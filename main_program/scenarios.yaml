@@ -1,0 +1,32 @@
+# ================================================================
+# Scenarios 設定檔 - 支援兩種模式
+#
+# 【標準模式】依照資料夾分類 (Category)，裡面填寫測試名稱與其對應路徑
+#   main.py 會自動產生兩層式選單，並載入該資料夾內的 __testcase__.py
+#
+# 【Custom 模式】直接以清單填寫步驟模組路徑
+#   可跨 TestCase 自由混搭步驟，無需修改任何程式碼
+# ================================================================
+
+# ── 標準模式範例 ──────────────────────────────────────────────
+Resource_Chassis:
+  Indicator_LED_Control: testcase_database.Resource_Chassis.Indicator_LED_Control
+
+Basic_Function_Test:
+  HEAD_Method_Support: testcase_database.Basic_Function_Test.HEAD_Method_Support
+Resource_Systems:
+  Boot_Option: testcase_database.Resource_Systems.Boot_Option
+  Payload_Power_Control: testcase_database.Resource_Systems.Payload_Power_Control
+
+Session_Service:
+  Session_Service: testcase_database.Session_Service.Session_Service
+  Session_Authentication: testcase_database.Session_Service.Session_Authentication
+
+Resource_Manager:
+  Patch_Management_LAN: testcase_database.Resource_Manager.Patch_Management_LAN
+
+# ── Custom 模式範例 ───────────────────────────────────────────
+Custom:
+  - testcase_database.Resource_Chassis.Indicator_LED_Control.blinking
+  - testcase_database.Resource_Chassis.Indicator_LED_Control.off
+  - testcase_database.Resource_Systems.Boot_Option.patch_boot_option

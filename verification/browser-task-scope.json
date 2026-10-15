@@ -1,0 +1,12 @@
+{
+  "empty_plan": true,
+  "live_rename_move_status_retained": true,
+  "pdf_download": true,
+  "scope_removal_drops_result": true,
+  "readded_scope_tbd": true,
+  "subtree_cascade": true,
+  "empty_task_retained": true,
+  "current_report_excludes_removed": true,
+  "impact": "Delete Moved\n\nRenamed live name\n\n1 descendant folders; 1 test cases; 1 affected Tasks; 1 Task memberships and latest results.\n\n I understand\nCancel\nDelete permanently",
+  "errors": []
+}

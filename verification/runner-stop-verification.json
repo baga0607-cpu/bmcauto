@@ -1,0 +1,14 @@
+{
+  "active_plan_mutation": 409,
+  "sibling_plan_mutation": 201,
+  "stop_response": {
+    "status": "stopping"
+  },
+  "mutation_during_worker_stop": 409,
+  "final_counts": {
+    "Failed": 0,
+    "Passed": 1,
+    "TBD": 2
+  },
+  "execution_active": false
+}

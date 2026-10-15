@@ -1,0 +1,10 @@
+{
+  "same_family_versions_coexist": true,
+  "default_path_preserved": true,
+  "duplicate_disabled": true,
+  "copy_after_golden_folder_rename": true,
+  "golden_ack_required": true,
+  "golden_subtree_deleted": true,
+  "independent_copies_retained": 3,
+  "errors": []
+}

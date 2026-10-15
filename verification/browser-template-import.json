@@ -1,0 +1,10 @@
+{
+  "plan_id": "018e66b0-afca-41c7-8c1c-e1ad76a31c2b",
+  "project_id": "1036347f-825b-4f19-a318-da9420a00e06",
+  "template_partial": true,
+  "structure_only": true,
+  "normalized_paths_merged": true,
+  "partial_import": "3 imported, 1 retained",
+  "retry": "1 imported, 0 retained",
+  "errors": []
+}

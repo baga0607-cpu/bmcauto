@@ -1,0 +1,13 @@
+{
+  "selected_failure_persisted": true,
+  "unselected_pass_preserved": true,
+  "unselected_timestamp_preserved": true,
+  "latest_log_visible": true,
+  "no_run_history": true,
+  "counts": {
+    "Failed": 1,
+    "Passed": 1,
+    "TBD": 1
+  },
+  "errors": []
+}

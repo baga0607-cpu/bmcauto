@@ -1,0 +1,27 @@
+{
+  "source_testcases": 17,
+  "after_testcases": 17,
+  "folders": 14,
+  "startup_snapshots_identical": true,
+  "integrity": [
+    [
+      "ok"
+    ]
+  ],
+  "foreign_keys": [],
+  "source_hash_unchanged": true,
+  "startups": [
+    {
+      "startup": 1,
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "startup": 2,
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  ]
+}

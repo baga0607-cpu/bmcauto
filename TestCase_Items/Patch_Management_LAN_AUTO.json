@@ -1,0 +1,23 @@
+{
+  "TESTCASE_NAME": "Patch_Management_LAN_AUTO",
+  "FAMILY_ID": "cb9afed5-66ec-4f51-a50a-ac4d784b502e",
+  "CATEGORY": "Custom",
+  "STEPS": [
+    {
+      "module_path": "testcase_database.steps.Resource_Manager.Patch_Management_LAN.list_interfaces",
+      "preset": "auto"
+    },
+    {
+      "module_path": "testcase_database.steps.Resource_Manager.Patch_Management_LAN.get_interface",
+      "preset": ""
+    },
+    {
+      "module_path": "testcase_database.steps.Resource_Manager.Patch_Management_LAN.patch_interface",
+      "preset": "auto"
+    },
+    {
+      "module_path": "testcase_database.steps.Resource_Manager.Patch_Management_LAN.verify_interface",
+      "preset": ""
+    }
+  ]
+}

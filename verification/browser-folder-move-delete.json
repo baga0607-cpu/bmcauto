@@ -1,0 +1,9 @@
+{
+  "child_reparented": true,
+  "returned_to_root": true,
+  "root_order_persisted": true,
+  "identity_preserved": true,
+  "empty_child_subtree_acknowledged": true,
+  "subtree_deleted": true,
+  "errors": []
+}

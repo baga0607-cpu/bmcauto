@@ -1,0 +1,12 @@
+[Font] Loaded CJK font from: C:\Windows\Fonts\msyh.ttc
+  [Attachment] Embedded: result_a.log
+[Report] Total embedded attachments: 1
+[Report] PDF saved: C:\Users\TOM~1.HSI\AppData\Local\Temp\tmpxfzl1tjp\report.pdf
+[Log] 執行結果已儲存至 workspace/logs/result_Custom_TestCase_20260917_165548.log
+[Log] 執行結果已儲存至 workspace/logs/result_Custom_TestCase_20260917_165548.log
+[Log] 執行結果已儲存至 workspace/logs/result_Custom_TestCase_20260917_165549.log
+.......................................................................................................................
+----------------------------------------------------------------------
+Ran 119 tests in 19.700s
+
+OK

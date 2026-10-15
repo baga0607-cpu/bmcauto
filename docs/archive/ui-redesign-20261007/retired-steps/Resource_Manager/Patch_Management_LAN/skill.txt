@@ -1,0 +1,107 @@
+## 三部曲/四部曲架構 (Get -> Patch/Post -> Verify -> Human Check) 設計規範
+
+為了確保軟體設定能精準套用並隔離硬體問題，強烈建議每個測試流程皆拆分為以下積木（完美落實**職責分離**）：
+
+1. **取得狀態 (Get)**:
+   - 抓取目前參數與 `ETag`，並將它們寫入 `context` 供後續步驟使用。
+   - 若為 `POST` 建立新資源的動作，可省略此步驟。
+2. **純動作發送 (Patch/Post/Delete)**:
+   - 職責：**只負責發送 API 指令**，以及檢查伺服器是否接收 (200/201/202/204)。
+   - **實用技巧 (測試資安防護)**：若要嚴格測試「不需 Basic Auth 也能建立 Session」的規範，可在 `headers` 中帶入 `{"Authorization": ""}`，這樣就能強制蓋掉底層套件預設的 Basic Auth，實現完全「裸奔」的請求。
+   - 執行後，將產生的 `Token` 或 `ID` 寫入 `context`。
+3. **純自動驗證 (Verify) (必須自帶雷達)**:
+   - 職責：**驗證副作用 (Side-Effects) 是否真的發生**。
+   - **積木內部必須主動呼叫 `client.get()`** 去向 BMC 抓取最新資料，不要依賴前一個步驟傳遞的資料。
+   - 驗證成功時，應使用 `logger.info(f"[Auto Verify] ...")` 主動寫入 `result.log`，讓測試報告更清晰。
+   - **⚠️ Context 優先原則（嚴禁 import 其他積木的資料）**：verify 積木的「期望值」必須從 `context` 讀取，**絕對不可以** `import DEFAULT_BODY` 或從其他積木直接引用靜態常數。正確做法是讓 Action 積木（Patch/Post）在執行後把「實際發送的值」寫入 context，verify 積木再從 context 取出比對。這樣無論使用哪種 preset（auto / 自訂 / 互動），驗證邏輯都能正確反映實際操作。
+4. **人工驗證 (Human Check) (開發首選)**:
+   - 為了保持「半自動 / 人機協作」的核心精神，未來開發新測項時，**請務必將 `common.human_check` 放置在適當的斷點**。
+   - **黃金順序**：永遠保持 `Verify` (自動軟體驗證) 在前，`Human Check` (人工實體驗證) 在後。讓機器先確認數值無誤，再由人類進行最後把關。
+   - **智慧提示 (Smart Prompt)**：`human_check` 支援以下兩種情境：
+     - **自訂提示**：可透過傳入 preset 來自訂提示（例如：`("testcase_database.common.human_check", "請確認系統是否重啟？")`）。
+     - **自動推導**：若無傳入 preset，它會自動讀取 `_last_step_name` 與 `_last_step_preset`，組合出聰明的提示（如 `請確認 [設定指示燈] 是否符合預期結果 (參數: Blinking)？`）。
+   - **Web UI 整合**：在網頁環境中，`human_check` 的 `input()` 會被 Flask 攔截，以 PASS/FAIL 按鈕取代。建構器亦開放 preset 欄位供填寫自訂提示。
+
+> [!IMPORTANT]
+> **即使是只有一個步驟的簡單測項，也必須遵守動作/驗證分離原則！**
+> 以 `HEAD Method Support` 為例，即使只是「發送 HEAD 並驗三個條件」這麼簡單的測項，也必須拆為：
+> - `head_request.py` (純動作)：發送請求，把 status/body/headers 全部存入 context。
+> - `verify_head_response.py` (純驗證)：從 context 取出資料，逐條驗證。
+> 
+> **不能因為測項簡單就把動作和驗證寫在同一支程式裡！**
+
+## 步驟模組 Metadata 與說明 (SKILL v3.4)
+
+為了支援 Web UI 整合與 CLI 顯示，每個步驟模組應包含以下變數：
+
+```python
+STEP_NAME = "步驟顯示名稱"
+
+# 步驟詳細說明 (單行純功能描述，禁止包含使用方式或參數說明！)
+# 使用方式與參數說明一律寫在 __testcase__.py 的 Cheat Sheet 中。
+STEP_DESCRIPTION = "此步驟的詳細行為描述，幫助測試員了解此動作的目的。"
+
+# 步驟元數據，定義輸入需求與產出結果
+STEP_METADATA = {
+    "requires": ["interface_uri"],   # 執行前 context 內必須存在的 Key
+    "produces": ["interface_etag"],  # 執行後會寫入 context 的 Key
+    "type": "api",                   # 類型：api / human_check / interactive / combined / automated
+    "safe_to_skip": False,           # 是否可以安全跳過
+    "preset_hint": "...",            # ★ 必填！Web UI tooltip 說明（見下方格式規範）
+}
+```
+
+### `preset_hint` 填寫規範（必須遵守）
+
+> [!IMPORTANT]
+> **每個新積木都必須填寫 `preset_hint`，這是 Web UI 顯示正確提示的唯一來源。**
+
+根據積木類型，`preset_hint` 有以下三種標準寫法：
+
+**① 不需要 preset 的積木（GET / Verify / Automated 類）**
+```python
+# GET 類
+"preset_hint": "此步驟不需要 preset，留空直接執行即可。"
+
+# Verify 類
+"preset_hint": "此步驟不需要 preset，驗證結果由前一步驟的 context 自動帶入。"
+
+# Automated 類（自動執行，不依賴前一步驟）
+"preset_hint": "此步驟不需要 preset，會自動執行完整流程。"
+```
+
+**② 有固定選項的積木（Action 類）**
+```python
+"preset_hint": "可填入: Lit / Blinking / Off\n留空 = 互動選單模式。"
+```
+
+**③ 有多欄位 preset 的積木（用 `_` 分隔）**
+```python
+"preset_hint": (
+    "可填入:\n"
+    "  auto              → 使用預設值發送\n"
+    "  欄位1_欄位2_欄位3  → 自訂格式（用底線分隔）\n"
+    "  例: False_192.168.1.100_255.255.255.0_0.0.0.0\n"
+    "留空 = 互動模式。"
+)
+```
+
+> [!NOTE]
+> `preset_hint` 中的 `\n` 會在 Web UI 的 tooltip 中正常換行顯示。
+> `human_check` 積木不需要填寫，因為 Web UI 不顯示 preset 輸入框給它。
+
+---
+## 狀態管理：共享 Context 字典
+
+本框架在執行每個 TestCase 時會建立一個共享的 `context = {}` 字典，並在所有步驟間傳遞。
+
+- **功能**：允許原子步驟之間共享資訊（例如獲取的 `manager_id`、`etag`、`token` 等）。
+- **自動狀態追蹤 (Smart Context)**：主引擎 (`main.py` 與 `app.py`) 在每個積木**執行完成後**，會自動將該步驟的名稱與傳入的參數儲存到 `context["_last_step_name"]` 與 `context["_last_step_preset"]` 中。這確保了下一個積木（如 `human_check`）能精準知道「前一個步驟試圖做什麼」。**注意**：記錄的是「意圖 (傳入的 preset)」，而非「實際執行結果」，若執行發生崩潰 (Exception) 則不會覆蓋此紀錄。
+- **用途**：Web UI 整合時，可依據 `context` 中的值決定下一個步驟的行為。
+- **自動偵測**：`main.py` 與 `app.py` 都會自動偵測 `execute()` 是否接收 `context` 參數。
+
+---
+
+## ⚠️ 絕對禁令：嚴禁使用 Emoji ⚠️
+**在撰寫任何 `print` 或 `logger` 時，絕對禁止加入 Emoji (如 ✅、❌、⚠️、🎉 等)！**
+Windows 預設命令提示字元 (CP950 編碼) 無法解析這些字元，一旦印出會直接導致程式崩潰 (Crash)。請乖乖使用 `[PASS]`, `[FAIL]`, `[WARNING]` 等純 ASCII 文字。

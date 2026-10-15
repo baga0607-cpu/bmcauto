@@ -1,0 +1,12 @@
+{
+  "empty_definition_failed": true,
+  "current_failure_log": true,
+  "valid_successor_passed": true,
+  "plan_unlocked": true,
+  "counts": {
+    "Failed": 1,
+    "Passed": 1,
+    "TBD": 0
+  },
+  "errors": []
+}

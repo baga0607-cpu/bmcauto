@@ -1,0 +1,19 @@
+{
+  "TESTCASE_NAME": "Indicator_LED_Control_AUTOTEST",
+  "FAMILY_ID": "",
+  "CATEGORY": "Custom",
+  "STEPS": [
+    {
+      "module_path": "testcase_database.steps.Resource_Chassis.Indicator_LED_Control.get_led",
+      "preset": ""
+    },
+    {
+      "module_path": "testcase_database.steps.Resource_Chassis.Indicator_LED_Control.patch_led",
+      "preset": "Off"
+    },
+    {
+      "module_path": "testcase_database.steps.Resource_Chassis.Indicator_LED_Control.verify_led",
+      "preset": ""
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+# =============================================
+# BMC 連線設定範本
+# 使用方式：複製此檔案並重新命名為 config.yaml
+#           填入您自己的 BMC 連線資訊
+# 注意：config.yaml 已在 .gitignore 中排除，不會被上傳
+# =============================================
+redfish:
+  host: "https://<BMC_IP>"
+  username: "<username>"
+  password: "<password>"
+  verify_ssl: false

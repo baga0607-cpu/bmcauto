@@ -1,0 +1,10 @@
+{
+  "fresh_tab_does_not_finish_between_workers": true,
+  "stop_recovered_without_session_storage": true,
+  "all_folder_controls_locked": true,
+  "sibling_plan_editable": true,
+  "completed_results_retained": true,
+  "unfinished_tbd": true,
+  "plan_unlocked": true,
+  "errors": []
+}

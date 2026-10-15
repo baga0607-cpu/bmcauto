@@ -1,0 +1,3637 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite id="521484" name="02.00.00 Redfish" >
+<node_order><![CDATA[2]]></node_order>
+<details><![CDATA[]]></details> 
+<custom_fields>
+			<custom_field>
+			<name><![CDATA[Version History:]]></name>
+			<value><![CDATA[]]></value>
+			</custom_field>
+		</custom_fields>
+<testsuite id="521485" name="02.01.00 Basic Function Test" >
+<node_order><![CDATA[0]]></node_order>
+<details><![CDATA[]]></details> 
+<custom_fields>
+			<custom_field>
+			<name><![CDATA[Version History:]]></name>
+			<value><![CDATA[]]></value>
+			</custom_field>
+		</custom_fields>
+
+<testcase internalid="521486" name="02.01.01 Base Authentication">
+	<node_order><![CDATA[0]]></node_order>
+	<externalid><![CDATA[560951]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>Unauthenticated Resources:</p>
+
+<p>a. Get below URI:<br />
+- Version: /redfish<br />
+- Service Root: /redfish/v1/<br />
+- Redfish metadata document:&nbsp;/redfish/v1/$metadata<br />
+- OData service document:&nbsp;/redfish/v1/odata<br />
+-&nbsp;OpenAPI YAML document:&nbsp; /redfish/v1/openapi.yaml (Not support yet)</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>a. Redfish shall not require password.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[2]]></step_number>
+	<actions><![CDATA[<p>Authentication:</p>
+
+<p>a. Power on DUT and boot to OS.<br />
+b. Connect with remote PC by LAN.<br />
+c. Execute browser on remote PC and link to below address:<br />
+&nbsp;https://&lt;BMC IP&gt;/redfish/v1<br />
+d. Execute browser on remote PC and link to below address:<br />
+&nbsp;https://&lt;BMC IP&gt;/redfish/v1/Systems<br />
+e. Login:<br />
+&nbsp;Account: administrator<br />
+&nbsp;Password: advantech</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c. The Redfish service root shall not need password.<br />
+e. It shall be able to login Redfish and get response.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[3]]></step_number>
+	<actions><![CDATA[<p>Login Fail:</p>
+
+<p>a. Clear cookie on remote PC.<br />
+b. Get below URI:<br />
+#/redfish/v1/Systems/0<br />
+c. Press &quot;Cancel&quot; button&nbsp;when user/password required.<br />
+d. Check response message.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>d1. Status code shall be 401 (Unauthorized).<br />
+d2. Redfish shall reply error extend message as below:<br />
+&quot;Required header &#39;Authorization or X-Auth-Token&#39; is missing in the request.&quot;</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="521491" name="02.01.02 Redfish Service Validator">
+	<node_order><![CDATA[1]]></node_order>
+	<externalid><![CDATA[560952]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Download latest version of Redfish Service Validator (RSV).<br />
+b. Follow DMTF step to install RSV on remote PC.<br />
+c. Power on DUT and boot to OS.<br />
+d. Connect DUT with remote PC by LAN (MGMT port).<br />
+e. Execute Redfish Validator&nbsp;on remote PC.<br />
+f. Edit config file for test environment.<br />
+g. Start the test and waiting test result.<br />
+h. After test finished, check test log.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>h. Test result shall not have any fail item.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="521494" name="02.01.03 HEAD Method Support">
+	<node_order><![CDATA[2]]></node_order>
+	<externalid><![CDATA[560953]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Send below command Talend API Tester:<br />
+- Select &quot;Head&quot; method.<br />
+- Fill in URI: /redfish/v1<br />
+b. Check response data</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b1. Redfish shall support &quot;Head&quot; method.<br />
+b2. Redfish&nbsp;shall not return message body information.<br />
+b3. Redfish shall reply &quot;Link&quot; in header.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="521497" name="02.01.04 Query Parameters">
+	<node_order><![CDATA[3]]></node_order>
+	<externalid><![CDATA[560954]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>Check Query Parameter Support:</p>
+
+<p>a. Get&nbsp;Redfish Service Root:<br />
+Get https://&lt;BMC IP&gt;/redfish/v1<br />
+b. Check Query Parameter Support in &quot;ProtocolFeaturesSupported&quot; object.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b. Redfish shall reply below data:<br />
+&quot;ExcerptQuery&quot;: false,<br />
+&quot;ExpandQuery&quot;: {<br />
+&nbsp; &nbsp; &nbsp;&quot;ExpandAll&quot;: false,<br />
+&nbsp; &nbsp; &nbsp;&quot;Levels&quot;: false,<br />
+&nbsp; &nbsp; &nbsp;&quot;Links&quot;: false,<br />
+&nbsp; &nbsp; &nbsp;&quot;MaxLevels&quot;: 1,<br />
+&nbsp; &nbsp; &nbsp;&quot;NoLinks&quot;: false},<br />
+&quot;FilterQuery&quot;: false,<br />
+&quot;OnlyMemberQuery&quot;: true,<br />
+&quot;SelectQuery&quot;: false</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[2]]></step_number>
+	<actions><![CDATA[<p>Check Query Parameter Function - $top:</p>
+
+<p>a. Add 20 SEL logs on DUT.<br />
+b. On remote PC, get below URI to get all event logs:<br />
+/redfish/v1/Managers/0/LogServices/Log/Entries<br />
+c. Get below URI with &quot;top&quot; query parameter:<br />
+/redfish/v1/Managers/0/LogServices/Log/Entries?$top=5<br />
+d. Check response data.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>d1. Status code shall 200.<br />
+d2. Redfish shall return 1 ~ 5 SEL entries.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[3]]></step_number>
+	<actions><![CDATA[<p>Check Query Parameter Function - $skip:</p>
+
+<p>a. After step 3, get below URI with &quot;skip&quot; query parameter:<br />
+/redfish/v1/Managers/0/LogServices/Log/Entries?$skip=5<br />
+b. Check response data.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b1. Status code shall be 200.<br />
+b2. Redfish shall skip first 5 SEL entries.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[4]]></step_number>
+	<actions><![CDATA[<p>Check Query Parameter Function - only:</p>
+
+<p>a. After step 3, get below URI with &quot;only&quot; query parameter:<br />
+/redfish/v1/Managers/0/LogServices/Log/Entries?only<br />
+b. Check response data.<br />
+c. Send command to clear SEL logs<br />
+(It generate a sel: Event Logging Disabled SYSTEM_EVENT_LOG | Log area reset/cleared).<br />
+d. Get URI again:<br />
+/redfish/v1/Managers/0/LogServices/Log/Entries?only<br />
+e. Check response data.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b1. Status code shall be 200.<br />
+b2. Redfish shall return all SEL in a collection.<br />
+e1. Status code shall be 200.<br />
+e2. Redfish shall return SEL detail information.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="521503" name="02.01.05 ETag">
+	<node_order><![CDATA[4]]></node_order>
+	<externalid><![CDATA[560955]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>Get Resource:</p>
+
+<p>a. Send command to get Redfish sensor:<br />
+https://&lt;BMC IP&gt;/redfish/v1/chassis/1u/Sensors<br />
+https://&lt;BMC IP&gt;/redfish/v1/chassis/1u/Sensors/3</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>a1. ETag shall be included in response header.<br />
+a2. ETag shall be strong validator. (No &quot;W/&quot;)</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="521508" name="02.01.06 If-Match / If-None-Match">
+	<node_order><![CDATA[5]]></node_order>
+	<externalid><![CDATA[560956]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>Get Resource:</p>
+
+<p>a. Send below URI with &quot;Get&quot; operation and check status code:<br />
+a1. #curl -k -v --header &#39;If-Match: &quot;5a709faf54bea895958b&quot;&#39; -X GET &quot;https://&lt;BMC IP&gt;/redfish/v1&quot;<br />
+a2.&nbsp;#curl -k -v --header &#39;If-Match: &quot;4a709faf54bea895958b&quot;&#39; -X GET &quot;https://&lt;BMC IP&gt;/redfish/v1&quot;<br />
+a3.&nbsp;#curl -k -v --header &#39;If-None-Match: &quot;5a709faf54bea895958b&quot;&#39; -X GET &quot;https://&lt;BMC IP&gt;/redfish/v1&quot;<br />
+a4.&nbsp;#curl -k -v --header &#39;If-None-Match: &quot;4a709faf54bea895958b&quot;&#39; -X GET &quot;https://&lt;BMC IP&gt;/redfish/v1&quot;</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>a1. Status Code shall be 200 and Redfish shall reply Service Root.<br />
+a2. Status Code shall be 412 and Redfish shall reply error response.<br />
+a3. Status Code shall be 304 and Redfish shall reply empty response.<br />
+a4. Status Code shall be 200 and Redfish shall reply Service root.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[2]]></step_number>
+	<actions><![CDATA[<p>Patch Resource</p>
+
+<p>a. Get&nbsp;below URI to check ETag:<br />
+/redfish/v1/AccountService/Accounts/5<br />
+b. Copy Etag that reply by Redfish in header.<br />
+c. On Talend API Tester, select patch method<br />
+d. Target URI is&nbsp;/redfish/v1/AccountService/Accounts/5<br />
+e. Add header &quot;Content-Type&quot;, value is &quot;application/json&quot;.<br />
+f. Add header &quot;If-Match&quot;, value is modified Etag.<br />
+g. Below is body:<br />
+{<br />
+&nbsp; &quot;UserName&quot;: &quot;admin1&quot;,<br />
+&nbsp; &quot;Password&quot;: &quot;admin1&quot;<br />
+}<br />
+h. Press send button&nbsp;and check Redfish response.<br />
+i. Modify &quot;If-Match&quot; header value to original Etag.<br />
+j. Press send button&nbsp;again and check Redfish response.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>h. Status code shall be 412 and patch shall be failed.<br />
+j1. Status code shall be 200 and patch shall be successful.<br />
+j2. Redfish shall reply new Etag.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[3]]></step_number>
+	<actions><![CDATA[<p>Patch Resource with Incorrect Header:</p>
+
+<p>a. Follow step 2 to test this case but use&nbsp;&quot;If-None-Match&quot; header instead of &quot;If-Match&quot; header.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>a. Status code shall be 428 and patch shall be failed.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="521513" name="02.01.07 Status Code &amp; Error Responses">
+	<node_order><![CDATA[6]]></node_order>
+	<externalid><![CDATA[560957]]></externalid>
+	<version><![CDATA[2]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>Get Success</p>
+
+<p>a. Get URI:<br />
+/redfish/v1<br />
+b. Check response data.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b1. Status code shall be 200.<br />
+b2. Redfish shall reply data.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[2]]></step_number>
+	<actions><![CDATA[<p>Get Fail&nbsp;400:</p>
+
+<p>a. Get URI:<br />
+/redfish/v1/Managers/0/LogServices/Log/Entries?only=3<br />
+b. Check response data.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b1. Status code shall be 400 (Bad Request).<br />
+b2. Redfish shall reply error extend message.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[3]]></step_number>
+	<actions><![CDATA[<p>Get Fail 400 (QueryNotSupportedOnResource):</p>
+
+<p>a. Get below URI:<br />
+/redfish/v1/Managers/0/LogServices/Log/Entries/1?$top=3<br />
+b. Check response data.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b1. Status code shall be 400 (Bad Request).<br />
+b2. Redfish shall reply error extend message as below:<br />
+&quot;Querying is not supported on the requested resource.&quot;</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[4]]></step_number>
+	<actions><![CDATA[<p>Get Fail 400 (QueryCombinationInvalid):</p>
+
+<p>a. Get URI:<br />
+/redfish/v1/Managers/0/LogServices/Log/Entries/1?$top=3&amp;only<br />
+b. Check response data.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b1. Status code shall be 400 (Bad Request).<br />
+b2. Redfish shall reply 2 error message and error extend message as below:<br />
+- Message 1:&nbsp;The format of the query parameter request $top=3&amp;only is wrong. General format is url followed by ?$query1=value1&amp;$query2=value2&amp;.., or ?only or ?excerpt&quot;<br />
+- Message 2:&nbsp;&quot;Two or more query parameters in the request cannot be used together.&quot;<br />
+- Message 3:&nbsp;&quot;A general error has occurred. See ExtendedInfo for more information.&quot;</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[5]]></step_number>
+	<actions><![CDATA[<p>Get Fail 404:</p>
+
+<p>a. Get below URI:<br />
+/redfish/v1/Systems/0/Processors/CPU3<br />
+b. Check response data.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b1. Status code shall be 404 (Not Found).<br />
+b2. Redfish shall reply error extend message as below:<br />
+&quot;The resource at the URI /redfish/v1/Systems/0/Processors/CPU3 was not found.&quot;</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[6]]></step_number>
+	<actions><![CDATA[<p>Get Fail 406:</p>
+
+<p>a. On remote PC, get below URI with condition:<br />
+URI: /redfish/v1/Systems/0<br />
+Condition:&nbsp;Add header =&nbsp;Accept, Value = text/html<br />
+b. Check response data.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b1. Status code shall be 406 (Not Acceptable).<br />
+b2. Redfish shall reply error extend message as below:<br />
+&quot;The resource at URI /redfish/v1/Systems/0 cannot be represented as the media types in the Accept of request header.&quot;</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[7]]></step_number>
+	<actions><![CDATA[<p>Get Fail 412:</p>
+
+<p>a. On remote PC, get below URI with condition:<br />
+URI: /redfish/v1/Systems/0<br />
+Condition: Modify header =&nbsp;Odata-Version, Value = 4.1<br />
+b. Check response data.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b1. Status code shall be 412 (Precondition Failed)<br />
+b2. Redfish shall reply error extend message as below:<br />
+&quot;Header &#39;OData-Version: 4.1&#39; is invalid.&quot;</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[8]]></step_number>
+	<actions><![CDATA[<p>Get Fail 415:</p>
+
+<p>a. On remote PC, get below URI with condition:<br />
+URI: /redfish/v1/Systems/0<br />
+Condition: Add header =&nbsp;Content-Type, value = text/html<br />
+b. Check response data.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b1. Status code shall be 415 (Unsupported Media Type).<br />
+b2. Redfish shall reply error extend message as below:<br />
+&quot;The request URI /redfish/v1/Systems/0 cannot be successful because the Content-Type text/html is not supported.&quot;</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[9]]></step_number>
+	<actions><![CDATA[<p>Get Fail 501 (Not Implemented)</p>
+
+<p>a. On remote PC, press &quot;F12&quot; on Chrome browser to open Chrome DevTools.<br />
+b. Past below path to address bar:<br />
+https://&lt;BMC&nbsp;IP&gt;/redfish/v1/Managers/0/LogServices/Log/Entries?$expand=*<br />
+c. Check header in&nbsp;Chrome DevTools.<br />
+d. Check response data.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c. Status code shall be 501 (Not Implemented).<br />
+d. Redfish shall reply error extend message as below:<br />
+&quot;Querying is not supported by the implementation.&quot;</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[10]]></step_number>
+	<actions><![CDATA[<p>POST Success</p>
+
+<p>a. Post below URI to create subscription:<br />
+https://&lt;BMC_IP&gt;/redfish/v1/EventService/Subscriptions<br />
+Body:<br />
+{<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&quot;Context&quot;:&quot;Test-1&quot;,<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&quot;Destination&quot;:&quot;https://&lt;BMC IP&gt;&quot;,<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&quot;EventFormatType&quot;:&quot;Event&quot;,<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&quot;RegistryPrefixes&quot;:[<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&quot;ResourceEvent&quot;<br />
+&nbsp;&nbsp;&nbsp;&nbsp;],<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&quot;ResourceTypes&quot;:[<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&quot;AccountService&quot;<br />
+&nbsp;&nbsp;&nbsp;&nbsp;],<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&quot;OriginResources&quot;:[<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{&quot;@odata.id&quot;:&nbsp;&quot;/redfish/v1/AccountService&quot;}<br />
+&nbsp;&nbsp;&nbsp;&nbsp;],<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&quot;Protocol&quot;:&quot;Redfish&quot;&nbsp;<br />
+}<br />
+b. After post successful, check response data.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b1. HTTP status code shall be 201.<br />
+b2. Response header&nbsp;shall have&nbsp;&quot;Location&quot;.<br />
+b3. Response body shall have new ETag and full representation of the new resource.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[11]]></step_number>
+	<actions><![CDATA[<p>Patch&nbsp;Success</p>
+
+<p>a. Get below URI on remote PC.<br />
+/redfish/v1/Chassis/1u<br />
+b. Copy ETag from response data.<br />
+c. Send below command:<br />
+- Method: Patch<br />
+- Target: /redfish/v1/Chassis/1u<br />
+- Add Header: If-Match, value = Etag<br />
+- Body: {&quot;IndicatorLED&quot;: &quot;Lit&quot;}<br />
+d. Check response data.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>d1. Status code shall be 200.<br />
+d2. Response data shall be updated message.<br />
+d3. ETag shall be also updated.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[12]]></step_number>
+	<actions><![CDATA[<p>Patch Fail 400 (Bad Request):</p>
+
+<p>a. Get below URI then&nbsp;copy ETag:<br />
+/redfish/v1/Chassis/1u<br />
+b. Patch this URI with below condition:<br />
+- URI: /redfish/v1/Chassis/1u<br />
+- Method: Patch<br />
+- Add Header: If-Match, value = Etag<br />
+- Body: {}<br />
+c. Check response data.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c1. Status code shall be 400 (Bad Request).<br />
+c2. Redfish shall reply error extend message as below:<br />
+&quot;The request body submitted contained an empty JSON object and the service is unable to process it.&quot;</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[13]]></step_number>
+	<actions><![CDATA[<p>Patch Fail 401 (Unauthorized):</p>
+
+<p>a. Using curl to send below command:<br />
+curl -k -v --user callback:advantech --header &#39;If-Match: ec524cf6fb1f05e7479d&#39; -H &#39;Content-Type: &quot;application/json&quot;&#39; -X PATCH &quot;https://&lt;BMC IP&gt;/redfish/v1/Chassis/1u&quot; --data &#39;{&quot;IndicatorLED&quot;: &quot;Lit&quot;}&#39;<br />
+b. Check response data.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b1. Status code shall be 401 (Unauthorized).<br />
+b2. Redfish shall reply error extend message as below:<br />
+&quot;There are insufficient privileges for the account or credentials associated with the current session to perform the requested operation.&quot;</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[14]]></step_number>
+	<actions><![CDATA[<p>405 (Method Not Allowed):</p>
+
+<p>a. Using &quot;PUT&quot; method for below URI:<br />
+/redfish/v1/Chassis/1u<br />
+b. Check response data.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b1. Status code shall be 405 (Method Not Allowed).<br />
+b2. Redfish shall reply error extend message as below:<br />
+&quot;The HTTP method is not allowed on this resource.&quot;</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[15]]></step_number>
+	<actions><![CDATA[<p>501 (Not Implemented):</p>
+
+<p>a. Using curl to send below command:<br />
+curl -k -v --user administrator:advantech&nbsp;-X READ &quot;https://&lt;BMC IP&gt;/redfish/v1&quot;</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b1. Status code shall be 501&nbsp;(Not Implemented).</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[16]]></step_number>
+	<actions><![CDATA[<p>Delete 204 (No Content):</p>
+
+<p>a. After step_5, delete created resource:<br />
+/redfish/v1/EventService/Subscriptions/0<br />
+b. Check response data.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b1. Status code shall be 204 (No Content).<br />
+b2. Response body shall be empty.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="621172" name="02.01.08 Enable Redfish Support">
+	<node_order><![CDATA[7]]></node_order>
+	<externalid><![CDATA[561998]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Boot into setup menu.<br />
+b. Check&nbsp;Network Stack [Enable] and Redfish Support [Enabled].<br />
+c. Save Changes and Reset.<br />
+d. Reboot<br />
+e.&nbsp;Check the Redfish Permission is enable<br />
+#ipmitool raw 0x2e 0xf7 0x39 0x28 0x00 0x03<br />
+&nbsp;</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b. Network Stack and Redfish Support shall be [Enabled].&nbsp;<br />
+e. It shall be return data 39 28 00 01</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+</testsuite><testsuite id="521531" name="02.02.00 Resource:Chassis" >
+<node_order><![CDATA[1]]></node_order>
+<details><![CDATA[]]></details> 
+<custom_fields>
+			<custom_field>
+			<name><![CDATA[Version History:]]></name>
+			<value><![CDATA[]]></value>
+			</custom_field>
+		</custom_fields>
+
+<testcase internalid="521532" name="02.02.01 Chassis Information">
+	<node_order><![CDATA[0]]></node_order>
+	<externalid><![CDATA[560958]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>Chassis Information and&nbsp;FRU</p>
+
+<p>a. Power on DUT and boot to OS.<br />
+b. On remote PC, get below URI to check chassis information:<br />
+/redfish/v1/Chassis/1u<br />
+c. Check below items:<br />
+- ETag<br />
+- Id<br />
+- Name<br />
+-&nbsp;Manufacturer<br />
+-&nbsp;Model<br />
+-&nbsp;SerialNumber<br />
+-&nbsp;PartNumber<br />
+-&nbsp;AssetTag</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c. Response data shall meet FRU data.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[2]]></step_number>
+	<actions><![CDATA[<p>ChassisType:</p>
+
+<p>a. After Step 1, check ChassisType.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>a. Chassis type shall meet product spec.<br />
+(SMBIOS)<br />
+#dmidecode -t 3</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[3]]></step_number>
+	<actions><![CDATA[<p>PowerState:</p>
+
+<p>a. After Step 1, check PowerState.<br />
+b. Bring DUT to DC off state.<br />
+c. Get the same URI again and check PowerState.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>a. &quot;PowerState&quot; shall be &quot;On&quot;.<br />
+c. &quot;PowerState&quot; shall be &quot;Off&quot;.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[4]]></step_number>
+	<actions><![CDATA[<p>Status:</p>
+
+<p>a. After step 1, check Status:<br />
+- State<br />
+- Health</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>a. Redfish shall reply:<br />
+- State: Enabled<br />
+- Health: OK</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[5]]></step_number>
+	<actions><![CDATA[<p>Location:</p>
+
+<p>a. After step 1, check Location:<br />
+- PartLocation<br />
+-- ServiceLabel<br />
+-- LocationType<br />
+-- LocationOrdinalValue</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>a. Redfish shall reply:<br />
+- PartLocation<br />
+-- ServiceLabel: Chassis<br />
+-- LocationType: Slot<br />
+-- LocationOrdinalValue: (node slot)</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[6]]></step_number>
+	<actions><![CDATA[<p>OEM:</p>
+
+<p>a. After step 1, check Oem:<br />
+- Advantech<br />
+-- @odata.type<br />
+-- FruType</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>a. Redfish shall reply:<br />
+- Advantech<br />
+-- @odata.type:&nbsp;#AdvantechResource.v1_0_0.Chassis<br />
+-- FruType: FrontBoard</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="521539" name="02.02.02 Chassis: Thermal">
+	<node_order><![CDATA[1]]></node_order>
+	<externalid><![CDATA[560959]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>Temperatures:</p>
+
+<p>a. Power on DUT and boot to OS.<br />
+b. On remote PC, get below URI:<br />
+/redfish/v1/chassis/1u/ThermalSubsystem/ThermalMetrics<br />
+c. Check if all temperature sensors are included.<br />
+d. Check if all temperature sensors are meet spec.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c. Redfish shall include all temperature sensors.<br />
+d. All temperature sensors&#39; configuration&nbsp;shall meet spec.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[2]]></step_number>
+	<actions><![CDATA[<p>Temperature Sensor Status:</p>
+
+<p>a. After step 1, select 1 temperature sensor to test.<br />
+b. Change sensor threshold to trigger sensor event.<br />
+c. Check sensor status.<br />
+d. Change sensor threshold back and check status again.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>d. Sensor threshold shall be changed after threshold change command.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[3]]></step_number>
+	<actions><![CDATA[<p>Fans:</p>
+
+<p>a. On remote PC, get below URI:<br />
+/redfish/v1/chassis/1u/ThermalSubsystem/<br />
+check fan array.<br />
+b. Check amount&nbsp;of sensor.<br />
+c. Check location of sensor.<br />
+d. Check configuration of sensor.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b. Amount of sensor shall meet DUT configuration.<br />
+c. Location of sensor shall meet product spec.<br />
+d. Configuration of sensor shall meet spec.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[4]]></step_number>
+	<actions><![CDATA[<p>Fan Sensor Status:</p>
+
+<p>a. After step 3, remove fan_0.<br />
+b. Check fan_0 status.<br />
+c. Install fan module back and check again.<br />
+d. Using the same method to check other status of sensors.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b. Fan_0 status shall be:<br />
+- State: Enable<br />
+- Health: Critical<br />
+c. Fan_0 status shall be:<br />
+- State: Enable<br />
+- Health: OK<br />
+d. Other fan sensor shall be the same behavior.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[5]]></step_number>
+	<actions><![CDATA[<p>Redundancy:</p>
+
+<p>a. After Step 3, check Redundancy array.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>a1. Amount of member in RedundancySet shall meet DUT configuration.<br />
+a2. MaxNumSupported shall meet DUT configuration.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[6]]></step_number>
+	<actions><![CDATA[<p>Redundancy Status:</p>
+
+<p>a. After step 5, check Status.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>a. Status shall be:<br />
+- State: Enable<br />
+- Health: OK</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="521547" name="02.02.03 Chassis: Power">
+	<node_order><![CDATA[2]]></node_order>
+	<externalid><![CDATA[560960]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>PowerSubsystem:</p>
+
+<p>a. Power on DUT and boot to OS.<br />
+b. On remote PC, get below URI to check information of sensors:<br />
+/redfish/v1/Chassis/1u/PowerSubsystem.<br />
+&nbsp;</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b. Redfish shall provide power subsystem resource.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[2]]></step_number>
+	<actions><![CDATA[<p>PowerSupplies:</p>
+
+<p>a. After step 1, check&nbsp;PowerSupplies array.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>a1. Amount of member shall meet DUT&#39;s configuration.<br />
+a2. Data in URI shall meet PSU entity spec.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="521551" name="02.02.04 Chassis: Sensor">
+	<node_order><![CDATA[3]]></node_order>
+	<externalid><![CDATA[560961]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Power on DUT and boot to OS.<br />
+b. On remote PC, get below URI:<br />
+/redfish/v1/Chassis/1u/Sensors<br />
+c. Check amount of sensor.<br />
+d. Check configuration of sensor.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c. Amount of sensor shall meet BMC spec.<br />
+d. Configuration of sensor shall meet BMC spec.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="521554" name="02.02.05 Chassis: Links">
+	<node_order><![CDATA[4]]></node_order>
+	<externalid><![CDATA[560962]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Power on DUT and boot to OS.<br />
+b. On remote PC, get below URI:<br />
+/redfish/v1/Chassis/1u<br />
+c. Check Links collection.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c1. Below links shall be included:<br />
+-&nbsp;ComputerSystems, link to&nbsp;/redfish/v1/Systems/0<br />
+-&nbsp;ManagedBy, link to&nbsp;/redfish/v1/Managers/0<br />
+-&nbsp;ManagersInChassis, link to&nbsp;/redfish/v1/Managers/0</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="521557" name="02.02.06 Indicator LED Control">
+	<node_order><![CDATA[5]]></node_order>
+	<externalid><![CDATA[560963]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Turn on Indicator LED.<br />
+Patch&nbsp;<br />
+/redfish/v1/Chassis/1u:<br />
+{<br />
+&nbsp;&nbsp; &nbsp;&quot;IndicatorLED&quot;: &quot;Lit&quot;<br />
+}<br />
+<br />
+b.&nbsp;Set Indicator LED blink.<br />
+Patch&nbsp;/redfish/v1/Chassis/1u:<br />
+{<br />
+&nbsp;&nbsp; &nbsp;&quot;IndicatorLED&quot;: &quot;Blinking&quot;<br />
+}<br />
+<br />
+c. Turn off&nbsp;Indicator LED.<br />
+Patch&nbsp;/redfish/v1/Chassis/1u:<br />
+{<br />
+&nbsp;&nbsp; &nbsp;&quot;IndicatorLED&quot;: &quot;Off&quot;<br />
+}</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>a.&nbsp;Indicator LED shall be turn on.<br />
+b.&nbsp;Indicator LED shall be blinking.<br />
+c.&nbsp;Indicator LED shall be turn off.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+</testsuite><testsuite id="521560" name="02.03.00 Resource:Manager" >
+<node_order><![CDATA[2]]></node_order>
+<details><![CDATA[]]></details> 
+<custom_fields>
+			<custom_field>
+			<name><![CDATA[Version History:]]></name>
+			<value><![CDATA[]]></value>
+			</custom_field>
+		</custom_fields>
+
+<testcase internalid="521561" name="02.03.01 Manager Information">
+	<node_order><![CDATA[0]]></node_order>
+	<externalid><![CDATA[560964]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>Manager:</p>
+
+<p>Check Redfish resources:<br />
+/redfish/v1/Managers/<br />
+/redfish/v1/Managers/0</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>Resources and response data shall meet Redfish user guide.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[2]]></step_number>
+	<actions><![CDATA[<p>EthernetInterfaces:</p>
+
+<p>Check BMC LAN information.<br />
+a. /redfish/v1/Managers/0/EthernetInterfaces/<br />
+b. /redfish/v1/Managers/0/EthernetInterfaces/&lt;ID&gt;</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>a. Number of BMC LAN shall meet spec.<br />
+b. BMC LAN information shall be the same with current configuration.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[3]]></step_number>
+	<actions><![CDATA[<p>NetworkProtocol:</p>
+
+<p>Check BMC Services.<br />
+/redfish/v1/Managers/0/NetworkProtocol</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>&quot;HTTPS&quot;:{&quot;ProtocolEnabled&quot;:&nbsp;true,&nbsp;&quot;Port&quot;:&nbsp;443},<br />
+&quot;SNMP&quot;:{&quot;ProtocolEnabled&quot;:&nbsp;true,&nbsp;&quot;Port&quot;:&nbsp;161},<br />
+&quot;IPMI&quot;:{&quot;ProtocolEnabled&quot;:&nbsp;true,&nbsp;&quot;Port&quot;:&nbsp;623},<br />
+&quot;SSH&quot;:{&quot;ProtocolEnabled&quot;:&nbsp;true,&nbsp;&quot;Port&quot;:&nbsp;22},<br />
+&quot;KVMIP&quot;:{&quot;ProtocolEnabled&quot;:&nbsp;true,&nbsp;&quot;Port&quot;:&nbsp;3520},<br />
+&quot;VirtualMedia&quot;:{&quot;ProtocolEnabled&quot;:&nbsp;true,&nbsp;&quot;Port&quot;:&nbsp;35202}</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[4]]></step_number>
+	<actions><![CDATA[<p>LogService:</p>
+
+<p>a. Check BMC Logs:<br />
+/redfish/v1/Managers/0/LogServices<br />
+/redfish/v1/Managers/0/LogServices/Log<br />
+/redfish/v1/Managers/0/LogServices/Log/Entries</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>a1. Resources shall meet user guide.<br />
+a2. Response data shall meet current BMC status.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[5]]></step_number>
+	<actions><![CDATA[<p>SerialInterfaces:</p>
+
+<p>Check Serial Interface information.<br />
+Get&nbsp;/redfish/v1/Managers/0/SerialInterfaces<br />
+Get&nbsp;/redfish/v1/Managers/0/SerialInterfaces/x</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>Response data shall meet current configuration.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[6]]></step_number>
+	<actions><![CDATA[<p>OEM:</p>
+
+<p>Get MC info:<br />
+/redfish/v1/Managers/0/Oem/Advantech/AdvantechManager</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>Response data shall meet spec.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="521569" name="02.03.02 Manager: Log Services">
+	<node_order><![CDATA[2]]></node_order>
+	<externalid><![CDATA[560965]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>NextLink:</p>
+
+<p>a. Create SEL logs&nbsp;over at least 50 entries.<br />
+b. On remote PC, get below URI:<br />
+/redfish/v1/Managers/0/LogServices/Log/Entries<br />
+c. Check response data.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c1. Status code shall be 200.<br />
+c2. Redfish shall present 50 entries in one request.<br />
+c3. Redfish shall provide &quot;nextLink&quot; for next 50 entries.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[2]]></step_number>
+	<actions><![CDATA[<p>Update Log Service:</p>
+
+<p>a. PATCH<br />
+/redfish/v1/Managers/0/LogServices/Log<br />
+{<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&quot;ServiceEnabled&quot;: false,<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&quot;DateTime&quot;: &quot;2019-04-23T08:48:58+00:00&quot;<br />
+}<br />
+b. Trigger an event then check log entry:<br />
+Get /redfish/v1/Managers/0/LogServices/Log<br />
+c. Send command to check BMC time:<br />
+#ipmitool sel time get</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b. Redfish shall not provide LogService.<br />
+c. BMC SEL time shall be changed.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="521573" name="02.03.03 Patch Management LAN">
+	<node_order><![CDATA[6]]></node_order>
+	<externalid><![CDATA[560966]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Patch&nbsp;<br />
+/redfish/v1/Managers/&lt;manager_id&gt;/EthernetInterfaces/&lt;id&gt;<br />
+{<br />
+&quot;InterfaceEnabled&quot;: false,<br />
+&quot;IPv4Addresses&quot;: [{<br />
+&quot;Address&quot;: &quot;172.21.73.33&quot;,<br />
+&quot;SubnetMask&quot;: &quot;255.255.0.0&quot;,<br />
+&quot;Gateway&quot;: &quot;0.0.0.0&quot;<br />
+}]<br />
+}<br />
+b. Login Node Explorer, check the channel IP address and&nbsp;interface status.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>a. BMC LAN configuration shall be modified.<br />
+b. The BMC IP address shall be changed and the channel interface shall be disabled.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="521576" name="02.03.04 Patch Management Serial Interfaces">
+	<node_order><![CDATA[7]]></node_order>
+	<externalid><![CDATA[560967]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>Patch&nbsp;<br />
+/redfish/v1/Managers/0/SerialInterfaces/1<br />
+{<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &quot;BitRate&quot;:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &quot;38400&quot;,<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &quot;Parity&quot;:&nbsp;&nbsp; &quot;None&quot;,<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &quot;DataBits&quot;:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &quot;8&quot;,<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &quot;StopBits&quot;:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &quot;1&quot;,<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &quot;FlowControl&quot;: &quot;Hardware&quot;<br />
+}</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>BMC serial interface configuration shall be modified.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="521579" name="02.03.05 Clear SEL">
+	<node_order><![CDATA[8]]></node_order>
+	<externalid><![CDATA[560968]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[4]]></step_number>
+	<actions><![CDATA[<p>a. Check BMC Logs:<br />
+/redfish/v1/Managers/0/LogServices<br />
+/redfish/v1/Managers/0/LogServices/Log<br />
+/redfish/v1/Managers/0/LogServices/Log/Entries<br />
+b. Clear SEL:<br />
+POST&nbsp;<br />
+/redfish/v1/Managers/0/LogServices/Log/Actions/LogService.ClearLog<br />
+- Body: {}<!--EndFragment --></p>
+]]></actions>
+	<expectedresults><![CDATA[<p>a1. Resources shall meet user guide.<br />
+a2. Response data shall meet current BMC status.<br />
+b. SEL log shall be clear.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="521582" name="02.03.06 Manager Reset">
+	<node_order><![CDATA[9]]></node_order>
+	<externalid><![CDATA[560969]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Power on DUT and boot to OS.<br />
+b. On remote PC, get URI:<br />
+/redfish/v1/Managers/0<br />
+c. Copy ETag.<br />
+d. Post below URI to reset BMC:<br />
+- Method: POST<br />
+- URI:&nbsp;/redfish/v1/Managers/0/Actions/Manager.Reset<br />
+- Add Header: If-Match, value: ETag<br />
+- Add Header: Content-Type, value: application/json<br />
+- Body: {&quot;ResetType&quot;: &quot;GracefulRestart&quot;}<br />
+e. Check response data and DUT state.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>e1. Status code shall be 204.<br />
+e2. Response data shall be empty.<br />
+e3. BMC shall be reset</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+</testsuite><testsuite id="521585" name="02.04.00 Resource:Systems" >
+<node_order><![CDATA[3]]></node_order>
+<details><![CDATA[]]></details> 
+<custom_fields>
+			<custom_field>
+			<name><![CDATA[Version History:]]></name>
+			<value><![CDATA[]]></value>
+			</custom_field>
+		</custom_fields>
+
+<testcase internalid="521586" name="02.04.01 System Information">
+	<node_order><![CDATA[0]]></node_order>
+	<externalid><![CDATA[560970]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Get URI:<br />
+/redfish/v1/Systems/0</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>a1. Status code shall 200.<br />
+a2. Response data shall be correct.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[2]]></step_number>
+	<actions><![CDATA[<p>Processors:</p>
+
+<p>a. Get URI:&nbsp;<br />
+/redfish/v1/Systems/0/Processors<br />
+b. Get URI:&nbsp;<br />
+/redfish/v1/Systems/0/Processors/CPU&lt;0-X&gt;</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>a. Number of resources shall meet number of CPU.<br />
+b. CPU information shall be correct.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[3]]></step_number>
+	<actions><![CDATA[<p>Simple Storage:</p>
+
+<p>a. Get URI:&nbsp;<br />
+/redfish/v1/Systems/0/SimpleStorage<br />
+b. Get URI:&nbsp;<br />
+/redfish/v1/Systems/0/SimpleStorage/X</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>a. Response resources&nbsp;shall have storage controller info.<br />
+b1. Response resource shall meet configuration.<br />
+b2. Amount and model of storage shall meet configuration.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[4]]></step_number>
+	<actions><![CDATA[<p>Memory:</p>
+
+<p>a. Get URI:&nbsp;<br />
+/redfish/v1/Systems/0/Memory<br />
+b. Get URI:&nbsp;<br />
+/redfish/v1/Systems/0/Memory/DIMM&lt;0~X&gt;</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>a. Response data shall meet configuration.<br />
+b.&nbsp;Response data shall meet configuration.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[5]]></step_number>
+	<actions><![CDATA[<p>EthernetInterfaces:</p>
+
+<p>a. Get URI:&nbsp;<br />
+/redfish/v1/Systems/0/EthernetInterfaces<br />
+b. Get URI:&nbsp;<br />
+/redfish/v1/Systems/0/EthernetInterfaces/x</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>a. Response data shall meet configuration.<br />
+b. Response data shall meet configuration.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[6]]></step_number>
+	<actions><![CDATA[<p>LogServices:</p>
+
+<p>a. Get URI:&nbsp;<br />
+/redfish/v1/Systems/0/LogServices<br />
+/redfish/v1/Systems/0/LogServices/Log<br />
+b. Get URI:&nbsp;<br />
+/redfish/v1/Systems/0/LogServices/Log/Entries</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>a. Response data shall meet configuration.<br />
+b. Response data shall meet sel list.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[7]]></step_number>
+	<actions><![CDATA[<p>VirtualMedia:</p>
+
+<p>Check virtual media information.<br />
+Get URI:<br />
+/redfish/v1/Systems/0/VirtualMedia<br />
+Get URI:<br />
+/redfish/v1/Systems/0/VirtualMedia/1</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>Response data shall meet current configuration</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="521592" name="02.04.02 Clear Logs">
+	<node_order><![CDATA[1]]></node_order>
+	<externalid><![CDATA[560971]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Post below URI to clear logs:<br />
+- Method: POST<br />
+- URI:&nbsp;<br />
+/redfish/v1/Systems/0/LogServices/Log/Actions/LogService.ClearLog<br />
+- Add Header: If-Match, value: &lt;ETag&gt;<br />
+- Add Header: Content-Type, value: application/json<br />
+- Body: {}</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>a. Logs shall be clear.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="521595" name="02.04.03 Boot Options">
+	<node_order><![CDATA[2]]></node_order>
+	<externalid><![CDATA[560972]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>Boot from PXE<br />
+After change configuration in setup menu,&nbsp;<br />
+Patch&nbsp;<br />
+/redfish/v1/Systems/0<br />
+{<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &quot;Boot&quot;:&nbsp;&nbsp;&nbsp;&nbsp; {<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &quot;BootSourceOverrideEnabled&quot;:&nbsp;&nbsp;&quot;Continuous&quot;,<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &quot;BootSourceOverrideTarget&quot;: &quot;Pxe&quot;,<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &quot;BootSourceOverrideMode&quot;:&nbsp; &quot;UEFI&quot;<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }<br />
+}<br />
+Then reboot DUT.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>DUT shall boot from PXE.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[2]]></step_number>
+	<actions><![CDATA[<p>Boot from HDD<br />
+Patch<br />
+/redfish/v1/Systems/0<br />
+{<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &quot;Boot&quot;:&nbsp;&nbsp;&nbsp;&nbsp; {<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &quot;BootSourceOverrideEnabled&quot;:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &quot;Once&quot;,<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &quot;BootSourceOverrideTarget&quot;: &quot;Hdd&quot;,<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &quot;BootSourceOverrideMode&quot;:&nbsp; &quot;UEFI&quot;<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }<br />
+}<br />
+Then reboot DUT.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>DUT shall boot from HDD.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[3]]></step_number>
+	<actions><![CDATA[<p>Enter Setup menu<br />
+Patch&nbsp;<br />
+/redfish/v1/Systems/0<br />
+{<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &quot;Boot&quot;:&nbsp;&nbsp;&nbsp;&nbsp; {<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &quot;BootSourceOverrideEnabled&quot;:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &quot;Once&quot;,<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &quot;BootSourceOverrideTarget&quot;: &quot;BiosSetup&quot;,<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &quot;BootSourceOverrideMode&quot;:&nbsp; &quot;Legacy&quot;<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }<br />
+}<br />
+Then reboot DUT.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>DUT shall enter setup menu.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="521600" name="02.04.04 Payload Power Control">
+	<node_order><![CDATA[3]]></node_order>
+	<externalid><![CDATA[560973]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Post&nbsp;<br />
+/redfish/v1/Systems/0/Actions/ComputerSystem.Reset<br />
+{<br />
+&nbsp; &quot;ResetType&quot;: &quot;GracefulShutdown&quot;<br />
+}<br />
+Then try other actions:<br />
+&quot;ForceOff&quot;, &quot;On&quot;, &quot;PowerCycle&quot;, &quot;ForceRestart&quot;.<br />
+b. Enable payload OS NMI function:<br />
+# echo 1 &gt; /proc/sys/kernel/unknown_nmi_panic<br />
+Post&nbsp;<br />
+/redfish/v1/Systems/0/Actions/ComputerSystem.Reset<br />
+{<br />
+&nbsp; &quot;ResetType&quot;: &quot;Nmi&quot;<br />
+}</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>DUT shall be:<br />
+- GracefulShutdown: DUT do a graceful shutdown.<br />
+- ForceOff: DUT power off.<br />
+- On: DUT power on.<br />
+- PowerCycle: DUT do a power cycle.<br />
+- ForceRestart: DUT do a cold&nbsp;reset.<br />
+- Nmi: Trigger payload OS&nbsp;kernel dump.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[2]]></step_number>
+	<actions><![CDATA[<p>a. Post with&nbsp;OperationApplyTime<br />
+/redfish/v1/Systems/0/Actions/ComputerSystem.Reset<br />
+{<br />
+&nbsp; &quot;ResetType&quot;: &quot;GracefulShutdown&quot;,<br />
+&nbsp; &quot;@Redfish.OperationApplyTime&quot;: &quot;AtMaintenanceWindowStart&quot;,<br />
+&nbsp;&nbsp;&quot;MaintenanceWindowStartTime&quot;: &quot;2023-12-31T11:03:30+08:00&quot;<br />
+}<br />
+Note: The MaintenanceWindowStartTime shall be modified.<br />
+b. Check the system status when the time exceeds the MaintenanceWindowStartTime.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>a. It shall return 202 and a&nbsp;task ID.<br />
+b. System shall be power off when&nbsp;the time exceeds the MaintenanceWindowStartTime.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[3]]></step_number>
+	<actions><![CDATA[<p>a. Post with&nbsp;OperationApplyTime<br />
+/redfish/v1/Systems/0/Actions/ComputerSystem.Reset<br />
+{<br />
+&nbsp; &quot;ResetType&quot;: &quot;On&quot;,<br />
+&nbsp; &quot;@Redfish.OperationApplyTime&quot;: &quot;Immediate&quot;<br />
+}<br />
+b. Check the system status.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>a. It shall return 204.<br />
+b. System shall be power on immediately.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="618311" name="02.04.05 VirtualMedia">
+	<node_order><![CDATA[4]]></node_order>
+	<externalid><![CDATA[561996]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>VirtualMedia:</p>
+
+<p>Check virtual media information.<br />
+Get URI<br />
+/redfish/v1/Systems/0/VirtualMedia<br />
+Get URI<br />
+/redfish/v1/Systems/0/VirtualMedia/1</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>Response data shall meet current configuration.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[2]]></step_number>
+	<actions><![CDATA[<p>a. POST below URI to insert virtual media:<br />
+- Method: POST<br />
+- URI:<br />
+/redfish/v1/Systems/0/VirtualMedia/1/Actions/VirtualMedia.InsertMedia<br />
+- Add Header: Content-Type, value: application/json<br />
+- Body:<br />
+{<br />
+&nbsp;&nbsp; &nbsp;&quot;Image&quot;: &quot;https://Remote Server IP]/dashboard/docs/private/rhel-baseos-9.1-x86_64-dvd.iso&quot;,<br />
+&nbsp; &nbsp;&nbsp;&quot;UserName&quot;: &quot;[account]&quot;,<br />
+&nbsp; &nbsp;&nbsp;&quot;Password&quot;: &quot;[password]&quot;<br />
+}</p>
+
+<p>}<br />
+b. Click send.<br />
+c. Check result on TaskService, on remote PC<br />
+get below URI:<br />
+/redfish/v1/TaskService/Tasks/0<br />
+d. Reboot x86 and boot into virtual media OS.&nbsp;<br />
+e. Login WebUI&nbsp;iKVM and check remote media status.<br />
+f. POST below URI to eject virtual media:<br />
+- Method: POST<br />
+- URI:<br />
+/redfish/v1/Systems/0/VirtualMedia/1/Actions/VirtualMedia.EjectMedia<br />
+- Add Header: Content-Type, value: application/json</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b1. It shall return 202.<br />
+b2. The response body information shall be correct.<br />
+c. The response body information shall be correct.<br />
+e. The remote storage shall be mount status and info shall be correct.<br />
+f. It shall return 202 and unmount remote media.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+</testsuite><testsuite id="521606" name="02.05.00 Resource:Registries" >
+<node_order><![CDATA[4]]></node_order>
+<details><![CDATA[]]></details> 
+<custom_fields>
+			<custom_field>
+			<name><![CDATA[Version History:]]></name>
+			<value><![CDATA[]]></value>
+			</custom_field>
+		</custom_fields>
+
+<testcase internalid="521607" name="02.05.01 Registries">
+	<node_order><![CDATA[1000]]></node_order>
+	<externalid><![CDATA[560975]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Login Redfish and move to below<br />
+path:<br />
+/redfish/v1/Registries/<br />
+b. Check members.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b. Below members shall be included.<br />
+-&nbsp;/redfish/v1/registries/Base.1.13.0<br />
+-&nbsp;/redfish/v1/registries/AdvantechOem.1.1.0<br />
+-&nbsp;/redfish/v1/registries/Privilege.1.1.0<br />
+-&nbsp;/redfish/v1/Registries/ResourceEvent.1.2.0<br />
+-&nbsp;/redfish/v1/Registries/TaskEvent.1.0.3</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[2]]></step_number>
+	<actions><![CDATA[<p>a. Get below URI:<br />
+/redfish/v1/Registries/Base.1.13.0<br />
+b. Get below URI:<br />
+/redfish/v1/Registries/Base.1.13.0.json</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>a. Redfish shall reply &quot;Location&quot; resource as below:<br />
+- &quot;Language&quot;: &quot;en&quot;<br />
+-&nbsp;&quot;Uri&quot;: &quot;/redfish/v1/Registries/Base.1.13.0.json&quot;<br />
+b. Redfish shall reply &quot;Base.1.13.json&quot; data.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[3]]></step_number>
+	<actions><![CDATA[<p>a. Get below URI:<br />
+/redfish/v1/Registries/Privilege.1.1.0.json<br />
+b. Check response data</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b. Response data shall include and &quot;Entity&quot; - &quot;AdvantechManager&quot;</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[4]]></step_number>
+	<actions><![CDATA[<p>a. Get below URI:<br />
+/redfish/v1/Registries/AdvantechOem.1.1.0<br />
+/redfish/v1/Registries/AdvantechOem.1.1.0.json</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>a. Redfish shall reply AdvantechOEM.1.1.0.json without error.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[5]]></step_number>
+	<actions><![CDATA[<p>a. Get below URI:<br />
+/redfish/v1/Registries/ResourceEvent.1.2.0<br />
+/redfish/v1/Registries/ResourceEvent.1.2.0.json</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>a. Redfish shall reply data without error.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[6]]></step_number>
+	<actions><![CDATA[<p>a. Get below URI:<br />
+/redfish/v1/Registries/TaskEvent.1.0.3<br />
+/redfish/v1/Registries/TaskEvent.1.0.3.json</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>a. Redfish shall reply data without error.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+</testsuite><testsuite id="521615" name="02.06.00 Session Service" >
+<node_order><![CDATA[5]]></node_order>
+<details><![CDATA[]]></details> 
+<custom_fields>
+			<custom_field>
+			<name><![CDATA[Version History:]]></name>
+			<value><![CDATA[]]></value>
+			</custom_field>
+		</custom_fields>
+
+<testcase internalid="521616" name="02.06.01 Session Service">
+	<node_order><![CDATA[0]]></node_order>
+	<externalid><![CDATA[560976]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>Get Session Service:</p>
+
+<p>a. Power on DUT and boot to OS.<br />
+b. On remote PC, get below URI to check configuration of session service:<br />
+/redfish/v1/SessionService</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b1. Status code shall be 200.<br />
+b2. Redfish shall reply default configuration as below:<br />
+&quot;@odata.type&quot;: &quot;#SessionService.v1_0_0.SessionService&quot;,<br />
+&quot;@odata.context&quot;: &quot;/redfish/v1/$metadata#SessionService.SessionService&quot;,<br />
+&quot;@odata.id&quot;: &quot;/redfish/v1/SessionService&quot;,<br />
+&quot;@odata.etag&quot;: &quot;4ea1d77c1fbd35076691&quot;,<br />
+&quot;Id&quot;: &quot;SessionService&quot;,<br />
+&quot;Name&quot;: &quot;Session Service&quot;,<br />
+&quot;Description&quot;: &quot;Session Service&quot;,<br />
+&quot;ServiceEnabled&quot;: true,<br />
+&quot;SessionTimeout&quot;: 86400,<br />
+&quot;Status&quot;:{<br />
+&quot;State&quot;: &quot;Enabled&quot;,<br />
+&quot;Health&quot;: &quot;OK&quot;<br />
+},<br />
+&quot;Sessions&quot;:{<br />
+&quot;@odata.id&quot;: &quot;/redfish/v1/SessionService/Sessions&quot;<br />
+}</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[2]]></step_number>
+	<actions><![CDATA[<p>Patch Session Service:</p>
+
+<p>a. After step 1, copy Etag from response data.<br />
+b. Change session service configuration:<br />
+- Method: Patch<br />
+- URI: /redfish/v1/SessionService<br />
+- Add Header: If-Match, Value: &lt;ETag&gt;<br />
+- Body:<br />
+{<br />
+&quot;ServiceEnabled&quot;: (true/false),<br />
+&quot;SessionTimeout&quot;: (30~86400/sec)<br />
+}<br />
+c. Check response data.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c1. Status code shall be 200.<br />
+c2. Response data shall be new content.<br />
+c3. ETag shall be new one.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[3]]></step_number>
+	<actions><![CDATA[<p>Check Session Timeout:</p>
+
+<p>a. According step 2, patch &quot;SessionTimeout&quot; to 300 seconds.<br />
+b. Create session:<br />
+- Method: POST<br />
+- URI: /redfish/v1/SessionService/Sessions<br />
+- Add Header: If-Match, value: &lt;ETag&gt;<br />
+- Add Header: Content-Type, value: application/json<br />
+- Body:&nbsp;<br />
+{<br />
+&nbsp;&quot;UserName&quot;: &quot;operator&quot;,<br />
+&nbsp;&quot;Password&quot;: &quot;advantech&quot;<br />
+}<br />
+c. Check response data and copy X-Auth-Token.<br />
+d. Get URI with X-Auth-Token:<br />
+/redfish/v1/SessionService/Sessions<br />
+e. Wait for 5 minutes, check resource again.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c1. Status code shall be 201.<br />
+c2. Response data shall include new content.<br />
+c3. Redfish shall reply new ETag.<br />
+c4. Redfish shall reply X-Auth-Token.<br />
+d. Client shall get resource by X-Auth-Token.<br />
+e1. After timeout, created session resource shall be removed.<br />
+e2. Client shall be logout after timeout.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[4]]></step_number>
+	<actions><![CDATA[<p>Service Disabled:</p>
+
+<p>a. Change session service configuration:<br />
+- Method: Patch<br />
+- URI: /redfish/v1/SessionService<br />
+- Add Header: If-Match, Value: &lt;ETag&gt;<br />
+- Body:<br />
+{<br />
+&quot;ServiceEnabled&quot;: false,<br />
+&quot;SessionTimeout&quot;: 86400<br />
+}<br />
+b. Try to create session as step 3.<br />
+c. Check Redfish response.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c1. Redfish shall reject create session request.<br />
+c2. &quot;MessageId&quot; shall be&nbsp;&quot;Base.1.12.ServiceDisabled&quot;.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="521622" name="02.06.02 Session Authentication">
+	<node_order><![CDATA[1]]></node_order>
+	<externalid><![CDATA[560977]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>Session Authentication:<br />
+a. POST URI:<br />
+/redfish/v1/SessionService/Sessions<br />
+{<br />
+&quot;UserName&quot;: &quot;&lt;username&gt;&quot;,<br />
+&quot;Password&quot;: &quot;&lt;password&gt;&quot;<br />
+}<br />
+b.&nbsp;After create new session, check response data (header and body).</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b1. It shall include X-Auth-Token in response header.<br />
+b2. Redfish shall reply new resource in response body.<br />
+b3. JSON Body shall contains a full representation.<br />
+b4. Redfish shall not require user to login by base authentication to create session.<br />
+b5. Status code shall be 201.<br />
+b6. Location shall be included in response header.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[2]]></step_number>
+	<actions><![CDATA[<p>a. After step 1, communicate with Redfish by session authentication.<br />
+b.&nbsp;GET URI to check session collection and session:<br />
+/redfish/v1/SessionService/Sessions<br />
+/redfish/v1/SessionService/Sessions/&lt;session_id&gt;</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>a. Communicate with Redfish by session authentication shall be successful.<br />
+b.&nbsp;After create new session, new hyperlink with session ID shall be find.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[3]]></step_number>
+	<actions><![CDATA[<p>a. After step 2, DELETE URI:<br />
+/redfish/v1/SessionService/Sessions/&lt;session_id&gt;<br />
+b. Check if logout.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b1. Status code shall be 204.<br />
+b2. Response data shall be empty.<br />
+b3.&nbsp;After delete URI, communication shall be logout.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+</testsuite><testsuite id="521627" name="02.07.00 Account Service" >
+<node_order><![CDATA[6]]></node_order>
+<details><![CDATA[]]></details> 
+<custom_fields>
+			<custom_field>
+			<name><![CDATA[Version History:]]></name>
+			<value><![CDATA[]]></value>
+			</custom_field>
+		</custom_fields>
+
+<testcase internalid="521628" name="02.07.01 Account Service">
+	<node_order><![CDATA[14]]></node_order>
+	<externalid><![CDATA[560978]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Power on DUT and boot to OS.<br />
+b. On remote PC, try to get below URI:<br />
+/redfish/v1/Registries<br />
+c. Try to get below URI:<br />
+/redfish/v1/Registries/Privilege.1.1.0</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b. Redfish shall reply below in &quot;Members&quot;&nbsp;collection:<br />
+&quot;@odata.id&quot;: &quot;/redfish/v1/registries/Privilege.1.1.0&quot;<br />
+c. Redfish shall reply below in &quot;Location&quot;:<br />
+&quot;Uri&quot;: &quot;/redfish/v1/Registries/Privilege.1.1.0.json&quot;</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[2]]></step_number>
+	<actions><![CDATA[<p>Get URI:<br />
+/redfish/v1/AccountService/</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>Redfish shall reply below resources:<br />
+- /redfish/v1/AccountService/Accounts<br />
+- /redfish/v1/AccountService/Roles<br />
+- /redfish/v1/Registries/Privilege.1.1.0.json</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[3]]></step_number>
+	<actions><![CDATA[<p>Get URI:<br />
+a. /redfish/v1/AccountService/Roles<br />
+b. /redfish/v1/AccountService/Roles/Administrator<br />
+c. /redfish/v1/AccountService/Roles/Operator<br />
+d. /redfish/v1/AccountService/Roles/ReadOnly<br />
+e. /redfish/v1/AccountService/Roles/Callback<br />
+f.&nbsp;/redfish/v1/AccountService/Roles/SystemAdministrator<br />
+g.&nbsp;/redfish/v1/AccountService/Roles/StorageAdministrator</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>a.<br />
+Name&quot;: &quot;Roles Collection&quot;,<br />
+&quot;Members@odata.count&quot;: 4,<br />
+&quot;Members&quot;:[<br />
+{&quot;@odata.id&quot;: &quot;/redfish/v1/AccountService/Roles/Administrator&quot;},<br />
+{&quot;@odata.id&quot;: &quot;/redfish/v1/AccountService/Roles/Operator&quot;},<br />
+{&quot;@odata.id&quot;: &quot;/redfish/v1/AccountService/Roles/ReadOnly&quot;},<br />
+{&quot;@odata.id&quot;: &quot;/redfish/v1/AccountService/Roles/Callback&quot;},<br />
+{&quot;@odata.id&quot;:&nbsp;&quot;/redfish/v1/AccountService/Roles/SystemAdministrator&quot;},<br />
+{&quot;@odata.id&quot;:&nbsp;&quot;/redfish/v1/AccountService/Roles/StorageAdministrator&quot;}]<br />
+b.<br />
+Id&quot;: &quot;Administrator&quot;,<br />
+&quot;Name&quot;: &quot;User Role&quot;,<br />
+&quot;Description&quot;: &quot;Admin User Role&quot;,<br />
+&quot;IsPredefined&quot;: true,<br />
+&quot;AssignedPrivileges&quot;:[<br />
+&quot;Login&quot;,<br />
+&quot;ConfigureManager&quot;,<br />
+&quot;ConfigureUsers&quot;,<br />
+&quot;ConfigureComponents&quot;,<br />
+&quot;ConfigureSelf&quot;]<br />
+c.<br />
+Id&quot;: &quot;Operator&quot;,<br />
+&quot;Name&quot;: &quot;User Role&quot;,<br />
+&quot;Description&quot;: &quot;Operator User Role&quot;,<br />
+&quot;IsPredefined&quot;: true,<br />
+&quot;AssignedPrivileges&quot;:[<br />
+&quot;Login&quot;,<br />
+&quot;ConfigureComponents&quot;,<br />
+&quot;ConfigureSelf&quot;]<br />
+d.<br />
+Id&quot;: &quot;ReadOnly&quot;,<br />
+&quot;Name&quot;: &quot;User Role&quot;,<br />
+&quot;Description&quot;: &quot;ReadOnly User Role&quot;,<br />
+&quot;IsPredefined&quot;: true,<br />
+&quot;AssignedPrivileges&quot;:[<br />
+&quot;Login&quot;,<br />
+&quot;ConfigureSelf&quot;]<br />
+e.<br />
+Id&quot;: &quot;Callback&quot;,<br />
+&quot;Name&quot;: &quot;User Role&quot;,<br />
+&quot;Description&quot;: &quot;Callback User Role&quot;,<br />
+&quot;IsPredefined&quot;: true,<br />
+&quot;AssignedPrivileges&quot;:[<br />
+&quot;Login&quot;]<br />
+f.<br />
+&quot;Id&quot;:&nbsp;&quot;SystemAdministrator&quot;,<br />
+&quot;Name&quot;:&nbsp;&quot;User&nbsp;Role&quot;,<br />
+&quot;Description&quot;:&nbsp;&quot;SystemAdministrator&nbsp;User&nbsp;Role&quot;,<br />
+&quot;IsPredefined&quot;:&nbsp;true,<br />
+&quot;AssignedPrivileges&quot;:&nbsp;[<br />
+&quot;Login&quot;,<br />
+&quot;ConfigureSelf&quot;,<br />
+&quot;AdministrateSystems&quot;&nbsp;]<br />
+g.<br />
+&quot;Id&quot;:&nbsp;&quot;StorageAdministrator&quot;,<br />
+&quot;Name&quot;:&nbsp;&quot;User&nbsp;Role&quot;,<br />
+&quot;Description&quot;:&nbsp;&quot;StorageAdministrator&nbsp;User&nbsp;Role&quot;,<br />
+&quot;IsPredefined&quot;:&nbsp;true,<br />
+&quot;AssignedPrivileges&quot;:&nbsp;[<br />
+&quot;Login&quot;,<br />
+&quot;ConfigureSelf&quot;,<br />
+&quot;AdministrateStorage&quot;]</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="521634" name="02.07.02 Account Configuration">
+	<node_order><![CDATA[15]]></node_order>
+	<externalid><![CDATA[560979]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Power on DUT and boot to OS.<br />
+b. On remote PC, get below URI:<br />
+/redfish/v1/AccountService/Accounts<br />
+c. Check response data.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c1. Redfish shall list enabled account.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[2]]></step_number>
+	<actions><![CDATA[<p>Callback:</p>
+
+<p>Get&nbsp;URI:<br />
+/redfish/v1/AccountService/Accounts/2</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>Response data shall be correct.&nbsp;<br />
+Record the body information:</p>
+
+<p>p.s.<br />
+1. ETag shall be strong validator and unique.<br />
+2. Password shall not list for security.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[3]]></step_number>
+	<actions><![CDATA[<p>User:</p>
+
+<p>Get URI:<br />
+/redfish/v1/AccountService/Accounts/3</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>Response data shall be correct.&nbsp;<br />
+Record the body information:</p>
+
+<p>p.s.<br />
+1. ETag shall be strong validator and unique.<br />
+2. Password shall not list for security.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[4]]></step_number>
+	<actions><![CDATA[<p>Operator:</p>
+
+<p>Get URI:<br />
+/redfish/v1/AccountService/Accounts/4</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>Response data shall be correct.&nbsp;<br />
+Record the body information:</p>
+
+<p>p.s.<br />
+1. ETag shall be strong validator and unique.<br />
+2. Password shall not list for security.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[5]]></step_number>
+	<actions><![CDATA[<p>Administrator:</p>
+
+<p>Get below URI:<br />
+/redfish/v1/AccountService/Accounts/5</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>Response data shall be correct.&nbsp;<br />
+Record the body information:</p>
+
+<p>p.s.<br />
+1. ETag shall be strong validator and unique.<br />
+2. Password shall not list for security.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="521638" name="02.07.03 PAM Support">
+	<node_order><![CDATA[16]]></node_order>
+	<externalid><![CDATA[560980]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>Patch Redfish User:</p>
+
+<p>a. Patch&nbsp;<br />
+/redfish/v1/AccountService/Accounts/5<br />
+{<br />
+&quot;Enabled&quot;: true,<br />
+&quot;RoleId&quot;: &quot;Administrator&quot;,<br />
+&quot;UserName&quot;: &quot;admin1&quot;,<br />
+&quot;Password&quot;: &quot;admin1&quot;<br />
+}<br />
+b. Send below command on DUT.<br />
+#ipmitool user<br />
+c. Send below command on remote PC:<br />
+#ipmitool -I lan -H &lt;BMC IP&gt; -U admin1 -P admin1 mc info</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>a1. Patch shall be successful.<br />
+a2. Get&nbsp;/redfish/v1/AccountService/Accounts/5 shall be below:<br />
+&quot;Id&quot;: &quot;5&quot;,<br />
+&quot;Name&quot;: &quot;User Account&quot;,<br />
+&quot;Description&quot;: &quot;User Account&quot;,<br />
+&quot;Enabled&quot;: true,<br />
+&quot;UserName&quot;: &quot;admin1&quot;,<br />
+&quot;Password&quot;: null,<br />
+&quot;RoleId&quot;: &quot;Administrator&quot;,<br />
+&quot;Locked&quot;: false,<br />
+&quot;Oem&quot;: {<br />
+&quot;Advantech&quot;: {<br />
+&quot;@odata.type&quot;: &quot;#AdvantechResource.v1_0_0.UserPermissionGroup&quot;,<br />
+&quot;EnableRMCP&quot;: true,<br />
+&quot;EnableSOL&quot;: true,<br />
+&quot;EnableSSH&quot;: true,<br />
+&quot;EnableConsoleAccess&quot;: true,<br />
+&quot;EnableRedfishAccess&quot;: true,<br />
+&quot;EnableSNMPAccess&quot;: true,<br />
+&quot;EnableWebAccess&quot;: true<br />
+}<br />
+},<br />
+&quot;Links&quot;: {<br />
+&quot;Role&quot;: {<br />
+&quot;@odata.id&quot;: &quot;/redfish/v1/AccountService/Roles/Administrator&quot;<br />
+}<br />
+}<br />
+b. IPMI user shall be changed.<br />
+c. IOL with new user account shall be worked.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[2]]></step_number>
+	<actions><![CDATA[<p>Change IPMI User:</p>
+
+<p>a. Change user on DUT:<br />
+#ipmitool user set name 5 administrator<br />
+#ipmitool user set password 5&nbsp;advantech<br />
+b. Check account on IOL.<br />
+c. Check account on Redfish.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b. New user shall be worked.<br />
+c. Previous account shall be logout and login with new account.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="521642" name="02.07.04 Account Lock Configuration">
+	<node_order><![CDATA[17]]></node_order>
+	<externalid><![CDATA[560981]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>Account Lockout</p>
+
+<p>a. Enable account lock function:<br />
+- Method: PATCH<br />
+- URI:&nbsp;/redfish/v1/AccountService<br />
+- Header: If-Match, value: &lt;ETag&gt;<br />
+- Header: Content-Type, value: application/json<br />
+- Body:&nbsp;<br />
+{<br />
+&nbsp; &nbsp; &quot;ServiceEnabled&quot;: true,<br />
+&nbsp; &nbsp; &quot;AccountLockoutThreshold&quot;: 2,<br />
+&nbsp; &nbsp; &quot;AccountLockoutDuration&quot;: 120,<br />
+&nbsp; &nbsp; &quot;AccountLockoutCounterResetAfter&quot;: 10<br />
+}<br />
+b. Get URI with operator account and incorrect password 3 times:<br />
+- Account/Password: operator/123<br />
+- URI: /redfish/v1/Systems<br />
+c. Check account status by get below URI:<br />
+/redfish/v1/AccountService/Accounts/4&nbsp;</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c. Account shall be lock.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[2]]></step_number>
+	<actions><![CDATA[<p>Account Unlock by Administrator</p>
+
+<p>a. Let account lock, patch below URI to unlock account:<br />
+- Method: PATCH<br />
+- URI: /redfish/v1/AccountService/Accounts/4<br />
+- Header: If-Match, value: &lt;ETag&gt;<br />
+- Header: Content-Type, value: application/json<br />
+- Body: {&quot;Locked&quot;: false}<br />
+P.S: Only administrator account can unlock account.<br />
+b. Try to login with unlocked account.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b. Account shall be unlocked.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[3]]></step_number>
+	<actions><![CDATA[<p>Account Unlock by Timeout</p>
+
+<p>a. After step 1, check account have been locked.<br />
+b. Waiting for 120 seconds.<br />
+c. Check if account still locked.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c. Account shall be unlocked.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[4]]></step_number>
+	<actions><![CDATA[<p>Account Lockout Counter Reset</p>
+
+<p>a. Try to login fail 1 time.<br />
+b. Wait for 15 seconds.<br />
+c. Try to login fail 1 time&nbsp;again.<br />
+d. Check if account have been locked.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>d. Account shall not be locked.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="535928" name="02.07.05 Account Create/Delete">
+	<node_order><![CDATA[18]]></node_order>
+	<externalid><![CDATA[561681]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>Create new user<br />
+<br />
+a. Power on DUT and boot to OS.<br />
+b. On remote PC, post below URI:<br />
+- Method: POST<br />
+- URI:&nbsp;/redfish/v1/AccountService/Accounts<br />
+- Header: Content-Type, value: application/json<br />
+- Body:&nbsp;<br />
+{<br />
+&nbsp; &nbsp; &quot;UserName&quot;: &quot;test&quot;,<br />
+&nbsp; &nbsp; &quot;Password&quot;: &quot;1234&quot;,<br />
+&nbsp; &nbsp; &quot;RoleId&quot;: &quot;Administrator&quot;&nbsp;<br />
+}<br />
+c. Check below URI for resource of new created user.<br />
+- Method: GET<br />
+- URI:&nbsp;/redfish/v1/AccountService/Accounts<br />
+- URI:&nbsp;/redfish/v1/AccountService/Accounts/X</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b. It shall return 201 for creating user.<br />
+c. There shall be created resource for new user under the URI.<br />
+&nbsp;</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[2]]></step_number>
+	<actions><![CDATA[<p>Create new user with existing username in user list<br />
+<br />
+a. Follow previous step to continue.<br />
+b. On remote PC, patch below URI:<br />
+- Method: POST<br />
+- URI:&nbsp;/redfish/v1/AccountService/Accounts<br />
+- Header: Content-Type, value: application/json<br />
+- Body:&nbsp;<br />
+{<br />
+&nbsp; &nbsp; &quot;UserName&quot;: &quot;test&quot;,<br />
+&nbsp; &nbsp; &quot;Password&quot;: &quot;5678&quot;,<br />
+&nbsp; &nbsp; &quot;RoleId&quot;: &quot;Administrator&quot;&nbsp;<br />
+}<br />
+c. Check below URI for resource of new created user.<br />
+- Method: GET<br />
+- URI:&nbsp;/redfish/v1/AccountService/Accounts<br />
+d. Use created user to access IOL/SSH/Web.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b. It shall return 400 for creating user and show error message.<br />
+c. Count of Account resource shall not be changed.<br />
+d. The created user shall be able to access IOL/SSH/Web with password in previous step.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[3]]></step_number>
+	<actions><![CDATA[<p>Create new user when out of available user count<br />
+<br />
+a. According to step 2 to create user with different user name until user list is full.<br />
+b. On remote PC, patch below URI:<br />
+- Method: POST<br />
+- URI:&nbsp;/redfish/v1/AccountService/Accounts<br />
+- Header: Content-Type, value: application/json<br />
+- Body:&nbsp;<br />
+{<br />
+&nbsp; &nbsp; &quot;UserName&quot;: &quot;test16&quot;,<br />
+&nbsp; &nbsp; &quot;Password&quot;: &quot;5678&quot;,<br />
+&nbsp; &nbsp; &quot;RoleId&quot;: &quot;Administrator&quot;&nbsp;<br />
+}</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b. It shall return 400 for creating user and show error message.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[4]]></step_number>
+	<actions><![CDATA[<p>Create new user when AccountService is set as disabled</p>
+
+<p>a. Follow previous step to continue.<br />
+b. On remote PC, patch below URI to disable account service:<br />
+- Method: PATCH<br />
+- URI:&nbsp;/redfish/v1/AccountService<br />
+- ETAG: etag from GET<br />
+- Header: Content-Type, value: application/json<br />
+- Body:&nbsp;<br />
+{<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&quot;ServiceEnabled&quot;: false<br />
+}<br />
+c. On remote PC, post below URI:<br />
+- Method: POST<br />
+- URI:&nbsp;/redfish/v1/AccountService/Accounts<br />
+- Header: Content-Type, value: application/json<br />
+- Body:&nbsp;<br />
+{<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&quot;UserName&quot;: &quot;test2&quot;,<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&quot;Password&quot;: &quot;1234&quot;,<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&quot;RoleId&quot;: &quot;Administrator&quot;&nbsp;<br />
+}</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c. It shall return 400 for creating user and show error message.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[5]]></step_number>
+	<actions><![CDATA[<p>Delete user when AccountService is set as disabled</p>
+
+<p>a. Follow previous step to continue.<br />
+b. On remote PC, patch below URI to disable account service:<br />
+- Method: PATCH<br />
+- URI:&nbsp;/redfish/v1/AccountService<br />
+- ETAG: etag from GET<br />
+- Header: Content-Type, value: application/json<br />
+- Body:&nbsp;<br />
+{<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&quot;ServiceEnabled&quot;: false<br />
+}<br />
+c. On remote PC, delete below URI:<br />
+- Method: DELETE<br />
+- URI:&nbsp;/redfish/v1/AccountService/Accounts/X (X means the account number)<br />
+- Header: Content-Type, value: application/json</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c. It shall return 400 for delete user and show error message.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[6]]></step_number>
+	<actions><![CDATA[<p>Delete user<br />
+<br />
+a. On remote PC, patch below URI to enable account service:<br />
+- Method: PATCH<br />
+- URI:&nbsp;/redfish/v1/AccountService<br />
+- ETAG: etag from GET<br />
+- Header: Content-Type, value: application/json<br />
+- Body:&nbsp;<br />
+{<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&quot;ServiceEnabled&quot;: true<br />
+}<br />
+b. On remote PC, delete below URI:<br />
+- Method: DELETE<br />
+- URI:&nbsp;/redfish/v1/AccountService/Accounts/X (X means the account number)<br />
+- Header: Content-Type, value: application/json<br />
+c. Check below URI for resource.<br />
+- Method: GET<br />
+- URI:&nbsp;/redfish/v1/AccountService/Accounts<br />
+d.&nbsp; Check user list by ipmitool.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b.&nbsp;It shall return 204 for deleting user.<br />
+c. Resource of&nbsp;deleted account shall be removed.<br />
+d.&nbsp;Deleted user shall be removed from ipmi user list.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="556751" name="02.07.06 Redfish System/Storage User">
+	<node_order><![CDATA[19]]></node_order>
+	<externalid><![CDATA[561689]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Create an account on WebUI.<br />
+-&nbsp;privilege - &quot;Redfish System Administrator&quot;<br />
+-&nbsp;User Permission -&nbsp;Enable Redfish Access<br />
+b. Create another account on WebUI.<br />
+-&nbsp;privilege - &quot;Redfish Storage Administrator&quot;<br />
+-&nbsp;User Permission -&nbsp;Enable Redfish Access<br />
+c. Check the account setting.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c. There shall be two accounts for Redfish.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[2]]></step_number>
+	<actions><![CDATA[<p>Redfish System Administrator<br />
+a. Using the&nbsp;Redfish System Administrator to login redfish.<br />
+b. Doing a payload reset.<br />
+POST&nbsp;/redfish/v1/Systems/0/Actions/ComputerSystem.Reset<br />
+Body:<br />
+{<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&quot;ResetType&quot;:&nbsp;&quot;PowerCycle&quot;<br />
+}<br />
+c. Check the payload behavior.<br />
+d. Change&nbsp;IndicatorLED.<br />
+PATCH&nbsp;/redfish/v1/Chassis/1u<br />
+Body:<br />
+{<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&quot;IndicatorLED&quot;:&nbsp;&quot;Lit&quot;<br />
+}</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c. The payload shall be reset.&nbsp;<br />
+d. It shall get 401 Unauthorized and error message include&nbsp;insufficient&nbsp;privileges text.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[3]]></step_number>
+	<actions><![CDATA[<p>Redfish Storage Administrator<br />
+a. Using the&nbsp;Redfish Storage Administrator to login Redfish.<br />
+b. Doing a payload reset.<br />
+POST&nbsp;/redfish/v1/Systems/0/Actions/ComputerSystem.Reset<br />
+Body:<br />
+{<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&quot;ResetType&quot;:&nbsp;&quot;PowerCycle&quot;<br />
+}<br />
+&nbsp;</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b. It shall get 403&nbsp;Unauthorized and error message include&nbsp;insufficient&nbsp;privileges text.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+</testsuite><testsuite id="521648" name="02.08.00 Event Service" >
+<node_order><![CDATA[7]]></node_order>
+<details><![CDATA[]]></details> 
+<custom_fields>
+			<custom_field>
+			<name><![CDATA[Version History:]]></name>
+			<value><![CDATA[]]></value>
+			</custom_field>
+		</custom_fields>
+
+<testcase internalid="521649" name="02.08.01 Event Service">
+	<node_order><![CDATA[0]]></node_order>
+	<externalid><![CDATA[560982]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>Get Event Service Configuration</p>
+
+<p>a. Power DUT and boot to OS.<br />
+b. On remote PC, get below URI:<br />
+/redfish/v1/EventService<br />
+c. Check response data.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c1. Status code shall be 200.<br />
+c2. Response data shall provide below information:<br />
+- Event Service Configuration<br />
+- Subscriptions URI<br />
+- Actions URI</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[2]]></step_number>
+	<actions><![CDATA[<p>Change Event Service Configuration</p>
+
+<p>a. Patch below URI to change Event Service Config:<br />
+- Method: Patch<br />
+- URI: /redfish/v1/EventService<br />
+- Add Header: If-Match, value: &lt;ETag&gt;<br />
+- Add Header: Content-Type, value: application/json<br />
+- Body:<br />
+{<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &quot;ServiceEnabled&quot;: true,<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &quot;DeliveryRetryAttempts&quot;: 5,<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &quot;DeliveryRetryIntervalSeconds&quot;: 3<br />
+}<br />
+b. Follow Case 02.08-03 to generate test event.<br />
+c. Check result on Redfish-Event-Listener.<br />
+d. Patch &quot;ServiceEnabled&quot; to false.<br />
+e. Check function again.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c1. Redfish shall push 5 events to destination.<br />
+c2. After receive first event and wait 3 seconds, next event will be received and so on.<br />
+e. Redfish shall not push event to destination.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="521653" name="02.08.02 Subscription">
+	<node_order><![CDATA[1]]></node_order>
+	<externalid><![CDATA[560983]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>EventService<br />
+a. Using chrome browser and open Talent API Tester.<br />
+b. Select method to get.<br />
+c. Enter URL as follows.<br />
+URL:&nbsp;https://&lt;BMC_IP&gt;/redfish/v1/EventService<br />
+d. Click Send.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>d. It shall list all the support URI under this URI.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[2]]></step_number>
+	<actions><![CDATA[<p>Subscriptions<br />
+a. Using chrome browser and open Talent API Tester.<br />
+b. Select method to get.<br />
+c. Enter URL as follows.<br />
+https://&lt;BMC_IP&gt;/redfish/v1/EventService/Subscriptions<br />
+d. Click Send.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>d. Record the&nbsp;Members@odata.count.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[3]]></step_number>
+	<actions><![CDATA[<p>Create subscriber<br />
+a. Using chrome browser and open Talent API Tester.<br />
+b. Select method to post.<br />
+c. Enter URL as follows.<br />
+https://&lt;BMC_IP&gt;/redfish/v1/EventService/Subscriptions<br />
+Body:</p>
+
+<p>{</p>
+
+<p>&nbsp;&nbsp;&nbsp;&nbsp;&quot;Context&quot;:&quot;Test-1&quot;,</p>
+
+<p>&nbsp;&nbsp;&nbsp;&nbsp;&quot;Destination&quot;:&quot;https://172.17.6.161:1234&quot;,</p>
+
+<p>&nbsp;&nbsp;&nbsp;&nbsp;&quot;EventFormatType&quot;:&quot;Event&quot;,</p>
+
+<p>&nbsp;&nbsp;&nbsp;&nbsp;&quot;RegistryPrefixes&quot;:[</p>
+
+<p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&quot;ResourceEvent&quot;,</p>
+
+<p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&quot;TaskEvent&quot;&nbsp;</p>
+
+<p>&nbsp;&nbsp;&nbsp;&nbsp;],</p>
+
+<p>&nbsp;&nbsp;&nbsp;&nbsp;&quot;ResourceTypes&quot;:[</p>
+
+<p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&quot;AccountService&quot;,</p>
+
+<p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&quot;UpdateService&quot;&nbsp;</p>
+
+<p>&nbsp;&nbsp;&nbsp;&nbsp;],</p>
+
+<p>&nbsp;&nbsp;&nbsp;&nbsp;&quot;OriginResources&quot;:[</p>
+
+<p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{&quot;@odata.id&quot;:&nbsp;&quot;/redfish/v1/UpdateService/FWUpdate&quot;},</p>
+
+<p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{&quot;@odata.id&quot;:&nbsp;&quot;/redfish/v1/AccountService&quot;}</p>
+
+<p>&nbsp;&nbsp;&nbsp;&nbsp;],</p>
+
+<p>&nbsp;&nbsp;&nbsp;&nbsp;&quot;Protocol&quot;:&quot;Redfish&quot;&nbsp;</p>
+
+<p>}</p>
+
+<p><br />
+d. Click Send.<br />
+e. Select method to get.<br />
+f. Enter URL as follows.<br />
+https://&lt;BMC_IP&gt;/redfish/v1/EventService/Subscriptions<br />
+https://&lt;BMC_IP&gt;/redfish/v1/EventService/Subscriptions/id<br />
+g. Click Send.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>d. Redfish shall return status code 201.<br />
+g.&nbsp; The&nbsp;Members@odata.count shall&nbsp;increase 1.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[4]]></step_number>
+	<actions><![CDATA[<p>Subscription fail, Check Status Code:</p>
+
+<p>Post below URI:<br />
+- Method: POST<br />
+- URI:&nbsp;/redfish/v1/EventService/Subscriptions<br />
+- Add Header: If-Match, value: &lt;ETag&gt;<br />
+- Add Header: Content-Type, value: application/json<br />
+- Body: {&quot;EventType&quot;: &quot;StatusChange&quot;}</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>Status code shall be 400.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[5]]></step_number>
+	<actions><![CDATA[<p>Retain subscriptions as persistent across service restarts.<br />
+- mc reset cold</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>Subscriptions shall be kept.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[7]]></step_number>
+	<actions><![CDATA[<p>Delete subscriber<br />
+a. Using chrome browser and open Talent API Tester.<br />
+b. Select method to delete.<br />
+c. Enter URL as follows.<br />
+https://&lt;BMC_IP&gt;/redfish/v1/EventService/Subscriptions/&lt;subscription_id&gt;<br />
+d. Click Send.<br />
+e. Select method to get.<br />
+f. Enter URL as follows and click send.<br />
+https://&lt;BMC_IP&gt;/redfish/v1/EventService/Subscriptions<br />
+https://&lt;BMC_IP&gt;/redfish/v1/EventService/Subscriptions/id</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>d. It shall delete&nbsp;subscriber successful.<br />
+f.&nbsp;The&nbsp;Members@odata.count shall be decrease 1 and delete subscriber shall not exist.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="521661" name="02.08.03 Test Event">
+	<node_order><![CDATA[2]]></node_order>
+	<externalid><![CDATA[560984]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Power on DUT and boot to OS.<br />
+b. On remote PC, edit RedfishEventListener&#39;s config.ini file:</p>
+
+<p>[Information]<br />
+Updated = April 24, 2017<br />
+Description = Redfish Event Listener Tool</p>
+
+<p>[SystemInformation]<br />
+ListenerIP = 172.17.16.234<br />
+ListenerPort = 443<br />
+UseSSL = on</p>
+
+<p>[CertificateDetails]<br />
+certfile = cert.pem<br />
+keyfile = server.key</p>
+
+<p>[SubscriptionDetails]<br />
+Destination = https://172.17.16.234<br />
+EventFormatTypes = Event<br />
+Context = Public<br />
+Format = Event<br />
+Expand = false</p>
+
+<p><br />
+[ServerInformation]<br />
+ServerIPs = https://172.17.4.121<br />
+UserNames = admin<br />
+Passwords = admin<br />
+LoginType = []</p>
+
+<p><br />
+c. Execute Redfish-Event-Listener<br />
+d. POST below URI to generate test event:<br />
+- Method: POST<br />
+- URI: /redfish/v1/EventService/Actions/EventService.SubmitTestEvent<br />
+- Add Header: Content-Type, value: application/json<br />
+- Body: {<br />
+&nbsp; &nbsp; &quot;MessageId&quot;:&nbsp;&quot;ResourceEvent.1.2.ResourceChanged&quot;,<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&quot;MessageArgs&quot;:&nbsp;[],<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&quot;OriginOfCondition&quot;:&nbsp;&quot;/redfish/v1/AccountService&quot;<br />
+}</p>
+
+<p><br />
+e. Check result.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>e1. Status code shall be 204.<br />
+e2. Redfish-Event-Listener shall receive event from DUT.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="521664" name="02.08.04 Event Format Type with Subscription">
+	<node_order><![CDATA[3]]></node_order>
+	<externalid><![CDATA[560985]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Power on DUT and boot to OS.<br />
+b. On remote PC, edit RedfishEventListener&#39;s config.ini file:</p>
+
+<p>[Information]<br />
+Updated = February 24, 2023<br />
+Description = Redfish Event Listener Tool Simple Config</p>
+
+<p>[SystemInformation]<br />
+ListenerIP = 172.17.6.77<br />
+ListenerPort = 443<br />
+UseSSL = on</p>
+
+<p>[CertificateDetails]<br />
+certfile = cert.pem<br />
+keyfile = server.key</p>
+
+<p>[SubscriptionDetails]<br />
+Destination = https://172.17.6.77<br />
+EventFormatTypes = Event<br />
+Context = Public<br />
+Format = Event<br />
+Expand = false</p>
+
+<p>[ServerInformation]<br />
+ServerIPs = https://172.17.6.122<br />
+UserNames = administrator<br />
+Passwords = advantech<br />
+LoginType = []<br />
+<br />
+c. Execute Redfish-Event-Listener<br />
+d. Using update service to update fw.<br />
+e. Check event listener.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>e. Redfish-Event-Listener shall receive task event from DUT.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[2]]></step_number>
+	<actions><![CDATA[<p>a. Create a subscription.<br />
+Method: POST<br />
+URI:&nbsp;https://&lt;bmcip&gt;/redfish/v1/EventService/Subscriptions/<br />
+Body:<br />
+{</p>
+
+<p>&nbsp;&nbsp;&nbsp;&nbsp;&quot;Context&quot;:&quot;Test-2&quot;,<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&quot;Destination&quot;:&quot;https://172.17.6.43&quot;,<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&quot;EventFormatType&quot;:&quot;Event&quot;,<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&quot;RegistryPrefixes&quot;:[<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&quot;ResourceEvent&quot;<br />
+&nbsp;&nbsp;&nbsp;&nbsp;],<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&quot;ResourceTypes&quot;:[<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&quot;AccountService&quot;<br />
+&nbsp;&nbsp;&nbsp;&nbsp;],<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&quot;OriginResources&quot;:[<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{&quot;@odata.id&quot;:&nbsp;&quot;/redfish/v1/AccountService&quot;}<br />
+&nbsp;&nbsp;&nbsp;&nbsp;],<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&quot;Protocol&quot;:&quot;Redfish&quot;&nbsp;<br />
+}<br />
+b. Check the&nbsp;subscriptions.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>a. The subscriptions members shall add 1.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[3]]></step_number>
+	<actions><![CDATA[<p>a. Do not close event listener at step 1.<br />
+b. Using update service.<br />
+POST below URI to update FW:<br />
+- Method: POST<br />
+- URI: /redfish/v1/UpdateService/FWUpdate<br />
+- Body:&nbsp;<br />
+Type - form-data<br />
+Key - file<br />
+Value - select file<br />
+c. Check&nbsp;Wireshark capture.<br />
+d. Update the account service.<br />
+- Method: PATCH<br />
+- URI: /redfish/v1/AccountService<br />
+- Body:&nbsp;{&nbsp;&quot;AccountLockoutDuration&quot;:&nbsp;12}<br />
+e. Check&nbsp;Wireshark capture.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b. The event listener shall not receive&nbsp;&quot;context: Test-2 &quot; event from the DUT.<br />
+e.&nbsp;The&nbsp;event listener shall&nbsp;receive &quot;context: Test-2 &quot; event from the DUT that about account service resource change.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+</testsuite><testsuite id="567487" name="02.09.00 BIOS Setting" >
+<node_order><![CDATA[8]]></node_order>
+<details><![CDATA[]]></details> 
+<custom_fields>
+			<custom_field>
+			<name><![CDATA[Version History:]]></name>
+			<value><![CDATA[]]></value>
+			</custom_field>
+		</custom_fields>
+
+<testcase internalid="567504" name="02.09.01 BIOS Setup WebUI">
+	<node_order><![CDATA[0]]></node_order>
+	<externalid><![CDATA[561728]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Click [Remote Control] &gt; [BIOS Setup Utility] in BMC WebUI.<br />
+b. Check if web page for setup menu is opened.<br />
+c. Compare setting with BIOS spec.<br />
+d. Change BIOS setting and click [save change] in WebUI.<br />
+e. Reboot DUT. Check if the change is applied.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b. The web page for setup menu shall be opened.<br />
+c. Naming shall meet the definition in BIOS spec.<br />
+e. Changing BIOS setting via WebUI shall be successful.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="567491" name="02.09.02 BIOS Setting Comparison with json File">
+	<node_order><![CDATA[1]]></node_order>
+	<externalid><![CDATA[561724]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>[Get json file for setting definition]<br />
+<br />
+a. Follow 13.01 to enable Redfish support for BIOS.<br />
+b. Set BMC network with same domain of your PC.<br />
+c.&nbsp;Install Talend API Tester on Chrome browser for your PC.<br />
+d. Use&nbsp;Talend API Tester to send URI as follows with action GET:<br />
+https://&lt;BMC_IP&gt;/redfish/v1/Registries/BiosAttributeRegistry&lt;ProjectTag&gt;.&lt;ProjectMajor&gt;.&lt;ProjectMinor&gt;.&lt;ProjectBuild&gt;<br />
+e. Compare definition between json file and BIOS spec.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>d. The json file for setting definition shall be able to be downloaded.<br />
+e. The item&#39;s ID defined in json shall meet defined in BIOS spec.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="567494" name="02.09.03 Dump BIOS setting">
+	<node_order><![CDATA[2]]></node_order>
+	<externalid><![CDATA[561725]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Change BIOS setting in setup menu (at least 5 items). Record changed item with its Redfish ID and value.<br />
+Ex:<br />
+Hyper Threading (ADVH001): to [Disabled]<br />
+b.&nbsp; Save and reset then re-enter setup menu to confirm the BIOS setting is changed successfully.<br />
+c. Open&nbsp;Talend API Tester to send URI as follows with action GET:<br />
+https://&lt;BMC_IP&gt;/redfish/v1/Systems/0/Bios<br />
+d. Compare value of items w/BIOS spec default value.<br />
+e. Repeat d&nbsp;until all results from&nbsp;Talend API are checked.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c.&nbsp;It shall return 200.<br />
+e. The output shall meet current BIOS setting.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="567497" name="02.09.04 Change BIOS setting">
+	<node_order><![CDATA[3]]></node_order>
+	<externalid><![CDATA[561726]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>[Change BIOS Setting by POST]<br />
+<br />
+a. Open&nbsp;Talend API Tester to enter URI as follows with action POST:<br />
+https://&lt;bmcip&gt;/redfish/v1/Systems/0/Bios/SD<br />
+b. Enter the setting with follow format (json format) at BODY filed.<br />
+{<br />
+&nbsp; &quot;Attributes&quot; : {<br />
+&nbsp; &nbsp; &quot;ADVH001&quot;: &quot;Disabled&quot;<br />
+&nbsp; }<br />
+}<br />
+c. Click Send.<br />
+d. Reboot DUT and enter setup menu. Check DUT behavior and if the setting value meet what you changed.<br />
+e. Repeat a~d for all setup items with Redfish ID.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c.&nbsp;It shall return 204.<br />
+d. System will auto reset once.<br />
+e.&nbsp;All setup items supporting Redfish shall be able to change setting by Redfish.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[2]]></step_number>
+	<actions><![CDATA[<p>[Change BIOS Setting by PATCH]<br />
+<br />
+a. Open&nbsp;Talend API Tester to enter URI as follows with action POST:<br />
+https://&lt;bmcip&gt;/redfish/v1/Systems/0/Bios/SD<br />
+b. Enter the setting for 3 items with follow format (json format) at BODY filed.<br />
+{<br />
+&nbsp;&nbsp;&quot;Attributes&quot; : {<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&quot;ADVH001&quot; : &quot;Disabled&quot;,<br />
+&nbsp;&nbsp; &nbsp;&quot;ADVH002&quot; : &quot;Disabled&quot;,<br />
+&nbsp;&nbsp; &nbsp;&quot;ADVH003&quot; : &quot;Disabled&quot;<br />
+&nbsp;&nbsp;}<br />
+}<br />
+c. Click Send.<br />
+d. Send URI as follows with action GET:<br />
+https://&lt;bmcip&gt;/redfish/v1/Systems/0/Bios/SD<br />
+e. Send URI as follows with action PATCH to add another change, then click send:<br />
+https://&lt;bmcip&gt;/redfish/v1/Systems/0/Bios/SD<br />
+{<br />
+&nbsp;&nbsp;&quot;Attributes&quot; : {<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&quot;ADVH004&quot; : &quot;Disabled&quot;<br />
+&nbsp;&nbsp;}<br />
+}<br />
+f. Send URI as follows with action GET:<br />
+https://&lt;bmcip&gt;/redfish/v1/Systems/0/Bios/SD</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c.&nbsp;It shall return 204.<br />
+d. The 3 items from step a shall be shown in the attribute of GET result.<br />
+f. The 4 items from step a shall be shown in the attribute of GET result.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="567501" name="02.09.05 Reset BIOS Default">
+	<node_order><![CDATA[4]]></node_order>
+	<externalid><![CDATA[561727]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Enter setup menu and change some items to non-default value, then save and reset.<br />
+b.&nbsp;Open&nbsp;Talend API Tester to set URI as follows with action POST:<br />
+https://&lt;BMC_IP&gt;/redfish/v1/Systems/0/Bios/Actions/Bios.ResetBios<br />
+Put following json content to body, then click send.<br />
+{}<br />
+c. Reset DUT. Check DUT behavior.<br />
+d. Enter setup menu and compare setting with default value in BIOS spec.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b. It shall return 204.<br />
+c1.&nbsp;Following message shall be displayed during POST if reload default by Redfish:&nbsp;<br />
+Loading defaults...<br />
+c2. System will auto reset once.<br />
+d. The BIOS setting shall return to default.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+</testsuite><testsuite id="521688" name="02.10.00 Update Service" >
+<node_order><![CDATA[9]]></node_order>
+<details><![CDATA[]]></details> 
+<custom_fields>
+			<custom_field>
+			<name><![CDATA[Version History:]]></name>
+			<value><![CDATA[]]></value>
+			</custom_field>
+		</custom_fields>
+
+<testcase internalid="521689" name="02.10.01 Firmware Inventory">
+	<node_order><![CDATA[1000]]></node_order>
+	<externalid><![CDATA[560992]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Using chrome browser and open Talent API Tester.<br />
+b. Select method to get.<br />
+c. Enter URL as follows.<br />
+Get&nbsp;URI<br />
+/redfish/v1/UpdateService/FirmwareInventory/BL<br />
+/redfish/v1/UpdateService/FirmwareInventory/BMC<br />
+/redfish/v1/UpdateService/FirmwareInventory/BMCONF<br />
+/redfish/v1/UpdateService/FirmwareInventory/FPGA<br />
+/redfish/v1/UpdateService/FirmwareInventory/BIOS<br />
+/redfish/v1/UpdateService/FirmwareInventory/NVRAM</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b. The firmware image shall be meet current configuration.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="521692" name="02.10.02 Update">
+	<node_order><![CDATA[1001]]></node_order>
+	<externalid><![CDATA[560993]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. POST below URI to update FW:<br />
+- Method: POST<br />
+- URI: /redfish/v1/UpdateService/FWUpdate<br />
+- Body:&nbsp;<br />
+Type - form-data<br />
+Key - file<br />
+Value - select file<br />
+b. Go to task service.<br />
+- Method: Get<br />
+- URI: /redfish/v1/TaskService/Tasks/0<br />
+c. Continue to send get until message is the same as criteria.<br />
+d. If update FPGA reboot system.<br />
+e. Check FW and SEL.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>a1. It shall return 202.<br />
+a2. body return &quot;Upgrade HPM Firmware Task&quot; and Id.<br />
+c1. It shall return 200.<br />
+c2. Name shall contain fw image name.<br />
+c3. PercentComplete shall be 100%.<br />
+c4. &quot;TaskState&quot;: &quot;Completed&quot;<br />
+e. The FW shall be upgrade successful and shall not have abnormal sel.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="549195" name="02.10.03 Update from HTTPS">
+	<node_order><![CDATA[1002]]></node_order>
+	<externalid><![CDATA[561686]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. POST below URI to update FW without authentication:<br />
+- Method: POST<br />
+- URI: /redfish/v1/UpdateService/Actions/UpdateService.SimpleUpdate<br />
+- Body:&nbsp;{<br />
+&nbsp; &nbsp; &quot;ImageURI&quot;: &quot;https://172.17.6.161/fw/advantech_bmc_fw_0.56.img&quot;,<br />
+&nbsp; &nbsp; &quot;TransferProtocol&quot;: &quot;HTTPS&quot;<br />
+}</p>
+
+<p>b. Go to task service.<br />
+- Method: Get<br />
+- URI: /redfish/v1/TaskService/Tasks/X<br />
+c. Continue to send get until message is the same as criteria.<br />
+d. If update FPGA/BIOS/NVRAM reboot system.<br />
+e. Check FW and SEL.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>a1. It shall return 202.<br />
+a2. body return &quot;Upgrade HPM Firmware Task&quot; and Id.<br />
+c1. It shall return 200.<br />
+c2. PercentComplete shall be 100%.<br />
+c3. &quot;TaskState&quot;: &quot;Completed&quot;<br />
+c4. Image name and component shall be correct in MessageArgs filed.<br />
+e. The FW shall be upgrade successful and shall not have abnormal sel.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[2]]></step_number>
+	<actions><![CDATA[<p>a. POST below URI to update FW without authentication:<br />
+- Method: POST<br />
+- URI: /redfish/v1/UpdateService/Actions/UpdateService.SimpleUpdate<br />
+- Body:&nbsp;<br />
+{<br />
+&nbsp; &nbsp; &quot;ImageURI&quot;: &quot;https://172.17.6.161/fw_pw/advantech_bmc_fw_0.56.img&quot;,<br />
+&nbsp; &nbsp; &quot;TransferProtocol&quot;: &quot;HTTPS&quot;,<br />
+&nbsp; &nbsp; &quot;Username&quot;: &quot;dqa&quot;,<br />
+&nbsp; &nbsp; &quot;Password&quot;: &quot;00dqa&quot;<br />
+}</p>
+
+<p>b. Go to task service.<br />
+- Method: Get<br />
+- URI: /redfish/v1/TaskService/Tasks/X<br />
+c. Continue to send get until message is the same as criteria.<br />
+d. If update FPGA/BIOS/NVRAM reboot system.<br />
+e. Check FW and SEL.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>a1. It shall return 202.<br />
+a2. body return &quot;Upgrade HPM Firmware Task&quot; and Id.<br />
+c1. It shall return 200.<br />
+c2. PercentComplete shall be 100%.<br />
+c3. &quot;TaskState&quot;: &quot;Completed&quot;<br />
+c4. Image name and component shall be correct in MessageArgs filed.<br />
+e. The FW shall be upgrade successful and shall not have abnormal sel.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+</testsuite><testsuite id="521695" name="02.11.00 Certificate Service" >
+<node_order><![CDATA[10]]></node_order>
+<details><![CDATA[]]></details> 
+<custom_fields>
+			<custom_field>
+			<name><![CDATA[Version History:]]></name>
+			<value><![CDATA[]]></value>
+			</custom_field>
+		</custom_fields>
+
+<testcase internalid="521696" name="02.11.01 Certificate Service Properties">
+	<node_order><![CDATA[1000]]></node_order>
+	<externalid><![CDATA[560994]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Get&nbsp;URI:<br />
+/redfish/v1/CertificateService<br />
+{<br />
+&nbsp;&quot;@odata.type&quot;: &quot;#CertificateService.v1_0_4.CertificateService&quot;,<br />
+&nbsp;&quot;@odata.context&quot;: &quot;/redfish/v1/$metadata#CertificateService.CertificateService&quot;,<br />
+&nbsp;&quot;@odata.id&quot;: &quot;/redfish/v1/CertificateService&quot;,<br />
+&nbsp;&quot;@odata.etag&quot;: &quot;791c2ed1d427b4093958&quot;,<br />
+&nbsp;&quot;Id&quot;: &quot;CertificateService&quot;,<br />
+&nbsp;&quot;Name&quot;: &quot;Certificate Service&quot;,<br />
+&nbsp;&quot;Description&quot;: &quot;Get the available to manager certificates and link to certificates&quot;,<br />
+&nbsp;&quot;Actions&quot;:{<br />
+&nbsp; &quot;#CertificateService.ReplaceCertificate&quot;:{<br />
+&nbsp; &nbsp;&quot;target&quot;: &quot;/redfish/v1/CertificateService/Actions/CertificateService.ReplaceCertificate&quot;,<br />
+&nbsp; &nbsp;&quot;@Redfish.ActionInfo&quot;: &quot;/redfish/v1/CertificateService/ReplaceCertificateActionInfo&quot;<br />
+&nbsp; &nbsp;}<br />
+&nbsp; },<br />
+&nbsp;&quot;CertificateLocations&quot;:{<br />
+&nbsp; &quot;@odata.id&quot;: &quot;/redfish/v1/CertificateService/CertificateLocations&quot;<br />
+&nbsp;}<br />
+}</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>a1. Certificate Service shall support replace certificate action.<br />
+a2. Certificate service shall include certificate location.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="521699" name="02.11.02 Certificate Locations Properties">
+	<node_order><![CDATA[1001]]></node_order>
+	<externalid><![CDATA[560995]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Get URI:&nbsp;<br />
+/redfish/v1/CertificateService/CertificateLocations<br />
+{<br />
+&nbsp;&quot;@odata.type&quot;: &quot;#CertificateLocations.v1_0_2.CertificateLocations&quot;,<br />
+&nbsp;&quot;@odata.context&quot;: &quot;/redfish/v1/$metadata#CertificateLocations.CertificateLocations&quot;,<br />
+&nbsp;&quot;@odata.id&quot;: &quot;/redfish/v1/CertificateService/CertificateLocations&quot;,<br />
+&nbsp;&quot;@odata.etag&quot;: &quot;03b4aab7d4988fa46cfe&quot;,<br />
+&nbsp;&quot;Id&quot;: &quot;CertificateLocations&quot;,<br />
+&nbsp;&quot;Name&quot;: &quot;Certificate Locations&quot;,<br />
+&nbsp;&quot;Description&quot;: &quot;Certificate Locations&quot;,<br />
+&nbsp;&quot;Links&quot;:{<br />
+&nbsp; &quot;Certificates@odata.count&quot;: 1,<br />
+&nbsp; &quot;Certificates&quot;:[<br />
+&nbsp; &nbsp;{<br />
+&nbsp; &nbsp;&quot;@odata.id&quot;: &quot;/redfish/v1/Managers/0/NetworkProtocol/HTTPS/Certificates/0&quot;<br />
+&nbsp; &nbsp;}<br />
+&nbsp; ]<br />
+&nbsp;}<br />
+}</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>a1. Certificate service shall show the count of certificates.<br />
+a2. Certificate service shall show the location of certificates.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="521702" name="02.11.03 Certificate Properties">
+	<node_order><![CDATA[1002]]></node_order>
+	<externalid><![CDATA[560996]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Get URI:&nbsp;<br />
+/redfish/v1/Managers/0/NetworkProtocol/HTTPS/Certificates/0<br />
+{<br />
+&nbsp;&quot;@odata.type&quot;: &quot;#Certificate.v1_2_2.Certificate&quot;,<br />
+&nbsp;&quot;@odata.context&quot;: &quot;/redfish/v1/$metadata#Certificate.Certificate&quot;,<br />
+&nbsp;&quot;@odata.id&quot;: &quot;/redfish/v1/Managers/0/NetworkProtocol/HTTPS/Certificates/0&quot;,<br />
+&nbsp;&quot;@odata.etag&quot;: &quot;bd83c6866ea9ad7d7a44&quot;,<br />
+&nbsp;&quot;Id&quot;: &quot;0&quot;,<br />
+&nbsp;&quot;Name&quot;: &quot;Certificate Instance 0&quot;,<br />
+&nbsp;&quot;CertificateString&quot;: &quot;-----BEGIN CERTIFICATE-----(Certificate Data)&quot;<br />
+&nbsp;&quot;CertificateType&quot;: &quot;PEM&quot;,<br />
+&nbsp;&quot;ValidNotBefore&quot;: &quot;2018-09-20T09:52:21+00:00&quot;,<br />
+&nbsp;&quot;ValidNotAfter&quot;: &quot;2019-09-30T09:52:21+00:00&quot;,<br />
+&nbsp;&quot;Issuer&quot;:{<br />
+&nbsp; &quot;Country&quot;: &quot;TW&quot;,<br />
+&nbsp; &quot;State&quot;: &quot;Taiwan&quot;,<br />
+&nbsp; &quot;Organization&quot;: &quot;Advantech Co.,Ltd&quot;,<br />
+&nbsp; &quot;OrganizationalUnit&quot;: &quot;NCG&quot;,<br />
+&nbsp; &quot;CommonName&quot;: &quot;Advantech&quot;<br />
+&nbsp;},<br />
+&nbsp;&quot;Subject&quot;:{<br />
+&nbsp; &quot;Country&quot;: &quot;TW&quot;,<br />
+&nbsp; &quot;State&quot;: &quot;Taiwan&quot;,<br />
+&nbsp; &quot;City&quot;: &quot;Taipei&quot;,<br />
+&nbsp; &quot;Organization&quot;: &quot;Advantech Co.,Ltd&quot;,<br />
+&nbsp; &quot;OrganizationalUnit&quot;: &quot;NCG&quot;,<br />
+&nbsp; &quot;CommonName&quot;: &quot;Advantech&quot;<br />
+&nbsp;}<br />
+}</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>a.&nbsp;Properties of certificate shall be the same with WebUI.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="521705" name="02.11.04 Replace Certificate">
+	<node_order><![CDATA[1003]]></node_order>
+	<externalid><![CDATA[560997]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>Replace Certification on&nbsp;Redfish</p>
+
+<p>a. Generate private key by OpenSSL.<br />
+b. Replace Certificate<br />
+- Method:&nbsp;POST<br />
+-&nbsp;URI:&nbsp;/redfish/v1/CertificateService/Actions/CertificateService.ReplaceCertificate<br />
+- Body:<br />
+{<br />
+&nbsp; &nbsp; &quot;CertificateType&quot;: &quot;PEM&quot;,<br />
+&nbsp; &nbsp; &quot;CertificateUri&quot;: &quot;/redfish/v1/Managers/0/NetworkProtocol/HTTPS/Certificates/0&quot;,<br />
+&nbsp; &nbsp; &quot;CertificateString&quot;: &quot;-----BEGIN CERTIFICATE-----(Certificate Data)&quot;<br />
+}<br />
+p.s.&nbsp;The content of CertificateString needs to include both cert.pem and key.pem.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b1. Replace certificate shall be successfully.<br />
+b2. Redfish shall return &quot;204 No Content&quot; status code.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[2]]></step_number>
+	<actions><![CDATA[<p>Check Certification on Redfish</p>
+
+<p>a. Get Certification properties<br />
+- Method: Get<br />
+- URI:&nbsp;/redfish/v1/Managers/0/NetworkProtocol/HTTPS/Certificates/0</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>a. Below items shall be expected:<br />
+-&nbsp;CertificateType&quot;: &quot;PEM&quot;<br />
+- ValidNotBefore<br />
+-&nbsp;ValidNotAfter<br />
+-&nbsp;Issuer<br />
+-&nbsp;Subject</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[3]]></step_number>
+	<actions><![CDATA[<p>Check Certification on WebUI</p>
+
+<p>a. Login WebUI.<br />
+b. Move to &quot;Extra Configuration&quot; &gt; &quot;SSL Certificate&quot;</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b. Below items shall be the same with Redfish.<br />
+-&nbsp;Valid From<br />
+-&nbsp;Valid To<br />
+-&nbsp;Issuer Fields<br />
+-&nbsp;Subject Fields</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[4]]></step_number>
+	<actions><![CDATA[<p>Replace Certification on&nbsp;WebUI</p>
+
+<p>a. Upload SSL on WebUI.<br />
+b. Check upload successfully<br />
+c. Check certificate on Redfish<br />
+- Method: Get<br />
+- URI:&nbsp;/redfish/v1/Managers/0/NetworkProtocol/HTTPS/Certificates/0</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c. Redfish certificate shall sync&nbsp;with WebUI.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[5]]></step_number>
+	<actions><![CDATA[<p>Incorrect Body</p>
+
+<p>a. Modify&nbsp;&quot;CertificateType&quot; besides &quot;PEM&quot; and post.<br />
+b. Modify&nbsp;&quot;CertificateUri&quot; as incorrect URI and post.<br />
+c. Modify&nbsp;&quot;CertificateString&quot;:<br />
+c1. Remove a &quot;\n&quot;<br />
+c2. Without private key data.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>a. Redfish shall return status code 400 bed request and indicate&nbsp;&quot;CertificateType&quot; error.<br />
+b.&nbsp;Redfish shall return status code 400 bed request and indicate&nbsp;&quot;CertificateUri&quot; error.<br />
+c1.&nbsp;Redfish shall return status code 400 bed request and indicate &quot;CertificateString&quot; invalid.<br />
+c2.&nbsp;Redfish shall return status code 400 bed request and indicate &quot;CertificateString&quot; invalid.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+</testsuite></testsuite>

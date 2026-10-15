@@ -1,0 +1,3948 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite id="520584" name="01.00.00 IPMI" >
+<node_order><![CDATA[1]]></node_order>
+<details><![CDATA[]]></details> 
+<custom_fields>
+			<custom_field>
+			<name><![CDATA[Version History:]]></name>
+			<value><![CDATA[]]></value>
+			</custom_field>
+		</custom_fields>
+<testsuite id="567409" name="01.01.00 Inventory Management" >
+<node_order><![CDATA[0]]></node_order>
+<details><![CDATA[]]></details> 
+<custom_fields>
+			<custom_field>
+			<name><![CDATA[Version History:]]></name>
+			<value><![CDATA[]]></value>
+			</custom_field>
+		</custom_fields>
+
+<testcase internalid="567410" name="01.01.01 CPU">
+	<node_order><![CDATA[0]]></node_order>
+	<externalid><![CDATA[561707]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Login web interface and check CPU information on single/duo CPU SKU.<br />
+b. Check CPU information in the local OS by &quot;cat /proc/cpuinfo&quot; command.<br />
+c. Check CPU present sensors status.<br />
+d. Compare results.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>a. Amount of CPU information shall meet SKU configuration.<br />
+c. CPU present sensor shall reflect CPU configuration.<br />
+d. CPU information shall be correct.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="567413" name="01.01.02 Memory">
+	<node_order><![CDATA[1]]></node_order>
+	<externalid><![CDATA[561708]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Check memory information from the memory label.<br />
+b. Install memory to the mainboard.<br />
+c. Login web interface and check memory information.<br />
+d. Check memory present sensors status with different configurations.<br />
+e. Compare results.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>e1. Memory information shall be correct.<br />
+e2. The amount of memory shall be correct.<br />
+e3. DIMM number in inventory, slot number on mainboard and memory present sensor name shall be mapped.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="567416" name="01.01.03 Storage">
+	<node_order><![CDATA[2]]></node_order>
+	<externalid><![CDATA[561709]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Check the label of disks and backplane type.<br />
+b. Install Disks to the front disk bay.<br />
+c. Power on DUT and boot to OS.<br />
+d. Login web interface and check disk information.<br />
+e. Check disk-related sensors&#39;&nbsp;status.<br />
+f. Change disk configuration, then restart DUT and check disk-related&nbsp;sensors status.<br />
+g. Remove each disk and repeat test step to check inventory function and disk-related&nbsp;sensors.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>d. Disk information shall meet configuration.<br />
+f. Disk present sensor shall present current configuration.<br />
+g1. After the disk is removed and rebooted DUT, the disk&#39;s present sensor status shall be empty.<br />
+g2. Disk information in inventory shall be removed.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="567419" name="01.01.04 PCIe">
+	<node_order><![CDATA[3]]></node_order>
+	<externalid><![CDATA[561710]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Login web interface and check PCIe information.<br />
+b. Login to the local OS and check PCIe information by the below command:<br />
+- lspci<br />
+- lspci -s &lt;b:d:f&gt; -vvv</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>a. Amount of PCIe interface shall meet configuration.<br />
+b. PCIe information shall meet the current configuration.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="567422" name="01.01.05 PSU (PSU Module Name)">
+	<node_order><![CDATA[4]]></node_order>
+	<externalid><![CDATA[561711]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Remove PSU_0, then check PSU label and PSU present sensor.<br />
+b. Install PSU_0 and remove PSU_1.<br />
+c. Check the label and PSU present sensor.<br />
+d. Install PSU back and check SEL list.<br />
+e. Login web interface and check PSU information.<br />
+f. Send below command to check PSU fru information:<br />
+- ipmitool fru print</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>d1. Present sensor shall reflect PSU status.<br />
+d2. BMC shall generate events for PSU configuration change.<br />
+d3. Sensor name shall map to physical location.<br />
+f. PSU information shall meet PSU label and fru information.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="567425" name="01.01.06 FRUs">
+	<node_order><![CDATA[5]]></node_order>
+	<externalid><![CDATA[561712]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Login web interface and check FRU information.<br />
+b. Check FRU information under local OS.<br />
+c. Compare the result.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c1. FRU information shall meet the current configuration.<br />
+c2. FRU information shall be mapped to BMC FRU.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="567428" name="01.01.07 Network">
+	<node_order><![CDATA[6]]></node_order>
+	<externalid><![CDATA[561713]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Login web interface and check network information.<br />
+b. Login to the local OS and check network information by&nbsp;the below command:<br />
+- lspci<br />
+- lspci -s &lt;b:d:f&gt; -vvv<br />
+- ifconfig -a</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>a. Amount of network interface shall meet configuration.<br />
+b. Network information shall meet the current configuration.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="567453" name="01.01.08 FAN">
+	<node_order><![CDATA[7]]></node_order>
+	<externalid><![CDATA[561716]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Login web interface and check FAN information.<br />
+b. Check FAN information under local OS.<br />
+c. Compare the result.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c1. FAN information shall meet the current configuration.<br />
+c2. FAN&nbsp;information shall be mapped to FAN FRU.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="567431" name="01.01.09 Storage (Hot Plug)">
+	<node_order><![CDATA[8]]></node_order>
+	<externalid><![CDATA[561714]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Insert hot plug storage into the system and record.<br />
+b. Power on system.<br />
+c. Check storage present sensor and temperature sensor.<br />
+d. Record the storage present and&nbsp;temperature sensor.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>a. Record the insert storage:<br />
+c. The inserted storage present status shall be present and&nbsp;temperature sensor reading shall be normal.<br />
+d. Record the storage present and&nbsp;temperature sensor.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[2]]></step_number>
+	<actions><![CDATA[<p>a. Login Node Explorer.<br />
+b. Check advance inventory &quot;Storage&quot; page.<br />
+c. Compare the information with the inserted storage.<br />
+d. Record the inventory&nbsp;information.&nbsp;</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c. The information shall be same with the&nbsp;inserted storage.<br />
+d. Record inventory information:<br />
+PCH:<br />
+PCIe:</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[3]]></step_number>
+	<actions><![CDATA[<p>a. Open the Redfish&nbsp;utility&nbsp;Postman.<br />
+b. Get URI:<br />
+https://&lt;BMC IP&gt;/redfish/v1/Systems/0/SimpleStorage<br />
+https://&lt;BMC IP&gt;/redfish/v1/Systems/0/SimpleStorage/PCH<br />
+https://&lt;BMC IP&gt;/redfish/v1/Systems/0/SimpleStorage/PCIe<br />
+c. Check the storage members field.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c. The number of members shall be correct.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[4]]></step_number>
+	<actions><![CDATA[<p>a. Remove two&nbsp;of the hot plug storages at system S0 state.<br />
+b.&nbsp;Check storage present sensor and temperature sensor.<br />
+c.&nbsp;Record the storage present and&nbsp;temperature sensor.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b. The removed storage present&nbsp;status shall be absent and shall not have temperature sensor.<br />
+c.&nbsp;Record the removed&nbsp;storage present and&nbsp;temperature sensor status.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[5]]></step_number>
+	<actions><![CDATA[<p>a. Login Node Explorer.<br />
+b. Check advance inventory &quot;Storage&quot; page.<br />
+c. Compare the information with the inserted storage.<br />
+d. Record the inventory&nbsp;information.&nbsp;</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c. The information shall be same with the&nbsp;inserted storage.<br />
+d. Record inventory information:<br />
+PCH:<br />
+PCIe:</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[6]]></step_number>
+	<actions><![CDATA[<p>a. Open the Redfish&nbsp;utility&nbsp;Postman.<br />
+b. Get URI:<br />
+https://&lt;BMC IP&gt;/redfish/v1/Systems/0/SimpleStorage<br />
+https://&lt;BMC IP&gt;/redfish/v1/Systems/0/SimpleStorage/PCH<br />
+https://&lt;BMC IP&gt;/redfish/v1/Systems/0/SimpleStorage/PCIe<br />
+c. Check the storage members field.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c. The number of members shall be correct.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[7]]></step_number>
+	<actions><![CDATA[<p>a. Insert a storage to hot plug port at system S0 state.&nbsp;<br />
+b.&nbsp;Check storage present sensor and temperature sensor.<br />
+c.&nbsp;Record the storage present and&nbsp;temperature sensor.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b. The inserted&nbsp;storage present&nbsp;status shall be present&nbsp;and shall have temperature sensor.<br />
+c.&nbsp;Record the storage present and&nbsp;temperature sensor.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[8]]></step_number>
+	<actions><![CDATA[<p>a. Login Node Explorer.<br />
+b. Check advance inventory &quot;Storage&quot; page.<br />
+c. Compare the information with the inserted storage.<br />
+d. Record the inventory&nbsp;information.&nbsp;</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c. The information shall be same with the&nbsp;inserted storage.<br />
+d. Record inventory information:<br />
+PCH:<br />
+PCIe:</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[9]]></step_number>
+	<actions><![CDATA[<p>a. Open the Redfish&nbsp;utility&nbsp;Postman.<br />
+b. Get URI:<br />
+https://&lt;BMC IP&gt;/redfish/v1/Systems/0/SimpleStorage<br />
+https://&lt;BMC IP&gt;/redfish/v1/Systems/0/SimpleStorage/PCH<br />
+https://&lt;BMC IP&gt;/redfish/v1/Systems/0/SimpleStorage/PCIe<br />
+c. Check the storage members field.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c. The number of members shall be correct.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="567442" name="01.01.10 PCIe (Hot Plug)">
+	<node_order><![CDATA[9]]></node_order>
+	<externalid><![CDATA[561715]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Insert OCP, NMC&nbsp;into the system&nbsp;and record.<br />
+b. Power on system.<br />
+c. Check the riser, PCIe card present and temperature sensor.<br />
+d. Record the riser, PCIe present and temperature sensor.<br />
+e. Check the fru information meet BMC specification&nbsp;and record.<br />
+# ipmitool fru print</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>a. Record the PCIe device:<br />
+c. The inserted the riser, PCIe present status shall be present and&nbsp;temperature sensor reading shall be normal.<br />
+d. Record the riser, PCIe present and&nbsp;temperature sensor.<br />
+e1. The fru information shall meet BMC specification define.<br />
+e2. Record the fru information:</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[2]]></step_number>
+	<actions><![CDATA[<p>a. Login Node Explorer.<br />
+b. Check advance inventory &quot;Network&quot; page.<br />
+c. Compare the information with the inserted PCIe.<br />
+d. Record the inventory&nbsp;information.&nbsp;<br />
+e. Check advance inventory &quot;FRUs&quot; page.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c. The information shall be same with the&nbsp;inserted PCIe card.<br />
+d. Record inventory information:<br />
+Nic #X<br />
+Vendor:<br />
+Model Name:<br />
+Bus Number:<br />
+Device Number:<br />
+Function Number:<br />
+Speed:<br />
+Width:<br />
+MAC Address:<br />
+e.&nbsp;The information shall be same with the fru print.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[3]]></step_number>
+	<actions><![CDATA[<p>a. Open the Redfish&nbsp;utility&nbsp;Postman.<br />
+b. Get URI:<br />
+https://&lt;BMC IP&gt;/redfish/v1/Chassis/1u/NetworkAdapters/x<br />
+c. Check the NIC members field.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c. The number of members shall be correct.<br />
+&nbsp;</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[4]]></step_number>
+	<actions><![CDATA[<p>a. Remove hot plug OCP or NMC.<br />
+b. Check removed devices present and temperature sensor.<br />
+e. Record the riser, PCIe present and temperature sensor.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>a. Record the removed devices:<br />
+b. The removed devices shall be absent and shall not have temperature sensor.<br />
+e.&nbsp;Record the riser, PCIe present and temperature sensor.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[5]]></step_number>
+	<actions><![CDATA[<p>a. Login Node Explorer.<br />
+b. Check advance inventory &quot;Network&quot; page.<br />
+c. Compare the information with the inserted PCIe.<br />
+d. Record the inventory&nbsp;information.&nbsp;<br />
+e. Check advance inventory &quot;FRUs&quot; page.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c. The information shall be same with the&nbsp;inserted PCIe card.<br />
+d. Record inventory information:<br />
+Nic #X<br />
+Vendor:<br />
+Model Name:<br />
+Bus Number:<br />
+Device Number:<br />
+Function Number:<br />
+Speed:<br />
+Width:<br />
+MAC Address:<br />
+e.&nbsp;The information shall be same with the fru print.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[6]]></step_number>
+	<actions><![CDATA[<p>a. Open the Redfish&nbsp;utility&nbsp;Postman.<br />
+b. Get URI:<br />
+https://&lt;BMC IP&gt;/redfish/v1/Chassis/1u/NetworkAdapters/x<br />
+c. Check the NIC members field.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c. The number of members shall be correct.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[7]]></step_number>
+	<actions><![CDATA[<p>a. Insert a hot plug PCIe card or NMC into hot plug port at system S0 state.&nbsp;<br />
+b.&nbsp;Check PCIe or NMC present sensor and temperature sensor.<br />
+c.&nbsp;Record the PCIe or NMC present and&nbsp;temperature sensor.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>a. Record the insert device:<br />
+b. The inserted&nbsp;PCIe or NMC present&nbsp;status shall be present&nbsp;and shall have temperature sensor.<br />
+c.&nbsp;Record PCIe or NMC present and&nbsp;temperature sensor.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[8]]></step_number>
+	<actions><![CDATA[<p>a. Login Node Explorer.<br />
+b. Check advance inventory &quot;Network&quot; page.<br />
+c. Compare the information with the inserted PCIe.<br />
+d. Record the inventory&nbsp;information.&nbsp;<br />
+e. Check advance inventory &quot;FRUs&quot; page.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c. The information shall be same with the&nbsp;inserted PCIe card.<br />
+d. Record inventory information:<br />
+Nic #X<br />
+Vendor:<br />
+Model Name:<br />
+Bus Number:<br />
+Device Number:<br />
+Function Number:<br />
+Speed:<br />
+Width:<br />
+MAC Address:<br />
+e.&nbsp;The information shall be same with the fru print.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[9]]></step_number>
+	<actions><![CDATA[<p>a. Open the Redfish&nbsp;utility&nbsp;Postman.<br />
+b. Get URI:<br />
+https://&lt;BMC IP&gt;/redfish/v1/Systems/0/EthernetInterfaces<br />
+c. Check the NIC members field.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c. The number of members shall be correct.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+</testsuite><testsuite id="520652" name="01.02.00 Thermal Management" >
+<node_order><![CDATA[2]]></node_order>
+<details><![CDATA[]]></details> 
+<custom_fields>
+			<custom_field>
+			<name><![CDATA[Version History:]]></name>
+			<value><![CDATA[]]></value>
+			</custom_field>
+		</custom_fields>
+
+<testcase internalid="520653" name="01.02.01 Thermal Sensors">
+	<node_order><![CDATA[1000]]></node_order>
+	<externalid><![CDATA[560807]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Check temperature sensor reading and status in S0.<br />
+b.&nbsp;Check temperature sensor reading and status in S5.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>a. The sensor reading shall be normal.<br />
+b1. The standby sensor reading shall be normal.<br />
+b2.&nbsp;The payload sensor shall be disabled.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[2]]></step_number>
+	<actions><![CDATA[<p>a. Set PEF action global control&nbsp;is OEM and alert.<br />
+#&nbsp;ipmitool raw 0x04 0x12 0x2 0x11<br />
+b. Check the global action.<br />
+# ipmitool raw 0x04 0x13 0x2 0x0 0x0<br />
+c. Login Node Explorer.<br />
+d. Setting and enabled PET trap and SMTP.<br />
+e. Check the test mail and PET trap.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b. The PEF action global control shall be OEM, alert and&nbsp;return data 11 11.<br />
+e. The test&nbsp;mail and PET trap shall be received.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[3]]></step_number>
+	<actions><![CDATA[<p>a. Login Node Explorer, move to &quot;Sensor Status&quot; page.<br />
+b.&nbsp;Select the filter to &quot;Temperature&quot;.<br />
+c. Check sensor status and reading.<br />
+d. Trigger sensor event by modify threshold value.<br />
+e. Check alert LED and audible alarm.<br />
+f.&nbsp;Check PET trap and alert mail.<br />
+g. Check sensor status and tool bar.<br />
+h. Check event log on &quot;Sensor Status&quot; page.<br />
+i. Check event log on &quot;Event Log&quot; page.<br />
+j. Click toolbar - &quot;Sensor status&quot;.<br />
+k.&nbsp;Check event log on &quot;Web Alert&quot; page.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c. All the temperature sensor shall be green icon and reading are normal.<br />
+e. The alert LED and audible alarm&nbsp;shall be on.<br />
+f1. The PEF trap shall be received asserted event.<br />
+f2. The alert mail shall be received asserted event.<br />
+g. The toolbar icon and sensor status icon&nbsp;shall become alert status.<br />
+h. The event log shall be list on the triggered sensor.<br />
+i. The event log shall be added&nbsp;at the end.<br />
+j. It shall move to &quot;Web Alert&quot; page.<br />
+k. The web alert shall be adding an event for triggered sensor.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[4]]></step_number>
+	<actions><![CDATA[<p>a. Change sensor threshold back to the original setting.<br />
+b.&nbsp;Move to &quot;Sensor Status&quot; page.<br />
+c. Check alert LED and audible alarm.<br />
+d.&nbsp;Check PET trap and alert mail.<br />
+e. Check sensor status and tool bar.<br />
+f. Check event log on &quot;Sensor Status&quot; page.<br />
+g. Check event log on &quot;Event Log&quot; page.<br />
+h.&nbsp;Check event log on &quot;Web Alert&quot; page.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c. The alert LED and audible alarm&nbsp;shall be off.<br />
+d1. The PEF trap shall be received de-asserted event.<br />
+d2. The alert mail shall be received de-asserted event.<br />
+e. The toolbar icon and sensor status icon&nbsp;shall become green.<br />
+f. The de-assert event log shall be list on the triggered sensor.<br />
+g. The de-assert event log shall be added&nbsp;at the end.<br />
+h. The web alert event de-assertion time shall be added.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="520659" name="01.02.02 CPU Overheat Protection">
+	<node_order><![CDATA[1001]]></node_order>
+	<externalid><![CDATA[560808]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Add 1 event filter on&nbsp;Event filter table:<br />
+- Enable this filter<br />
+- Apply&nbsp;policy 1<br />
+- Severity is &quot;Critical Condition&quot;<br />
+- Actions are &quot;Alert&quot; and &quot;OEM action&quot;<br />
+- Sensor type is&nbsp; &quot;[7] Processor&quot; and Sensor name is [5] PROC_STATE<br />
+- Event trigger is 6f, Event offset mask is 402, Generator ID 1 and 2 are&nbsp;ff.<br />
+b.&nbsp;Set PEF action global control&nbsp;are OEM and alert.<br />
+#&nbsp;ipmitool raw 0x04 0x12 0x2 0x11<br />
+c. Check the global action.<br />
+# ipmitool raw 0x04 0x13 0x2 0x0 0x0<br />
+d. Setting &quot;SMTP&quot; and PET trap.<br />
+e. Check the test mail and PET trap.<br />
+&nbsp;</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b. The PEF action global control shall be OEM,&nbsp;alert and&nbsp;return data 11 11.<br />
+e. The test&nbsp;mail and PET trap shall be received.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[2]]></step_number>
+	<actions><![CDATA[<p>a. Remove FAN modules.<br />
+b. Heat CPU to trigger CPU throttled.<br />
+c.&nbsp;After DUT OS prompt CPU speed throttled due to overheat, check SEL list.<br />
+d. Check alert mail.<br />
+e. Check Alert LED and audible alarm.<br />
+f. Check DUT if power off when overheat (Thermal trip)</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c. PROC_STATE shall generate for CPU overheat.<br />
+d. The alert mail shall be received from PROC_STATE sensor.<br />
+e. The alert LED and audible alarm shall be turn on.<br />
+f.&nbsp;System shall be shutdown DUT to overheat.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+</testsuite><testsuite id="520663" name="01.03.00 Power Management" >
+<node_order><![CDATA[3]]></node_order>
+<details><![CDATA[]]></details> 
+<custom_fields>
+			<custom_field>
+			<name><![CDATA[Version History:]]></name>
+			<value><![CDATA[]]></value>
+			</custom_field>
+		</custom_fields>
+
+<testcase internalid="520664" name="01.03.01 Power Sensors">
+	<node_order><![CDATA[0]]></node_order>
+	<externalid><![CDATA[560809]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Check power sensor reading and status in S0.<br />
+b.&nbsp;Check power sensor reading and status in S5.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>a. The sensor reading shall be normal.<br />
+b1. The standby sensor reading shall be normal.<br />
+b2.&nbsp;The payload sensor shall be disabled.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[2]]></step_number>
+	<actions><![CDATA[<p>a. Set PEF action global control&nbsp;are OEM and alert.<br />
+#&nbsp;ipmitool raw 0x04 0x12 0x2 0x11<br />
+b. Check the global action.<br />
+# ipmitool raw 0x04 0x13 0x2 0x0 0x0<br />
+c. Login Node Explorer.<br />
+d. Setting and enabled PET trap and SMTP.<br />
+e. Check the test mail and PET trap.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b. The PEF action global control shall be OEM, alert and&nbsp;return data 11 11.<br />
+e. The test&nbsp;mail and PET trap shall be received.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[3]]></step_number>
+	<actions><![CDATA[<p>a. Login Node Explorer, move to &quot;Sensor Status&quot; page.<br />
+b.&nbsp;Select the filter to &quot;Voltage&quot;.<br />
+c. Check sensor status and reading.<br />
+d. Trigger sensor event by modify threshold value.<br />
+e. Check alert LED and audible alarm.<br />
+f.&nbsp;Check PET trap and alert mail.<br />
+g. Check sensor status and tool bar.<br />
+h. Check event log on &quot;Sensor Status&quot; page.<br />
+i. Check event log on &quot;Event Log&quot; page.<br />
+j. Click toolbar - &quot;Sensor Status&quot;.<br />
+k.&nbsp;Check event log on &quot;Web Alert&quot; page.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c. All the voltage sensor shall be green icon and reading are normal.<br />
+e. The alert LED and audible alarm&nbsp;shall be on.<br />
+f1. The PEF trap shall be received asserted event.<br />
+f2. The alert mail shall be received asserted event.<br />
+g. The toolbar icon and sensor status icon&nbsp;shall become alert status.<br />
+h. The event log shall be list on the triggered sensor.<br />
+i. The event log shall be added&nbsp;at the end.<br />
+j. It shall move to &quot;Web Alert&quot; page.<br />
+k. The web alert shall add an event for triggered sensor.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[4]]></step_number>
+	<actions><![CDATA[<p>a. Change sensor threshold back to the original setting.<br />
+b.&nbsp;Move to &quot;Sensor Status&quot; page.<br />
+c. Check alert LED and audible alarm.<br />
+d.&nbsp;Check PET trap and alert mail.<br />
+e. Check sensor status and tool bar.<br />
+f. Check event log on &quot;Sensor Status&quot; page.<br />
+g. Check event log on &quot;Event Log&quot; page.<br />
+h.&nbsp;Check event log on &quot;Web Alert&quot; page.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c. The alert LED and audible alarm&nbsp;shall be off.<br />
+d1. The PEF trap shall be received de-asserted event.<br />
+d2. The alert mail shall be received de-asserted event.<br />
+e. The toolbar icon and sensor status icon&nbsp;shall become green.<br />
+f. The de-assert event log shall be list on the triggered sensor.<br />
+g. The de-assert event log shall be added&nbsp;at the end.<br />
+h. The web alert event de-assertion time shall be added.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="520670" name="01.03.02 PSU Status Sensor">
+	<node_order><![CDATA[9]]></node_order>
+	<externalid><![CDATA[560810]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>PSU Fail:<br />
+a. Insert paper clip to PSU to stop PSU fan.<br />
+b. Insert PSU to DUT and power on DUT.<br />
+c. After DUT boot to OS, check SEL.<br />
+d. Check PSU LED.<br />
+e. Check critical LED.<br />
+f. Remove paper clip then check sensor, PSU LED, critical LED again.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c1. PSU status sensor shall create PSU fail event for PSU fan is not running.<br />
+c2. Event data shall meet spec.<br />
+d. PSU LED shall be blinking red on failure one.<br />
+e. The critical LED shall be light on when PSU failure.<br />
+f1. The sensor shall generate&nbsp;PSU fail de-asserted event.<br />
+f2. The PSU LED shall be green on.<br />
+f3. The critical LED shall be turn off.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[2]]></step_number>
+	<actions><![CDATA[<p>AC Lost:<br />
+a. Power on DUT and boot to OS.<br />
+b. After DUT boot to OS, remove one power cord.<br />
+c. Check PSU LED and sensor.<br />
+d. Insert power cord back.<br />
+e. Repeat test step on another PSU.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c1. PSU status sensor shall create AC lost event after power cord removed.<br />
+c2. Event data shall meet spec.<br />
+c3. PSU LED shall be steady red on failure one.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[3]]></step_number>
+	<actions><![CDATA[<p>Presence:<br />
+a. Power on DUT and boot to OS.<br />
+b. After DUT boot to OS, remove one PSU.<br />
+c. Insert PSU back.<br />
+d. Repeat test step on another PSU.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b1. PSU status sensor shall create present de-assert event after PSU removed.<br />
+b2. Event data meet spec.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="629521" name="01.03.03 Sensor Accuracy">
+	<node_order><![CDATA[10]]></node_order>
+	<externalid><![CDATA[562005]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Check the onboard&nbsp;voltage sensor, temperature&nbsp;sensor and FAN speed sensor.<br />
+b. Compare the sdr command value with&nbsp;the measured value.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b. The sensor reading shall be accurate.<br />
+Tolerance:<br />
+Vol/Wat/Current: +/-5%<br />
+Temp: +/- 3&deg;C<br />
+FAN Speed: +/-10%</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+</testsuite><testsuite id="520830" name="01.04.00 Configurations" >
+<node_order><![CDATA[4]]></node_order>
+<details><![CDATA[]]></details> 
+<custom_fields>
+			<custom_field>
+			<name><![CDATA[Version History:]]></name>
+			<value><![CDATA[]]></value>
+			</custom_field>
+		</custom_fields>
+
+<testcase internalid="520831" name="01.04.01 Network">
+	<node_order><![CDATA[1000]]></node_order>
+	<externalid><![CDATA[560847]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[<p>V4/V6</p>
+]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Login Node Explorer.<br />
+b. Set BMC LAN (IPv4) in Node Explorer.<br />
+c. Check BMC LAN configuration (IPv4) via KCS and Node Explorer.<br />
+d. Set BMC LAN (IPv6) in Node Explorer.<br />
+e. Check BMC LAN configuration (IPv6) via KCS and Node Explorer.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b.&nbsp;It shall be able to set BMC LAN (IPv4) via Node Explorer.<br />
+c.&nbsp;BMC LAN configuration (IPv4) shall be the same showed via KCS and Node Explorer.<br />
+d.&nbsp;It shall be able to set BMC LAN (IPv6) via Node Explorer.<br />
+e.&nbsp;BMC LAN configuration (IPv6) shall be the same showed via KCS and Node Explorer.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="520834" name="01.04.02 Time Zone &amp; NTP">
+	<node_order><![CDATA[1001]]></node_order>
+	<externalid><![CDATA[560848]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>Check System Time<br />
+a. Check sel time in Node Explorer and move&nbsp;to &quot;Extra Configuration&quot; page.<br />
+b. Change Time Zone to another country (different with current time zone).<br />
+c. Check bmc date / time in Node Explorer.<br />
+d. Modify time in Date Time block and save it.<br />
+e. Check &quot;Event Log&quot; page sel time in Node Explorer.<br />
+f. Click detect button then save.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c. The bmc time shall be correct with timezone change.<br />
+e. The sel time shall not be change after bmc time or timezone change.<br />
+f1. It shall pop&nbsp;up&nbsp;dialog box with successful message &quot;Timezone setting has been changed.&quot; after click save button.<br />
+f2. It shall be detected correct time zone.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[2]]></step_number>
+	<actions><![CDATA[<p>Check NTP Time<br />
+a. Reboot OS and boot to BIOS setup menu change system time (different with real time). Then choose &quot;save and reset&quot; boot to OS.<br />
+b. Send below&nbsp;command to change BMC time.<br />
+#ipmitool sel time set &quot;12/30/2023&nbsp;12:30:00&quot;<br />
+c. Check BMC&nbsp;and system time.<br />
+#date<br />
+#ipmitool sel time get<br />
+d. Setting Host (clock.stdtime.gov.tw) and port is 123.<br />
+e. Set NTP Client activate.<br />
+f. Set up date time interval is 300.<br />
+g. Click Test Server to check the NTP server can be connected and save the setting.<br />
+h. Continue to check the time while waiting for the update twice.<br />
+#date<br />
+#ipmitool sel time get<br />
+i. Send below command to reset BMC.<br />
+#ipmitool mc reset cold<br />
+j. Login web and check NTP setting.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>g.&nbsp;The NTP server shall be connected.<br />
+h.&nbsp;The BMC time shall sync with NTP server.<br />
+j.&nbsp;The setting shall be kept after BMC reset.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="520838" name="01.04.03 VLAN">
+	<node_order><![CDATA[1002]]></node_order>
+	<externalid><![CDATA[560849]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Login Node Explorer and move to &quot;Network&quot; page<br />
+b. Enable VLAN for this channel (1/2)<br />
+c. Modify VLAN ID is 100 (HEX is 64)<br />
+d.&nbsp;Send below command from remote PC (use VLAN 100) to BMC via IOL:<br />
+# ipmitool &lt;IOL&gt; mc info</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>d.&nbsp;BMC LAN shall response command after set VLAN ID.<br />
+&nbsp;</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="520841" name="01.04.04 Configuration (Load, Save, Reload default)">
+	<node_order><![CDATA[1003]]></node_order>
+	<externalid><![CDATA[560850]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>Version<br />
+a. Check the fw versions.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>a.&nbsp;The fw versions shall meet the version in cli fw version.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[2]]></step_number>
+	<actions><![CDATA[<p>Load default configuration<br />
+a. Power on DUT and boot to OS.<br />
+b. Send below command to set BMC LAN via KCS:<br />
+# ipmitool lan set 1 ipsrc none<br />
+# ipmitool lan set 1 ipaddr 192.168.200.200<br />
+# ipmitool lan set 1 macaddr 00:0a:0b:81:01:02<br />
+# ipmitool lan set 1 netmask 255.0.0.0<br />
+# ipmitool lan set 1 defgw ipaddr 192.1.1.1<br />
+c. Check BMC LAN configuration.<br />
+d. Login Node Explorer by default user name and password.<br />
+e. Move to the &quot;Configuration-Maintenance&quot; page.<br />
+f. Choose &quot;Load default configuration&quot;.<br />
+g. Check BMC LAN configuration.<br />
+# ipmitool lan print 1</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>f.&nbsp;Verify password before loading default configuration.<br />
+g.&nbsp;BMC LAN&nbsp;shall be back to default configuration.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[3]]></step_number>
+	<actions><![CDATA[<p>Load / Save Configurations<br />
+a. Power on DUT and boot to OS.<br />
+b. Send below command to set BMC LAN via KCS:<br />
+# ipmitool lan alert set 1 1 ipaddr [alert destination]<br />
+# ipmitool raw 0x04 0x12 0x06 3 0x80 0x11 0x01 0x10 0xff 0xff 0x05 0x07 0x6f 0x01 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00<br />
+c. Change &quot;Timezone&quot; is Singapore<br />
+d. SMTP server address is ipmitest.com<br />
+e. SNMP read is public1<br />
+f. Add new user(admin1/admin1)&nbsp;<br />
+g.&nbsp;Choose &quot;Download&quot; button<br />
+h. Do BMC reset<br />
+#ipmitool mc reset cold<br />
+i. Modify step b-f&nbsp;configuration<br />
+j. Choose Upload button and choose &quot;nodeexp_config.json&quot; to upload.<br />
+k. Check b-f configuration</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>g.&nbsp;It shall be download config and key file.<br />
+h. BMC reset shall not change modify configuration.<br />
+k.&nbsp;It shall&nbsp;be back to configuration from download file.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="520846" name="01.04.05 Web Frame Format Check">
+	<node_order><![CDATA[1004]]></node_order>
+	<externalid><![CDATA[560851]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[<p>Layout, Product name, Language, General information</p>
+]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Login Node Explorer.<br />
+b. Check the all frame format<br />
+c.&nbsp;Check the top area&nbsp;in the home&nbsp;page.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>a1. Node Explorer logo shall be &lt;ADVANTECH&gt;<br />
+a2. Node Explorer color shall&nbsp;meet BMC spec.<br />
+a3. Node Explorer icon shall&nbsp;include<br />
+&nbsp; &nbsp; &nbsp;-- Web Alert Details<br />
+&nbsp; &nbsp; &nbsp;-- Host Power state<br />
+&nbsp; &nbsp; &nbsp;-- BIOS POST code history<br />
+&nbsp; &nbsp; &nbsp;-- Refresh<br />
+&nbsp; &nbsp; &nbsp;--&nbsp;Web language switch<br />
+&nbsp; &nbsp; &nbsp;-- logout<br />
+c.&nbsp;It shall show correct [Project Name] in the top-left corner and [Node Information] in the top-right corner.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="618297" name="01.04.06 BMC hostname">
+	<node_order><![CDATA[1005]]></node_order>
+	<externalid><![CDATA[561995]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Get BMC hostname<br />
+# ipmitool raw 0x2e 0xf5 0x39 0x28 0x00 0x00<br />
+b. Get Hex value to transfer ASCII value and Check Node Explorer Hostname&nbsp;<br />
+c. Set BMC hostname<br />
+# ipmitool raw 0x2e 0xf5 0x39 0x28 0x0 0x1 0x41 0x42 0x43 0x2d 0x31 0x32 0x33 0x2d 0x61 0x62 0x63<br />
+d. Get BMC hostname<br />
+# ipmitool raw 0x2e 0xf5 0x39 0x28 0x00 0x00<br />
+e. Get Hex value to transfer ASCII value and Check Node Explorer Hostname&nbsp;</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b. response value shall be match node explorer&nbsp;Hostname.<br />
+e.&nbsp;response value shall be match node explorer&nbsp;Hostname (ABC-123-abc)</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+</testsuite><testsuite id="520675" name="01.05.00 Cooling Management" >
+<node_order><![CDATA[5]]></node_order>
+<details><![CDATA[]]></details> 
+<custom_fields>
+			<custom_field>
+			<name><![CDATA[Version History:]]></name>
+			<value><![CDATA[]]></value>
+			</custom_field>
+		</custom_fields>
+
+<testcase internalid="520676" name="01.05.01 Smart FAN">
+	<node_order><![CDATA[1000]]></node_order>
+	<externalid><![CDATA[560811]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>Smart FAN for CPU:<br />
+a. Power on system, and make sure the CPU temperature and FAN speed is normal.<br />
+b. Make CPU temp high by &quot;stresscpu&quot; tool.<br />
+# stresscpu2<br />
+c. Check fan speed.<br />
+# ipmitool sdr elist</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c1. FAN&nbsp;&lt;number&gt; speed shall be changed.<br />
+c2. FAN speed shall meet mapping table.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[2]]></step_number>
+	<actions><![CDATA[<p>Smart FAN for PCIe:<br />
+a. Power on system, and make sure the CPU temperature and FAN speed is normal.<br />
+b. Make PCIe temp high.<br />
+c. Check fan speed.<br />
+# ipmitool sdr elist</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c1. FAN &lt;number&gt; speed shall be changed.<br />
+c2. FAN speed shall meet mapping table.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="520680" name="01.05.02 FAN ID Number Check">
+	<node_order><![CDATA[1001]]></node_order>
+	<externalid><![CDATA[560812]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>Presence<br />
+a. Power on system and check all&nbsp;FAN speed.<br />
+b. After boot to OS, remove FAN_1 module, check FAN sensor and SEL list.<br />
+c. BMC cold reset then&nbsp;check FAN speed.<br />
+d. Insert FAN_1 module back, check FAN speed and SEL list.<br />
+e. Repeat test for other FAN modules.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>a1. After power on, FAN speed shall be normal speed.<br />
+a2.&nbsp;Number of FAN sensors shall meet spec.<br />
+b1. Others FAN speed shall be full on.<br />
+b2.&nbsp;BMC shall create FAN_1 module absent event.<br />
+b3. FAN_1 speed shall be 0 RPM.<br />
+c.&nbsp;After BMC reset cold, the remove FAN is 0 RPM and the other FAN speed shall&nbsp;keep full on.<br />
+d. All FAN speed shall be slow down to normal level&nbsp;and de-asserted SEL created for FAN_1 presence&nbsp;after FAN module install back.<br />
+e. All the FAN behavior status shall be correct.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[2]]></step_number>
+	<actions><![CDATA[<p>FAN Failure<br />
+a. Power on system and check all&nbsp;FAN speed.<br />
+b. After boot to OS, remove FAN_1 module&#39;s FAN 1 connector.<br />
+c. Check all FAN&nbsp;speed and SEL list.<br />
+d.&nbsp;BMC cold reset then&nbsp;check FAN speed.<br />
+e. Install back FAN connector.<br />
+f. Check all FAN&nbsp;speed and SEL list.<br />
+g. Repeat test for all FAN.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c1. After remove FAN connector, the others FAN shall full on.<br />
+c2. BMC shall create FAN 1 speed lower event.<br />
+d.&nbsp;After BMC reset cold, the FAN 1 is 0 RPM and the others FAN speed shall&nbsp;keep full on.<br />
+f. After insert FAN 1 connector back, FAN 1 speed shall be normal and BMC shall create FAN 1 speed de-asserted event<br />
+g. All the FAN behavior shall be correct.&nbsp;</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[3]]></step_number>
+	<actions><![CDATA[<p>FAN Failure<br />
+a. Power on system and check all&nbsp;FAN speed.<br />
+b.&nbsp;After boot to OS, insert a paper clip to stop FAN 1 rotate.<br />
+c. Check all FAN&nbsp;speed and SEL list.<br />
+d.&nbsp;BMC reset cold and check FAN speed.<br />
+e. Remove paper clip.<br />
+f. Check all FAN&nbsp;speed and SEL list.<br />
+g. Repeat test for all FAN.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c1. After&nbsp;FAN 1 stop to rotate, the others FAN shall full on.<br />
+c2. The stop FAN 1 shall create FAN lower speed event.<br />
+d.&nbsp;After BMC reset cold, the FAN 1&nbsp;is 0 RPM and the others FAN speed shall&nbsp;keep full on.<br />
+f. After remove FAN 1 paper clip, FAN speed shall be normal and BMC shall create FAN 1 speed de-asserted event.<br />
+g. All the FAN behavior shall be correct.&nbsp;</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="520685" name="01.05.03 FAN Control Manually">
+	<node_order><![CDATA[1003]]></node_order>
+	<externalid><![CDATA[560813]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Power on DUT and boot to OS.<br />
+b. Check FAN speed properties.<br />
+# ipmitool raw 0x2c 0x14 0x00 &lt;FAN ID&gt;<br />
+c. Shutdown the FAN rotate.<br />
+# ipmitool raw 0x2c 0x15 0x00 &lt;FAN ID&gt; 0xfe&nbsp;<br />
+d. Send the FAN to the 100% duty.<br />
+# ipmitool raw 0x2c 0x15 0x00 &lt;FAN ID&gt; 0x64 0x00<br />
+e. Send the FAN to the local control.<br />
+# ipmitool raw 0x2c 0x15 0x00 &lt;FAN ID&gt; 0xff&nbsp;0x01<br />
+f. Heat the CPU and check fan speed.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c. Fan rotation shall be stop.<br />
+d. FAN speed compare with FAN duty shall meet FAN data sheet.<br />
+e. FAN shall become local control mode.<br />
+f. FAN speed shall follow CPU temperature sensor.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+</testsuite><testsuite id="520688" name="01.06.00 System Management" >
+<node_order><![CDATA[6]]></node_order>
+<details><![CDATA[]]></details> 
+<custom_fields>
+			<custom_field>
+			<name><![CDATA[Version History:]]></name>
+			<value><![CDATA[]]></value>
+			</custom_field>
+		</custom_fields>
+
+<testcase internalid="520689" name="01.06.01 Time Sync">
+	<node_order><![CDATA[0]]></node_order>
+	<externalid><![CDATA[560814]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Power on DUT and boot to Linux.<br />
+b. Check BMC time and system&nbsp;time.<br />
+&nbsp;&nbsp;# ipmitool sel time get&nbsp;<br />
+&nbsp;&nbsp;# date<br />
+c. Modify BMC time and different with step b, then reboot system.<br />
+&nbsp;&nbsp;# ipmitool sel time set &quot;mm/dd/yyyy hh:mm:ss&quot;<br />
+&nbsp;&nbsp;# ipmitool sel time get<br />
+&nbsp;&nbsp;# reboot<br />
+d. Check BMC time and system time.<br />
+&nbsp;&nbsp;# ipmitool sel time get&nbsp;<br />
+&nbsp;&nbsp;# date<br />
+e. Reboot system and enter setup menu.<br />
+f. Modify BIOS time w/ different time ,then save and reset to exit setup menu.<br />
+g. Check BMC time and system time after boot to OS.<br />
+&nbsp;&nbsp;#ipmitool sel time get&nbsp;<br />
+&nbsp;&nbsp;#date<br />
+h. Modify RTC time w/ different time in OS. Then reboot into Linux.<br />
+&nbsp; # date -s&nbsp;&quot;YYYY-MM-DD HH:MM&quot; set time need late present time.<br />
+&nbsp; # hwclock -w<br />
+&nbsp; # reboot<br />
+i. Check BMC time and system time after boot to OS.<br />
+&nbsp;&nbsp;# ipmitool sel time get&nbsp;<br />
+&nbsp;&nbsp;# date</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c. Check the BMC time shall be same as setting.<br />
+d. Time sync shall be executed after system reboot BMC time shall sync with RTC time.<br />
+&nbsp;&nbsp;&nbsp;(The tolerance shall less than 5 seconds)<br />
+g. BMC time shall sync with the RTC after changed on setup menu in Step f.<br />
+&nbsp;&nbsp;( The tolerance shall less than 5 seconds)<br />
+i. BMC time shall sync with the RTC time in Step h.<br />
+&nbsp;&nbsp;( The tolerance shall less than 5 seconds)<br />
+&nbsp;</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="567461" name="01.06.02 WDT &amp; BIOS Redundant">
+	<node_order><![CDATA[1]]></node_order>
+	<externalid><![CDATA[561718]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Power on system and boot to Linux.<br />
+b. Make sure IOL is working and check BIOS bank ID.<br />
+c. Send below command to check BIOS rollback setting:<br />
+# ipmitool raw 0x2e 0x85 0x39 0x28 0x00</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c. BIOS rollback setting shall be 1.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[2]]></step_number>
+	<actions><![CDATA[<p>a. Power off DUT to S5 and keep sending get watchdog command via IOL.<br />
+# ipmitool -I lanplus -H bmcip -U administrator -P advantech mc watchdog get<br />
+b.&nbsp;Record the initial countdown seconds of WDT.<br />
+c. Power on system and boot to Linux.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b.&nbsp;The initial countdown seconds of WDT shall be displayed and recorded.<br />
+c1. After system power on,&nbsp;Watchdog shall keep countdown before boot to OS.<br />
+c2. Watchdog shall be stopped after boot to OS.<br />
+c3. If BIOS need to load Option ROM, watchdog shall stop countdown during loading Option ROM.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[3]]></step_number>
+	<actions><![CDATA[<p>a. Reboot DUT<br />
+b. Enter setup menu and set POST delay 200 seconds.<br />
+# ipmitool -I lanplus -H bmcip -U administrator -P advantech mc watchdog get</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b. BIOS shall stop watchdog when enter setup menu.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[4]]></step_number>
+	<actions><![CDATA[<p>a. Save changes and reset to exit setup menu.<br />
+b. After reset, system will stay in POST till watchdog timeout.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b. Watchdog shall be re-initialed after exit setup menu and&nbsp;payload reset.<br />
+&nbsp;</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[5]]></step_number>
+	<actions><![CDATA[<p>a. System will execute a hard reset.<br />
+b. After system boot-up, send command to check BIOS boot bank.<br />
+​​​​​​​# ipmitool raw 0x2e 0x71 0x39 0x28 0x00 0x01</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b. BIOS boot bank shall not be swapped after watchdog timeout.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[6]]></step_number>
+	<actions><![CDATA[<p>a. System will stay in POST again till watchdog timeout again.<br />
+b. After system boot-up again, send command to check BIOS boot bank.<br />
+# ipmitool raw 0x2e 0x71 0x39 0x28 0x00 0x01</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b. BIOS bank shall be swapped after watchdog timeout again.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="520698" name="01.06.03 Load BMC Factory Default">
+	<node_order><![CDATA[3]]></node_order>
+	<externalid><![CDATA[560817]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Power on DUT in standalone mode<br />
+b. After system boot into Linux:<br />
+&nbsp;b1. Send IPMI command to change BMC&nbsp;IP<br />
+&nbsp;b2. Send IPMI command to change a sensor threshold<br />
+&nbsp;b3.&nbsp;Send IPMI command to set boot BMC and BIOS bank_1 as active<br />
+c. Reboot DUT and enter setup menu<br />
+d. Set POST delay to 10 sec from 1 sec.<br />
+e. Save and exit setup menu, then boot to Linux<br />
+f. Send IPMI command to restore factory default<br />
+# ipmitool raw 0x2e 0xF4 0x39 0x28 0x00 0x0f 0x07 0x4f<br />
+g. BMC will issue an BMC cold reset<br />
+h. Follow criteria to check settings</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>f. Command shall work normally<br />
+h1. Below items shall be applied:<br />
+- BMC Network configuration<br />
+- BMC user credentials and privileges<br />
+- Sensor Thresholds<br />
+- BIOS settings<br />
+- Set BMC FW bank 0 to active<br />
+- Set BIOS flash 0 to active and POST delay shall be 1 sec.<br />
+h2. Below items shall not be applied:<br />
+- BMC MAC address<br />
+- FRU data<br />
+- SEL<br />
+- BMC, BIOS or FPGA/CPLD revision</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="520695" name="01.06.04 Load BIOS Default">
+	<node_order><![CDATA[4]]></node_order>
+	<externalid><![CDATA[560816]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Load BIOS default in setup menu.<br />
+b. Change some setting in setup menu and record it.<br />
+&nbsp;&nbsp;&nbsp;(set EIST /Hyper threading to different value)<br />
+c. Save and exit setup menu.<br />
+d. Enter setup menu again to check the settings are not default value.<br />
+e.&nbsp;Boot into OS and write test string in efi variable area.<br />
+#&nbsp;echo &#39;Reload default&nbsp;test&#39; &gt; ~/reloadtest-efi.var ; efivar -n 84be9c3e-8a32-42c0-891c-4cd3b072becc-loadtest -w -f ~/reloadtest-efi.var -t 7<br />
+f.&nbsp;Check efi variable is written successfully.<br />
+#&nbsp;efivar -p -n 84be9c3e-8a32-42c0-891c-4cd3b072becc-loadtest<br />
+g. Execute IPMI command :<br />
+# ipmitool raw 0x2e 0x81 0x39 0x28 0x00<br />
+h. Reset DUT and boot into setup menu.<br />
+# reboot<br />
+i. Check if setup menu settings are default setting.<br />
+j.&nbsp;Check efi variable.<br />
+#&nbsp;efivar -p -n 84be9c3e-8a32-42c0-891c-4cd3b072becc-loadtest</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b.&nbsp;Record the default values and changed values of modified BIOS setup item.&nbsp;<br />
+f.&nbsp;The value shall be&nbsp;&quot;Reload default&nbsp;test&quot;.<br />
+i.&nbsp;Modified BIOS setting shall restore to default value.<br />
+j. The command shall&nbsp;return &quot;efivar: show variable: No such file or directory&quot;</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="520701" name="01.06.05 FW Progress Sensor">
+	<node_order><![CDATA[5]]></node_order>
+	<externalid><![CDATA[560818]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Power on DUT and enter setup menu.<br />
+b. Enable FW progress support.<br />
+c. Boot to OS and clear SEL.<br />
+d. Reboot system.<br />
+e. In next boot to OS, check SEL.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>e. It shall have FW progress sensor event after reboot.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+</testsuite><testsuite id="520716" name="01.07.00 FW Update" >
+<node_order><![CDATA[7]]></node_order>
+<details><![CDATA[]]></details> 
+<custom_fields>
+			<custom_field>
+			<name><![CDATA[Version History:]]></name>
+			<value><![CDATA[]]></value>
+			</custom_field>
+		</custom_fields>
+
+<testcase internalid="520717" name="01.07.01 BL upgrade via Web">
+	<node_order><![CDATA[1]]></node_order>
+	<externalid><![CDATA[560821]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Login web page and move to &quot;Firmware Upgrade&quot; page.<br />
+b. Upgrade BMC Bootloader FW.<br />
+c. Check version from Web.<br />
+d. Check SEL from Web.<br />
+e. Check sensor status from Web.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b.&nbsp;FW upgrade shall be successful.<br />
+c.&nbsp;Version shall be correct.<br />
+d.&nbsp;It shall not have unexpected SEL.<br />
+e.&nbsp;Sensor status shall be normal.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="520720" name="01.07.02 BMC upgrade via Web">
+	<node_order><![CDATA[2]]></node_order>
+	<externalid><![CDATA[560822]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Login web page and move&nbsp;to &quot;Firmware Upgrade&quot; page.<br />
+b. Upgrade previous BMC FW.<br />
+c. Check and record SW/FW version from Web.<br />
+d. Upgrade new BMC FW.<br />
+e. Check and record SW/FW version from Web.<br />
+f. Check SEL from Web.<br />
+g. Check sensor status from Web.<br />
+h. Upgrade new BMC FW and during upgrade firmware run over 50 percent, turn AC power off.<br />
+i. Wait 60 sec.<br />
+j. Turn AC power on then upgrade again.<br />
+k. During upgrade firmware run over 50 percent, close web page.<br />
+l. Open Node Explore and upgrade again.<br />
+m. Check the other web page.<br />
+n. Open Node Explore and upgrade wrong BMC image.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b.&nbsp;FW upgrade shall be successful.<br />
+c.&nbsp;Record SW/FW and check SW/FW Version shall be correct.<br />
+d. FW upgrade shall be successful.<br />
+e.&nbsp;Record SW/FW and check SW/FW Version shall be correct.<br />
+f.&nbsp;It shall not have unexpected SEL.<br />
+g.&nbsp;Sensor status shall be normal.<br />
+j.&nbsp;It shall upgrade again without error whether AC or web break.<br />
+l.&nbsp;It shall upgrade again without error whether AC or web break.<br />
+m.&nbsp;While firmware is upgrading, the dialog box with progress bar shall be pop out and all other operation by different users or in different tab will be for bidden.<br />
+n. FW upgrade shall be display error message.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="520723" name="01.07.03 BMConf upgrade via Web">
+	<node_order><![CDATA[3]]></node_order>
+	<externalid><![CDATA[560823]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Login web page and move&nbsp;to &quot;Firmware Upgrade&quot; page.<br />
+b. Upgrade BMConf FW.<br />
+c. DUT reboot.<br />
+d. Check version from Web.<br />
+e. Check SEL from Web.<br />
+f. Check sensor status from Web.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b.&nbsp;FW upgrade shall be successful.<br />
+d.&nbsp;Version shall be correct.<br />
+e.&nbsp;It shall not have unexpected SEL.<br />
+f.&nbsp;Sensor status shall be normal.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="520726" name="01.07.04 FPGA/CPLD upgrade via Web">
+	<node_order><![CDATA[4]]></node_order>
+	<externalid><![CDATA[560824]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Login web page and move&nbsp;to &quot;Firmware Upgrade&quot; page.<br />
+b. Upgrade FPGA/CPLD FW.<br />
+c. DUT reboot.<br />
+d. Check version from Web.<br />
+e. Check SEL from Web.<br />
+f. Check sensor status from Web.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b.&nbsp;FW upgrade shall be successful.<br />
+d.&nbsp;Version shall be correct.<br />
+e.&nbsp;It shall not have unexpected SEL.<br />
+f.&nbsp;Sensor status shall be normal.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="520729" name="01.07.05 BIOS upgrade via Web">
+	<node_order><![CDATA[5]]></node_order>
+	<externalid><![CDATA[560825]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Login web page and move&nbsp;to &quot;Firmware Upgrade&quot; page.<br />
+b. Upgrade BIOS FW.<br />
+c. DUT reboot.<br />
+d. Check version from Web.<br />
+e. Check SEL from Web.<br />
+f. Check sensor status from Web.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b.&nbsp;FW upgrade shall be successful.<br />
+d.&nbsp;Version shall be correct.<br />
+e.&nbsp;It shall not have unexpected SEL.<br />
+f.&nbsp;Sensor status shall be normal.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="520732" name="01.07.06 NVRAM upgrade via Web">
+	<node_order><![CDATA[6]]></node_order>
+	<externalid><![CDATA[560826]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Login web page and move&nbsp;to &quot;Firmware Upgrade&quot; page.<br />
+b. Upgrade NVRAM FW.<br />
+c. DUT reboot.<br />
+d. Check version from Web.<br />
+e. Check SEL from Web.<br />
+f. Check sensor status from Web.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b.&nbsp;FW upgrade shall be successful.<br />
+d.&nbsp;Version shall be correct.<br />
+e.&nbsp;It shall not have unexpected SEL.<br />
+f.&nbsp;Sensor status shall be normal.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+</testsuite><testsuite id="520735" name="01.08.00 Security" >
+<node_order><![CDATA[8]]></node_order>
+<details><![CDATA[]]></details> 
+<custom_fields>
+			<custom_field>
+			<name><![CDATA[Version History:]]></name>
+			<value><![CDATA[]]></value>
+			</custom_field>
+		</custom_fields>
+
+<testcase internalid="520736" name="01.08.01 Account Lockout">
+	<node_order><![CDATA[0]]></node_order>
+	<externalid><![CDATA[560827]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>Max number of login attempt function<br />
+a. Send command to set login attempt to 3 and interval to 1 minutes:<br />
+# ipmitool raw 0x2e 0x0b 0x39 0x28 0x00 0x03 0x00 0x3c 0x00 0x00<br />
+b. Trigger login fail events on administrator:<br />
+&nbsp; &nbsp; - fail to login WebUI 2 times<br />
+c. Check if account lockout via IOL command.<br />
+# ipmitool -I lan -H bmcip -U administrator -P advantech hpm check<br />
+d. Trigger login fail event by fail to login WebUI 3 time&nbsp;and check if account lockout.<br />
+e. Check other account if lockout via IOL command.<br />
+# ipmitool -I lan -H bmcip -U administrator -P advantech hpm check</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>a. Command shall be work without error.<br />
+c. Administrator account shall not be locked.<br />
+d. Administrator account shall be locked.<br />
+e. Besides Administrator account, other account shall not be locked.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[2]]></step_number>
+	<actions><![CDATA[<p>Time Interval value<br />
+a. Send command to set login attempt to 3 and interval to 10 seconds:<br />
+&nbsp;#ipmitool raw 0x2e 0x0b 0x39 0x28 0x00 0x03 0x00 0x0a 0x00 0x00<br />
+b. Trigger login fail events on administrator within 10 seconds:<br />
+&nbsp; &nbsp; - fail to login WebUI 2 times<br />
+c. Wait 10 seconds.<br />
+d. Trigger login fail events on administrator&nbsp;within 10 seconds:<br />
+&nbsp; &nbsp; - fail to login WebUI 2 times<br />
+e. Check if account lockout via IOL command.<br />
+# &nbsp;ipmitool -I lan -H bmcip -U administrator -P advantech hpm check<br />
+f. Send command to change interval value:<br />
+1 second:&nbsp;#ipmitool raw 0x2e 0x0b 0x39 0x28 0x00 0x0a 0x00 0x01 0x00 0x00<br />
+86400 sec: #ipmitool raw 0x2e 0x0b 0x39 0x28 0x00 0x0a 0x00 0x80 0x51 0x01</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>e. The administrator account shall not be lock.<br />
+f. Valid range shall from 1 - 86400 seconds.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[3]]></step_number>
+	<actions><![CDATA[<p>Number of login attempt value<br />
+a. Change login attempt from 10 to 3:<br />
+#ipmitool raw 0x2e 0x0b 0x39 0x28 0x00 0x03 0x00 0x2c 0x01 0x00<br />
+b. Check if account locked after login fail 3 times.<br />
+c. Send command to change login attempt value:<br />
+1 attempt:&nbsp;#ipmitool raw 0x2e 0x0b 0x39 0x28 0x00 0x01 0x00 0x2c 0x01 0x00<br />
+1000 attempts:&nbsp;#ipmitool raw 0x2e 0x0b 0x39 0x28 0x00 0xe8 0x03 0x2c 0x01 0x00<br />
+Out of range: 0 = Byte [1][2] &gt; 1000</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b. Account shall be locked after 3 login attempts.<br />
+c1. BMC shall reject out of range setting.<br />
+c2. Valid range shall from 1-1000 attempts.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[4]]></step_number>
+	<actions><![CDATA[<p>Check Re-Enable command function.<br />
+a. Send command to set login attempts to 3:<br />
+&nbsp;#ipmitool raw 0x2e 0x0b 0x39 0x28 0x00 0x03 0x00 0x2c 0x01 0x00<br />
+b. Make account locked.<br />
+c. Send command to re-enable account:<br />
+&nbsp;#ipmitool raw 0x2e 0x0a 0x39 0x28 0x00 &lt;username&gt;<br />
+d. Check if user un-locked.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>d. Account shall be unlocked immediately.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="520742" name="01.08.02 Authentication Log">
+	<node_order><![CDATA[1]]></node_order>
+	<externalid><![CDATA[560828]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>Log Authentication Login Events<br />
+a. Power on DUT and boot to OS.<br />
+b. Setup BMC LAN environment.<br />
+c. Trigger authentication login events by below actions:<br />
+&nbsp; &nbsp; - Send mc info command via IOL with correct&nbsp;username/password.<br />
+&nbsp; &nbsp; - Send mc info command via IOL with&nbsp;incorrect username/password.<br />
+&nbsp; &nbsp; - Login WebUI with correct username/password.<br />
+&nbsp; &nbsp; -&nbsp;Login WebUI with incorrect username/password.<br />
+&nbsp; &nbsp; - Logout WebUI.<br />
+&nbsp; &nbsp; - Login BMC via SSH with&nbsp;correct username/password.<br />
+&nbsp; &nbsp; - Login BMC via SSH with incorrect username/password.<br />
+d. Send get authentication login info command via KCS:<br />
+#ipmitool raw 0x2e 0x98 0x39 0x28 0x00<br />
+e. Send&nbsp;get authentication login info command via IOL.<br />
+f. Full fill authentication log then check authentication log info.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>d. BMC shall update authentication log info:<br />
+&nbsp; &nbsp; - Authentication event log count shall be increased.<br />
+&nbsp; &nbsp; - Free space shall be reduced.<br />
+&nbsp; &nbsp; - Most recent addition timestamp shall be changed after new log created.<br />
+&nbsp; &nbsp; - Most recent erase timestamp shall not be changed.<br />
+e. Authentication log info command shall be available through KCS only<br />
+f. When authentication log full:<br />
+&nbsp; &nbsp;- Authentication event log count shall be 4095<br />
+&nbsp; &nbsp;- Free space shall be 0<br />
+&nbsp; &nbsp;- Byte 18 shall be 0x80</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[2]]></step_number>
+	<actions><![CDATA[<p>Get Authentication Log Entry<br />
+a.&nbsp;Trigger authentication login events by below actions:<br />
+&nbsp; &nbsp; - Send mc info command via IOL with correct&nbsp;username/password.<br />
+&nbsp; &nbsp; - Send mc info command via IOL with&nbsp;incorrect username/password.<br />
+&nbsp; &nbsp; - Login WebUI with correct username/password.<br />
+&nbsp; &nbsp; -&nbsp;Login WebUI with incorrect username/password.<br />
+&nbsp; &nbsp; - Logout WebUI.<br />
+&nbsp; &nbsp; - Login BMC via SSH with&nbsp;correct username/password.<br />
+&nbsp; &nbsp; - Login BMC via SSH with incorrect username/password.<br />
+b. Send get authentication log entry to check the content of each entries:<br />
+#ipmitool raw 0x2e 0x99 0x39 0x28 0x00 0x00 0x00 &lt;Record ID&gt;</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b. Each log entry content shall meet authentication event.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[3]]></step_number>
+	<actions><![CDATA[<p>Delete Authentication Log Entry<br />
+a. Trigger authentication login events by above case.<br />
+b. Delete 3 logs (First one, middle one and last&nbsp;one).<br />
+c. Trigger one event and check last event log.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c. Authentication log shall be added to last</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[4]]></step_number>
+	<actions><![CDATA[<p>Clear Authentication Log<br />
+a. Full fill authentication log.<br />
+b. Send command to clear all log entries.<br />
+#ipmitool raw 0x2e 0x9b 0x39 0x28 0x00 0x00 0x00 0x43 0x4c 0x52 0xaa</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b. Authentication log shall be clear.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="520748" name="01.08.03 Users">
+	<node_order><![CDATA[2]]></node_order>
+	<externalid><![CDATA[560829]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Login Node Explorer with default user.<br />
+b. Move&nbsp;to &quot;Extra Configurations - User Management&quot; page.<br />
+c. Create a new user.<br />
+&nbsp; &nbsp; - Username: dqatest<br />
+&nbsp; &nbsp; -&nbsp;Password: advantech<br />
+&nbsp; &nbsp; - Privilege: Administrator<br />
+&nbsp; &nbsp; - User Permission: Enable RMCP Access, Enable&nbsp;Redfish Access<br />
+d. User enabled and save.<br />
+e. Send user list command to check.<br />
+# ipmitool user list</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>e. The dqatest user shall be exist in user list.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[2]]></step_number>
+	<actions><![CDATA[<p>a. Send command to clean authentication log.<br />
+# ipmitool raw 0x2e 0x9b 0x39 0x28 0x00 0x00 0x00 0x43 0x4c 0x52 0xaa.<br />
+b.&nbsp;Send command to check&nbsp;authentication log clean status.<br />
+# ipmitool raw 0x2e 0x9b 0x39 0x28 0x00 0x00 0x00 0x43 0x4c 0x52 0x00.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b. The command shall return 0x01.<br />
+&nbsp;</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[3]]></step_number>
+	<actions><![CDATA[<p>a. Using&nbsp;the new create user with incorrect password to access BMC via RMCP.<br />
+# ipmitool -I lanplus -H bmcip -U dqatest -P advantech1 mc info&nbsp;<br />
+b.&nbsp;Using&nbsp;the new create user to access BMC via RMCP.<br />
+# ipmitool -I lanplus -H bmcip -U dqatest -P advantech&nbsp;mc info&nbsp;</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>a. The command shall fail because password error.<br />
+b. BMC shall return mc info.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[4]]></step_number>
+	<actions><![CDATA[<p>a. Send command to check authentication log entry 1.<br />
+# ipmitool raw 0x2e 0x99&nbsp;0x39 0x28 0x00 0x00 0x00 0x00 0x00<br />
+b. Send command to check authentication log entry 2.<br />
+# ipmitool raw 0x2e 0x99&nbsp;0x39 0x28 0x00 0x00 0x00 0x01&nbsp;0x00</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>a. The return data shall be correct, service information byte shall be 0x44.<br />
+b. The return data shall be correct, service information byte shall be 0x04</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[5]]></step_number>
+	<actions><![CDATA[<p>a. Move&nbsp;to &quot;Extra Configurations - User Management&quot; page.<br />
+b. Select the &quot;dqatest&quot; user and modify the password to adminadmin.<br />
+c. Using&nbsp;the dqatest user with new password the login Node Explorer.<br />
+d.&nbsp;Using&nbsp;the dqatest user with new password the login Redfish.<br />
+e.&nbsp;Using&nbsp;the dqatest user with new password the login SOL.<br />
+# ipmitool -I lanplus -H bmcip -U dqatest -P adminadmin sol activate</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c. The dqatest shall not login Node Explorer.<br />
+d.&nbsp;The dqatest shall login Redfish successful.<br />
+e. The&nbsp;dqatest shall not login SOL.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="520755" name="01.08.04 LDAP">
+	<node_order><![CDATA[3]]></node_order>
+	<externalid><![CDATA[560830]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[<p>Server:172.17.21.34<br />
+dc=dqatest<br />
+uid=root,cn=users,dc=dqatest<br />
+BIN PW (Password)&nbsp; :12345678<br />
+<br />
+Name: aduser<br />
+PW: 1qaz@WSX</p>
+]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Set LDAP server up.<br />
+b. Connect BMC&#39;s LAN&nbsp;port to LDAP server.<br />
+c. Power DUT and boot into OS. Set BMC LAN IP to DHCP.<br />
+d. Open Web browser in LDAP server. Open BMC WebUI with IP gotten in step c.<br />
+e. Login with default user and move to &quot;Extra Configuration&nbsp;-&nbsp;LDAP&quot; page.<br />
+f. Configure LDAP setting in WebUI.<br />
+g. Logout and login in again with user account in LDAP server.<br />
+&nbsp;</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>g. It shall be able to login BMC WebUI&nbsp;with&nbsp;user account in LDAP server.<br />
+&nbsp;</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="520758" name="01.08.05 RADIUS with Sessions">
+	<node_order><![CDATA[4]]></node_order>
+	<externalid><![CDATA[560831]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[<p>Server IP:&nbsp;172.17.21.34<br />
+Server Secret: 12345678<br />
+Port: 1854<br />
+<br />
+User: &lt;RADIUS user&gt;<br />
+PW: &lt;RADIUS PW&gt;</p>
+]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Set RADIUS server in office domain.<br />
+b. Connect BMC&#39;s LAN&nbsp;port to RADIUS server.<br />
+c. Power on DUT and boot into OS. Set BMC LAN IP to DHCP.<br />
+d. Login with default user and move to &quot;Extra Configuration&nbsp;-&nbsp;RADIUS&quot; page.<br />
+e. Configure RADIUS setting in WebUI.<br />
+f. Logout and login again with Office username and password.</p>
+
+<p><br />
+RADIUS server setting:<br />
+&nbsp; &nbsp;- Login NAS server<br />
+&nbsp; &nbsp;- Open RADIUS server.<br />
+&nbsp; &nbsp;- In client page to add&nbsp;client IP and key.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>f. It shall be able to login BMC WebUI&nbsp;with&nbsp;user account in RADIUS/AD server.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[2]]></step_number>
+	<actions><![CDATA[<p>a. Using the company Office&nbsp;username and password to login Node Explorer.<br />
+b. Open the &quot;iKVM Redirection&quot;.<br />
+c. Key-in some command at the &quot;iKVM Redirection&quot;.&nbsp;</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>a. It shall be login successfully with company PC&#39;s&nbsp;account.<br />
+c. The iKVM shall be work normally.<br />
+&nbsp;</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[3]]></step_number>
+	<actions><![CDATA[<p>a. Open the other web page and use the administrator account to login Node Explorer.<br />
+b. Open the &quot;Remote Serial Console&quot;.<br />
+c. Key-in some command at &quot;Remote Serial Console&quot;.&nbsp;</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>a. It shall be login successfully with administrator account.<br />
+c. The remote serial console shall be work normally.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[4]]></step_number>
+	<actions><![CDATA[<p>a. Using&nbsp;the administrator account move to &quot;Session&quot; page.<br />
+b. Check the session list.<br />
+c. Select the &quot;iKVM&quot; and click&nbsp;end.<br />
+d. Check the iKVM session.<br />
+e. At &quot;iKVM session&quot; click reconnect.<br />
+f. Check&nbsp;the session list.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b1. Current session shall be show red rectangle.<br />
+b2. PC&#39;s account shall&nbsp;attach&nbsp;iKVM session and administrator account shall attached remote serial session.<br />
+d. The iKVM session shall be disconnect and the attached iKVM session shall be disappear.<br />
+e. The iKVM shall be work normally.<br />
+f. The PC&#39;s account shall be attached iKVM session</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[5]]></step_number>
+	<actions><![CDATA[<p>a. At PC&#39;s account, select administrator account &quot;end all&quot; button.<br />
+b. Check the remote serial console and Node Explorer status.<br />
+c. Key-in some command in&nbsp;console.&nbsp;<br />
+d. Click log out icon.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b. The remote serial console shall be disconnect and Node Explorer shall be log out.<br />
+c. The console shall work normally due to remote serial console disconnect.<br />
+d. The PC&#39;s account shall be log out immediately.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[6]]></step_number>
+	<actions><![CDATA[<p>a. Using the administrator account to login Node Explorer.<br />
+b. Check &quot;Session&quot; page.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b. The PC&#39;s account shall not in session list.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[7]]></step_number>
+	<actions><![CDATA[<p>a. Login Redfish with PC&#39;s account.<br />
+Get&nbsp;https://bmcip/redfish/v1/Systems/0<br />
+b. Check the response.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b. The Redfish shall return 200 OK.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="520767" name="01.08.06 SSL">
+	<node_order><![CDATA[5]]></node_order>
+	<externalid><![CDATA[560832]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Login Node Explorer and move to &quot;SSL Certificate&quot; page.<br />
+b. Click upload&nbsp;icon to upload SSL file.<br />
+c. Check SSL content in the page<br />
+d. Open KVM and remoter serial console to check SSL certificate.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b.&nbsp;SSL file shall be able to upload.<br />
+c.&nbsp;SSL content shall be the same with file.<br />
+d. The SSL certificate shall be the same.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="520770" name="01.08.07 Firewall">
+	<node_order><![CDATA[6]]></node_order>
+	<externalid><![CDATA[560833]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Connect BMC lan and a remote server in the same domain.<br />
+b. Send command via IOL in the remote server.<br />
+# ipmitool &lt;IOL&gt; mc info<br />
+c. Move&nbsp;to web &quot;Firewall&quot; page.<br />
+d. Set IPv4 Address Firewall to block remote server IP.<br />
+e. Send command via IOL in the remote server.<br />
+# ipmitool &lt;IOL&gt; mc info</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b. The RMCP command shall work.<br />
+e. It shall not get mc information via RMCP with block IP.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="520773" name="01.08.08 Vulnerability">
+	<node_order><![CDATA[7]]></node_order>
+	<externalid><![CDATA[560834]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Power on DUT and boot to OS.<br />
+b. Set BMC LAN IP source to DHCP and get IP from DHCP.<br />
+c. Connect to NESSUS&nbsp;WebUI from your Notebook.<br />
+(https://172.17.21.22:8834/#/)<br />
+d. Login NESSUS&nbsp;<br />
+e. Move to &quot;Scans&quot; &gt; click on &quot;DQA_BMC&quot;.<br />
+f. Key in DUT BMC IP then click &quot;Start Scan&quot; button.<br />
+g. After test finished, move to &quot;Scans&quot; &gt; click &quot;Reports&quot;.<br />
+h. Move to &quot;Download Filtered Report&quot; and click.<br />
+i. Report format is &quot;HTML&quot; and click OK button to download report.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>i. Download test report and provide to test report folder.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="520776" name="01.08.09 Case Intrusion">
+	<node_order><![CDATA[8]]></node_order>
+	<externalid><![CDATA[560835]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Power on DUT and boot to OS.<br />
+b. Triger case intrusion event by open lid of chassis.<br />
+c. Check minor LED and SEL list.<br />
+d. Close the lid of chassis then send below command:<br />
+# ipmitool raw 0x04 0x2a &lt;case intrusion sensor ID&gt;&nbsp;0x00 0x00 0x00 0x00 0x00<br />
+e. Check minor LED and SEL list again.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c1.&nbsp;Minor LED shall be turn on and steady amber.<br />
+c2. Case intrusion sensor shall create asserted event.<br />
+e1. Minor LED shall be turn off.<br />
+e2. Case intrusion sensor shall create de-asserted event.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="537813" name="01.08.10 Enable/Disable Each Interface">
+	<node_order><![CDATA[9]]></node_order>
+	<externalid><![CDATA[561683]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>IOL Channel 1<br />
+a. Login web interface and move to &quot;BMC Interface Control&quot; page.<br />
+b. Disable IOL channel 1 on web.<br />
+c. Check all remote features.<br />
+d. Send command to enable IOL channel 1:<br />
+#ipmitool lan set 1 access on.<br />
+e. Check all remote features.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c. LAN 1 shall be disabled. The other features work.<br />
+e. LAN 1&nbsp;shall be enabled. The other features work.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[2]]></step_number>
+	<actions><![CDATA[<p>IOL Channel 2<br />
+a. Login web interface and move to &quot;BMC Interface Control&quot; page.<br />
+b. Disable IOL channel 2 on web.<br />
+c. Check LAN 2 function.<br />
+d. Enable IOL channel 2 on web.<br />
+e. Check LAN 2 function again.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c. LAN 2 shall be disabled.<br />
+d. LAN 2 shall be enabled.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[3]]></step_number>
+	<actions><![CDATA[<p>SOL<br />
+a. Login web interface and move to &quot;BMC Interface Control&quot; page.<br />
+b. Disable SOL channel 1 on web.<br />
+c. Check SOL function.<br />
+d. Enable SOL channel 1 on web.<br />
+e. Check SOL function.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c. SOL shall be disabled.<br />
+d. SOL shall be enabled.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[4]]></step_number>
+	<actions><![CDATA[<p>Redfish<br />
+a. Login web interface and move to &quot;BMC Interface Control&quot; page.<br />
+b. Disable Redfish on web.<br />
+c. Try to discover Redfish service root:<br />
+https://&lt;BMC IP&gt;/redfish/v1/<br />
+d. Enable Redfish on web.<br />
+e. Try to discover Redfish service root:<br />
+https://&lt;BMC IP&gt;/redfish/v1/</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c. Redfish shall be disabled.<br />
+d. Redfish shall be enabled.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[5]]></step_number>
+	<actions><![CDATA[<p>SSH<br />
+a. Login web interface and move to &quot;BMC Interface Control&quot; page.<br />
+b. Disable SSH on web.<br />
+c. Check BMC SSH function<br />
+d. Enable SSH on web.<br />
+e. Check BMC SSH function again.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c. SSH shall be disabled.<br />
+d. SSH shall be enabled.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[6]]></step_number>
+	<actions><![CDATA[<p>SNMP<br />
+a. Login web interface and move to &quot;BMC Interface Control&quot; page.<br />
+b. Disable SNMP on web.<br />
+c. Check SNMP function<br />
+d. Enable SNMP on web.<br />
+e. Check SNMP function again.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c. SNMP shall be disabled.<br />
+d. SNMP shall be enabled.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[7]]></step_number>
+	<actions><![CDATA[<p>Lighttpd<br />
+a. Login web interface and move to &quot;BMC Interface Control&quot; page.<br />
+b. Disable lighttpd on web.<br />
+c. Try to connect to web interface.<br />
+d. Enable lighttpd by OEM command:<br />
+#ipmitool raw 0x2e 0xf6 0x39 0x28 0x00 0x01 0x01<br />
+e. Try to connect to web interface again.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c. Web interface shall be disabled.<br />
+d. Web interface shall be enabled.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[8]]></step_number>
+	<actions><![CDATA[<p>SMTP<br />
+a. Login web interface and move to &quot;BMC Interface Control&quot; page.<br />
+b. Disable SMTP on web.<br />
+c. Check SMTP function<br />
+d. Enable SMTP on web.<br />
+e. Check SMTP function again.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c. BMC shall not send alert mail to destination PC.<br />
+d. BMC shall send alert mail to destination PC.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[9]]></step_number>
+	<actions><![CDATA[<p>iKVM Server<br />
+a. Login web interface and move to &quot;BMC Interface Control&quot; page.<br />
+b. Disable iKVM Server on web.<br />
+c. Check iKVM Server function<br />
+d. Enable iKVM Server on web.<br />
+e. Check iKVM Server function again.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c. iKVM Server shall be disabled.<br />
+d. iKVM Server shall be enabled.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[10]]></step_number>
+	<actions><![CDATA[<p>Remote Storage<br />
+a. Login web interface and move to &quot;BMC Interface Control&quot; page.<br />
+b. Disable remote storage on web.<br />
+c. Check remote storage function<br />
+d. Enable remote storage on web.<br />
+e. Check remote storage function again.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c. Remote storage shall be disabled.<br />
+d. Remote storage shall be enabled.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[11]]></step_number>
+	<actions><![CDATA[<p>Dying Gasp<br />
+a. Login web interface and move to &quot;BMC Interface Control&quot; page.<br />
+b. Disable dying gasp on web.<br />
+c. Check dying gasp function.<br />
+d. Enable dying gasp on web.<br />
+e. Check dying gasp function again.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c. Dying gasp shall be disabled.<br />
+d. Dying gasp shall be enabled.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="537826" name="01.08.11 Channel Policy">
+	<node_order><![CDATA[10]]></node_order>
+	<externalid><![CDATA[561684]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Login web interface and move to &quot;BMC Interface Control - Channel Policy&quot; page.<br />
+b. Change KCS/BT privilege to Callback.<br />
+c.&nbsp;Send below command via KCS:<br />
+# ipmitool raw 0x06 0x01<br />
+d.&nbsp;Change KCS/BT privilege to User.<br />
+e.&nbsp;Send below command via KCS:<br />
+# ipmitool raw 0x06 0x01<br />
+f.&nbsp;Send below command via KCS:<br />
+# ipmitool raw 0x0c 0x02 0x01 0x03 0x00 0x00<br />
+g.&nbsp;Change KCS/BT privilege to Operator.<br />
+h.&nbsp;Send below command via KCS:<br />
+# ipmitool raw 0x0c 0x02 0x01 0x03 0x00 0x00<br />
+i.&nbsp;Send below command via KCS:<br />
+# ipmitool raw 0x0c 0x01 0x02 0x03 0xb 0xb 0xb 0xb<br />
+j.&nbsp;Change KCS/BT privilege to Administrator.<br />
+k.&nbsp;Send below command via KCS:<br />
+# ipmitool raw 0x0c 0x01 0x02 0x03 0xb 0xb 0xb 0xb<br />
+l. Check lan 2 IP address.<br />
+# ipmitool lan print 2</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c.&nbsp;BMC shall not return device ID after set user&#39;s privilege to callback.<br />
+e.&nbsp;BMC shall return device ID after set user&#39;s privilege to user.<br />
+f.&nbsp;BMC shall not return lan 1 address after&nbsp;set user&#39;s privilege to user.<br />
+h.&nbsp;BMC shall return lan 1 address after&nbsp;set user&#39;s privilege to operator.<br />
+i.&nbsp;BMC shall not be able to set lan 2 address after user&#39;s privilege is operator.<br />
+l. BMC lan 2 address shall be 11.11.11.11.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[2]]></step_number>
+	<actions><![CDATA[<p>a. Change the access mode to always disable.<br />
+b. Send ipmi command via KCS.<br />
+# ipmitool hpm check<br />
+c.&nbsp;Change the access mode to after BIOS phase.<br />
+d. Reboot system.<br />
+e. After reboot into OS, check ipmi command via KCS.<br />
+# ipmitool hpm check<br />
+f.&nbsp;Change the access mode to always available.<br />
+g. check ipmi command via KCS.<br />
+# ipmitool hpm check</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b. The command shall not work via KCS.<br />
+e.&nbsp;The command shall work via KCS.<br />
+g.&nbsp;The command shall work via KCS.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+</testsuite><testsuite id="520782" name="01.09.00 Remote Management" >
+<node_order><![CDATA[9]]></node_order>
+<details><![CDATA[]]></details> 
+<custom_fields>
+			<custom_field>
+			<name><![CDATA[Version History:]]></name>
+			<value><![CDATA[]]></value>
+			</custom_field>
+		</custom_fields>
+
+<testcase internalid="520783" name="01.09.01 iKVM with Remote Storage">
+	<node_order><![CDATA[0]]></node_order>
+	<externalid><![CDATA[560837]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Insert the storage in the system.<br />
+b. Power on the system.<br />
+c. Login the Node Explorer and set the &quot;iKVM&quot; page timeout are 3600 seconds.<br />
+d.&nbsp;Open the &quot;iKVM&quot; page.<br />
+e. Open the &quot;Remote Storage&quot; and mount an install .iso image via &quot;SMB&quot;.<br />
+f. Move&nbsp;to &quot;Session&quot; page and check the attached session.&nbsp;</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>e. The remote storage shall mount successfully.<br />
+f. The attached session shall be iKVM.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[2]]></step_number>
+	<actions><![CDATA[<p>a. Reboot system and press &lt;del&gt; boot into setup menu.<br />
+b. Boot from the remote storage.<br />
+c. Using the iKVM page to install the OS.<br />
+d. Reboot system and select the install OS is first boot device.<br />
+e. Save and reset to exit setup menu.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c1. The OS shall be installed successfully.<br />
+c2. The iKVM page shall&nbsp;work normally.<br />
+c3. The iKVM shall not be timeout within the timeout setting.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[3]]></step_number>
+	<actions><![CDATA[<p>a. At grub screen press &lt;Tab&gt;.<br />
+b. Using the&nbsp;on-screen keyboard to add below text in grub:<br />
+console=ttyS0,115200<br />
+c. Press &lt;Ctrl+x&gt; in the &quot;iKVM&quot; page to boot into OS.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b. The on-screen shall be enter text without error.<br />
+c. It shall boot into OS with text mode normally.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[4]]></step_number>
+	<actions><![CDATA[<p>a. Press &quot;Shutdown&quot; button.<br />
+b. Check iKVM status.&nbsp;<br />
+c. Click&nbsp;restart button.<br />
+d.&nbsp;Check iKVM status.&nbsp;</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b. The iKVM shall be disconnect immediately.<br />
+d. The&nbsp;iKVM shall be reconnect and work normally.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="520789" name="01.09.02 Remote Serial Console with Remote Storage">
+	<node_order><![CDATA[1]]></node_order>
+	<externalid><![CDATA[560838]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Login the Node Explorer and set the remote serial console&nbsp;timeout are 300 seconds.<br />
+b.&nbsp;Open the &quot;Remote Serial Console&quot; page.<br />
+c. Open the &quot;Remote Storage&quot; and mount an ISO image via &quot;WEB&quot;.<br />
+d. Go to &quot;Session&quot; page and check the attached session.&nbsp;<br />
+e. Click &quot;End all&quot; button on current session.<br />
+f.&nbsp;Check remote serial console status.<br />
+g. Check system console&nbsp;status.&nbsp;<br />
+h. Login the Node Explorer.<br />
+i. Open the &quot;Remote Serial Console&quot; page.<br />
+j. Open the &quot;Remote Storage&quot; and mount an ISO image via &quot;WEB&quot;.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c. The remote storage shall mount successfully.<br />
+d. The attached session shall be remote serial console and remote storage.<br />
+e. The Node Explorer shall be logout.<br />
+f. The remote serial console shall&nbsp;disconnect immediately.<br />
+g. The&nbsp;system console shall be work normally due to remote serial disconnect.<br />
+j.&nbsp;The remote storage shall mount successfully.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[2]]></step_number>
+	<actions><![CDATA[<p>a. Reboot system and press &lt;del&gt; boot into setup menu.<br />
+b. Boot from the remote storage.<br />
+c.&nbsp;At grub screen press &lt;Tab&gt;.<br />
+d. Add below text in grub:<br />
+console=ttyS0,115200<br />
+e. Press &lt;Ctrl+x&gt; in the remote serial console page to boot into OS.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>d. The on-screen shall be enter text without error.<br />
+e. It shall boot into OS with text mode normally.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[3]]></step_number>
+	<actions><![CDATA[<p>a. Press &quot;Disable&quot; button.<br />
+b. Check remote serial console status.&nbsp;<br />
+c. Check system console&nbsp;status.&nbsp;<br />
+d. Click&nbsp;restart button.<br />
+e. Check remote serial console status.&nbsp;<br />
+f. Check system console&nbsp;status.&nbsp;</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b. The remote serial console shall be disconnect immediately.<br />
+c. The&nbsp;system console shall be work normally due to remote serial disconnect.<br />
+e. The remote serial console shall be work normally.<br />
+f. The&nbsp;system console shall not be operated.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[4]]></step_number>
+	<actions><![CDATA[<p>a. Idle the remote serial console over 15 minutes.<br />
+b.&nbsp;Check remote serial console status.&nbsp;<br />
+c. Check system console&nbsp;status.&nbsp;</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b. The remote serial console shall be disconnect due to timeout.<br />
+c. The&nbsp;system console shall be work normally due to remote serial disconnect.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="520796" name="01.09.03 VNC">
+	<node_order><![CDATA[2]]></node_order>
+	<externalid><![CDATA[560839]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Login Node Explorer.<br />
+b. Go to &quot;Extra Configurations-VNC Service&quot; page.<br />
+c. Configure Port &lt;5900 (5890)<br />
+d. Configure Port &gt;5999 (6000)<br />
+e. Configure service port to 5950.<br />
+f. Connect VNC viewer (Connected to BMC IP:5950) to DUT aging.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c. and d.&nbsp;it shall&nbsp;show &quot;The port value is invalid&quot; on page.<br />
+e.&nbsp;It shall&nbsp;pop-up a window &quot;The VNC settings had been saved.&quot;.<br />
+f. VNC viewer shall connect to DUT successfully.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="520799" name="01.09.04 Power Control">
+	<node_order><![CDATA[3]]></node_order>
+	<externalid><![CDATA[560840]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Power on system and check system power led.<br />
+b. Login Node Explorer.<br />
+c. Go to &quot;System Power Control&quot; page.<br />
+d. At &quot;Remote Power Control&quot; select &quot;Power Off&quot;.<br />
+e. Click &quot;Perform&quot; button.<br />
+f. Check the system power state, led.<br />
+g.&nbsp;Check &quot;Host BIOS POST Code&quot; in toolbar and host status.<br />
+h. Click&nbsp;toolbar &quot;BIOS POST Code&quot; and download history.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>a. System power led shall be green on.<br />
+c. The &quot;Host Status&quot; - &quot;Host Power State&quot; shall be on.<br />
+f1. The system shall be power off.<br />
+f2.&nbsp;System power led shall be off.<br />
+g1. The POST code shall be 0xff.<br />
+g2. The icon shall be gray color.<br />
+h. The POST code history shall be downloaded.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[2]]></step_number>
+	<actions><![CDATA[<p>a. At &quot;Remote Power Control&quot; select &quot;Power On&quot;.<br />
+b. Click &quot;Perform&quot; button.<br />
+c. Check the system power state and led.<br />
+d. Press &quot;del&quot; to enter bios menu.<br />
+e. Check &quot;Host BIOS POST Code&quot; in toolbar and host status.<br />
+f. Exit setup menu and boot into OS.<br />
+g. Check &quot;Host BIOS POST Code&quot; in toolbar and host status.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>a. System power led shall be green on.<br />
+c. The &quot;Host Power State&quot;&nbsp;shall be on during POST phase.<br />
+e1. The POST code shall be 0xab.<br />
+e2. The icon shall be orange color.<br />
+g1. The POST code shall be 0x00.<br />
+g2. The icon shall be green color.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[3]]></step_number>
+	<actions><![CDATA[<p>a. At &quot;Remote Power Control&quot; select &quot;Reset&quot;.<br />
+b. Check the system behavior and record the sel.<br />
+c. At &quot;Remote Power Control&quot; select &quot;Power Cycle&quot;.<br />
+d. Check the system behavior and record the sel.<br />
+e. At &quot;Remote Power Control&quot; select &quot;Graceful Shutdown&quot;.<br />
+f. Check the system behavior and record the sel.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b1. The system shall do a reset.<br />
+b2. Record the sel of reset:&nbsp;<br />
+d1. The system shall do a power cycle.<br />
+d2. Record the sel of power cycle:&nbsp;<br />
+f1. The system shall do a graceful shutdown.<br />
+f2. Record the sel of graceful shutdown:&nbsp;</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="520804" name="01.09.05 Boot Options">
+	<node_order><![CDATA[4]]></node_order>
+	<externalid><![CDATA[560841]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Modify boot option is &quot;UEFI: Built-in EFI Shell&quot; and choose save and reset.<br />
+b. Login Node Explorer and move to &quot;System Power Control&quot; page.<br />
+c. Go to &quot;BIOS Boot Options&quot; and choose the boot device&nbsp;is &quot;Default Hard-drive&quot;.<br />
+d. Select &quot;Option Persistence&quot; is &quot;Next Boot Only&quot;.<br />
+e. Select &quot;BIOS Boot Type&quot; is &quot;Extensible Firmware Interface(EFI)&quot;<br />
+f. Choose save.<br />
+g. Select &quot;Remote Power Control&quot; is power cycle.<br />
+h. Check OS boot from HDD.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>f. BIOS boot options shall be display BIOS boot device has been changed to &quot;Default Hard-drive&quot;.&nbsp;<br />
+h. System shall boot from Default Hard-drive.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[2]]></step_number>
+	<actions><![CDATA[<p>a. Modify boot option is &quot;UEFI: Built-in EFI Shell&quot; and choose save and reset.<br />
+b. Login Node Explorer, move to &quot;System Power Control&quot; page&nbsp;and connect PXE server to DUT.<br />
+c. Go to &quot;BIOS Boot Options&quot; and choose the boot device is&nbsp;&quot;Force PXE&quot;<br />
+d. Select &quot;Option Persistence&quot; is &quot;Next Boot Only&quot;.<br />
+e. Select &quot;BIOS Boot Type&quot; is &quot;Extensible Firmware Interface(EFI)&quot;<br />
+f. Choose save.<br />
+g. Select &quot;Remote Power Control&quot; is power cycle.<br />
+h. Check OS boot from PXE.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>f. BIOS boot options shall be display BIOS boot device has been changed to &quot;Force PXE&quot;.<br />
+h. System shall boot from PXE.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[3]]></step_number>
+	<actions><![CDATA[<p>a. Modify boot option is &quot;UEFI: Built-in EFI Shell&quot; and choose save and reset.<br />
+b.&nbsp;Login Node Explorer and move to &quot;System Power Control&quot; page.<br />
+c. Go to &quot;BIOS Boot Options&quot; and choose the boot device is &quot;BIOS setup&quot;.<br />
+d. Select &quot;Option Persistence&quot; is &quot;Next Boot Only&quot;.<br />
+e. Select &quot;BIOS Boot Type&quot; is &quot;Extensible Firmware Interface(EFI)&quot;<br />
+f. Choose save.<br />
+g. Select &quot;Remote Power Control&quot; is power cycle.<br />
+h. Check OS boot to BIOS setup.<br />
+i. Change &quot;Option Persistence&quot; is &quot;All Future Boots&quot;.<br />
+j. DUT reboot twice and check boot device every time.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>f. BIOS boot options shall be display BIOS boot device has been changed to &quot;BIOS Setup menu&quot;.&nbsp;<br />
+h. System shall boot in&nbsp;BIOS Setup menu.<br />
+j. System&nbsp;shall boot in BIOS Setup menu&nbsp;every time.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="520809" name="01.09.06 Chassis Identify">
+	<node_order><![CDATA[5]]></node_order>
+	<externalid><![CDATA[560842]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>Force On:<br />
+a. Login Node Explorer.<br />
+b. Click &quot;Front Panel&quot;.<br />
+c. Select &quot;Force On&quot; in the LED Identification Options field.<br />
+d. Click &quot;Identify&quot; button.<br />
+e. Check front panel identification LED.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c.&nbsp;The LED On Interval field shall be disabled.<br />
+e. The front panel identification LED shall continue to light on.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[2]]></step_number>
+	<actions><![CDATA[<p>Force Off:<br />
+a. Click &quot;Front Panel&quot;.<br />
+b. Select &quot;Force Off&quot; in the LED Identification Options field.<br />
+c. Click &quot;Identify&quot; button.<br />
+d. Check front panel identification LED.<br />
+e. Press ID button.<br />
+f. Check front panel identification LED.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b. The LED On Interval field shall be disabled.<br />
+d. The front panel identification LED shall light off immediately.<br />
+f. The LED shall be light on.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[3]]></step_number>
+	<actions><![CDATA[<p>Interval:<br />
+a. Login Node Explorer.<br />
+b. Click &quot;Front Panel&quot;.<br />
+c. Select &quot;Interval&quot; in the LED Identification Options field.<br />
+d. Use default interval 15 seconds<br />
+e. Click &quot;Identify&quot; button.<br />
+f. Check front panel identification LED.<br />
+g. Change interval to 5 seconds.<br />
+h. Click&nbsp;&quot;Identify&quot; button.<br />
+i. Check front panel identification LED.<br />
+j. Change interval to 255 seconds.<br />
+k. Click&nbsp;&quot;Identify&quot; button.<br />
+l. Check front panel identification LED.<br />
+m. Input any non-positive integer / character / greater&nbsp;than 255 positive integer&nbsp;to Interval field.<br />
+n. Click&nbsp;&quot;Identify&quot; button.<br />
+o. Check the response from Interval field.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>f. LED shall light on for 15 seconds then light off.<br />
+i. LED shall light on for 5 seconds then light off.<br />
+l.&nbsp;LED shall light on for 255 seconds then light off.<br />
+o. The Interval field shall only accept 1 ~ 255 positive integer.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="520814" name="01.09.07 SW Define LED">
+	<node_order><![CDATA[6]]></node_order>
+	<externalid><![CDATA[560843]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>SW Define LED 1:<br />
+a. Power on system and boot to OS.<br />
+b. Send below command to turn on Major LED:<br />
+# ipmitool picmg led set 0 2 255 0 0xf<br />
+c. Send below command to turn off Major LED:<br />
+# ipmitool picmg led set 0 2 0 0 0xf<br />
+d. Send below command to let Major LED blinking.<br />
+# ipmitool picmg led set 0 2 100 100 0xf<br />
+e. Send below command to set Major LED restore local control.<br />
+# ipmitool picmg led set 0 2 252 0 0xf</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b. Major LED shall be turn on.<br />
+c. Major LED shall be turn off.<br />
+d. Major LED shall&nbsp;keep blinking for one second.<br />
+e. Major LED shall be restored to local control.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[2]]></step_number>
+	<actions><![CDATA[<p>SW Define LED 2:<br />
+a. Power on system and boot to OS.<br />
+b. Send below command to turn on Critical LED:<br />
+# ipmitool picmg led set 0 1 255 0 0xf<br />
+c. Send below command to turn off Critical LED:<br />
+# ipmitool picmg led set 0 1 0 0 0xf<br />
+d. Send below command to let Critical LED blinking.<br />
+# ipmitool picmg led set 0 1 100 100 0xf<br />
+e. Send below command to set Critical LED restore local control.<br />
+# ipmitool picmg led set 0 1 252 0 0xf</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b. Critical LED shall be turn on.<br />
+c. Critical LED shall be turn off.<br />
+d. Critical LED shall keep blinking for one second.<br />
+e. Critical LED shall be restored&nbsp;to local control.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="520818" name="01.09.08 Remote Log (syslog, debug)">
+	<node_order><![CDATA[7]]></node_order>
+	<externalid><![CDATA[560844]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a.&nbsp;Login Node Explorer and move to&nbsp;&quot;Maintenance - BMC Debug Log&quot; page.<br />
+b. Click each log file.<br />
+c. Try to download debug archive file.<br />
+d. Press &quot;Download All&quot; button to download all logs.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b. Click file shall show detail information.<br />
+c. It shall be able to download log file by download button.<br />
+d. It shall be able to download all debug logs by &quot;Download All&quot; button.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[2]]></step_number>
+	<actions><![CDATA[<p>a. At &quot;BMC Debug Log&quot; page, enable &quot;Output to syslog&quot;.<br />
+b. Move to &quot;Extra Configurations - Remote Syslog&quot; page.<br />
+c. Enable remote syslog feature.<br />
+d. Set destination IP as remote PC IP.<br />
+e. On remote PC, using Wireshark to monitor received package on port 514.<br />
+f. Establish SSH session to DUT&#39;s BMC.<br />
+g.&nbsp;check Wireshark log.<br />
+h.&nbsp;In BMC session open debug function.<br />
+# cli debug 5 0x200<br />
+i. Reboot system to trigger log.<br />
+j.&nbsp;check Wireshark log.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>g.&nbsp;SSH login message shall forward to remote PC.<br />
+j.&nbsp;Trigger log shall be forward to remote PC.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="520822" name="01.09.09 SNMP V1/V2">
+	<node_order><![CDATA[8]]></node_order>
+	<externalid><![CDATA[560845]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Login Node Explorer and move to &quot;Extra Configurations - SNMP&quot; page.<br />
+b. Download MIB file from Node Explorer.<br />
+c. Trying to get SNMP &quot;boardInfoTable&quot; with downloaded MIB file by iReasoning MIB browser.&nbsp;<br />
+d. On Node Explorer, change community string type to &quot;read/write&quot;.<br />
+e. Change community string value.<br />
+f. Try to set and get SNMP &quot;boardInfoTable&quot; with new community string by MIB browser.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b. MIB file shall be able to download from web.<br />
+c. It shall be able to get SNMP message by MIB browser.<br />
+f. It shall be able to get/set SNMP message with private community string.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[2]]></step_number>
+	<actions><![CDATA[<p>a. Login Node Explorer and move to &quot;BMC Interface Control&quot; page.<br />
+b. Disable SNMP function.<br />
+c.&nbsp;Try to set and get SNMP data&nbsp;by MIB browser.<br />
+d. Enable SNMP function.<br />
+e.&nbsp;Try to set and get SNMP data by MIB browser.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c. It shall not be able to get/set SNMP message with public/private community string.<br />
+e. It shall&nbsp;be able to get/set SNMP message with public/private community string.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="520826" name="01.09.10 SNMP V3">
+	<node_order><![CDATA[9]]></node_order>
+	<externalid><![CDATA[560846]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Power DUT and boot to OS.<br />
+b. On remote PC, connect LAN with DUT&#39;s MGMT port.<br />
+c. Installed iReasoning.<br />
+d. Go to Node Explorer enable administrator PAM SNMP.&nbsp;<br />
+e. Set iReasoning:<br />
+&nbsp;- snmp version to V3.<br />
+&nbsp;- USM user: administrator<br />
+&nbsp;- Security Level: auth, priv<br />
+&nbsp;- Auth Algorithm: SHA<br />
+&nbsp;- Auth Password: advantech<br />
+&nbsp;- Privacy Algorithm: AES<br />
+&nbsp;- Privacy Password: advantech<br />
+f. Check SNMP get on PC is working normally with SNMP user and password.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>f. SNMP get/set action shall be works through SNMP v3 user.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[2]]></step_number>
+	<actions><![CDATA[<p>a. Go to Node Explorer disable administrator PAM SNMP.<br />
+b.&nbsp;Check SNMP get on PC is working normally with SNMP user and password.<br />
+c. Go to Node Explorer enable administrator PAM SNMP.<br />
+d.&nbsp;Check SNMP get on PC is working normally with SNMP user and password.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b. SNMP get/set action shall not be works through SNMP v3 user.<br />
+d. SNMP get/set action shall be works through SNMP v3 user.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="567456" name="01.09.11 Restore Power Policy">
+	<node_order><![CDATA[10]]></node_order>
+	<externalid><![CDATA[561717]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration>60.00</estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>Always On:<br />
+a. Send IPMI command to set power policy.<br />
+&nbsp;# ipmitool chassis policy always-on<br />
+b. Send IPMI command to check power policy.<br />
+&nbsp;# ipmitool chassis status<br />
+c. Turn off AC power.<br />
+d. After 10 seconds, resume AC power.<br />
+e. Check if system power on automatically or not.<br />
+f. Boot system to OS.<br />
+g. Shut down system by poweroff command.<br />
+h. After system power off, turn off AC power.<br />
+i. After 10 seconds, turn on AC power.<br />
+j. Check system status.<br />
+k.&nbsp;Power off DUT by power button during POST.<br />
+l. Turn off AC power.<br />
+m. Resume AC power and check system status.<br />
+n. Boot DUT to OS.<br />
+o. Power off DUT by press power button over 4 seconds in OS.<br />
+p. Turn off AC power.<br />
+q. Resume AC power and check system state.<br />
+r. Boot system to OS, and then send command to power off system.<br />
+s. Keep press power button, system will power on then power off.<br />
+t. Turn off AC power.<br />
+u. Resume AC power and check system status.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b. Restore AC Power policy shall be always-on.<br />
+e. System shall power on automatically after turn on AC power.<br />
+j.&nbsp;System shall power on automatically after turn on AC power.<br />
+m.&nbsp;System shall power on automatically after turn on AC power.<br />
+q.&nbsp;System shall power on automatically after turn on AC power.<br />
+u.&nbsp;System shall power on automatically after turn on AC power.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[2]]></step_number>
+	<actions><![CDATA[<p>Always Off:<br />
+a. Send IPMI command to set power policy.<br />
+&nbsp;#ipmitool chassis policy always-off<br />
+b. Send IPMI command to check power policy.<br />
+&nbsp;#ipmitool chassis status<br />
+c. Turn off AC power.<br />
+d. After 10 seconds, resume AC power.<br />
+e. Check if system power on automatically or not.<br />
+f. Boot system to OS.<br />
+g. Shutdown system by poweroff command.<br />
+h. After system power off, turn off AC power.<br />
+i. After 10 seconds, turn on AC power.<br />
+j. Check system status.<br />
+k.&nbsp;Power off DUT by power button during POST.<br />
+l. Turn off AC power.<br />
+m. Resume AC power and check system status.<br />
+n. Boot DUT to OS.<br />
+o. Power off DUT by press power button over 4 seconds in OS.<br />
+p. Turn off AC power.<br />
+q. Resume AC power and check system state.<br />
+r. Boot system to OS, and then send command to power off system.<br />
+s. Keep press power button, system will power on then power off.<br />
+t. Turn off AC power.<br />
+u. Resume AC power and check system status.<br />
+&nbsp;</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b. Restore AC Power policy shall be always-off.<br />
+e. System shall keep in power off state after turn on AC power.<br />
+j.&nbsp;System shall keep in power off state after turn on AC power.<br />
+m.&nbsp;System shall keep in power off state after turn on AC power.<br />
+q.&nbsp;System shall keep in power off state after turn on AC power.<br />
+u.&nbsp;System shall keep in power off state after turn on AC power.<br />
+&nbsp;</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[3]]></step_number>
+	<actions><![CDATA[<p>Last State:<br />
+a. Send IPMI command to set power policy.<br />
+&nbsp;# ipmitool chassis policy previous<br />
+b. Send IPMI command to check power policy.<br />
+&nbsp;# ipmitool chassis status<br />
+c. Turn off AC power.<br />
+d. After 10 seconds, resume AC power.<br />
+e. Check if system power on automatically or not.<br />
+f. Boot system to OS.<br />
+g. Shutdown system by poweroff command.<br />
+h. After system power off, turn off AC power.<br />
+i. After 10 seconds, turn on AC power.<br />
+j. Check system status.<br />
+k.&nbsp;Power off DUT by power button during POST.<br />
+l. Turn off AC power.<br />
+m. Resume AC power and check system status.<br />
+n. Boot DUT to OS.<br />
+o. Power off DUT by press power button over 4 seconds in OS.<br />
+p. Turn off AC power.<br />
+q. Resume AC power and check system state.<br />
+r. Boot system to OS, and then send command to power off system.<br />
+s. Keep press power button, system will power on then power off.<br />
+t. Turn off AC power.<br />
+u. Resume AC power and check system status.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b. Restore AC Power policy shall be previous.<br />
+e. System shall power on automatically after turn on AC power.<br />
+j.&nbsp;System shall keep in power off state after turn on AC power.<br />
+m.&nbsp;System shall keep in power off state after turn on AC power.<br />
+q.&nbsp;System shall keep in power off state after turn on AC power.<br />
+u.&nbsp;System shall keep in power off state after turn on AC power.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+</testsuite><testsuite id="520849" name="01.10.00 Stability" >
+<node_order><![CDATA[10]]></node_order>
+<details><![CDATA[]]></details> 
+<custom_fields>
+			<custom_field>
+			<name><![CDATA[Version History:]]></name>
+			<value><![CDATA[]]></value>
+			</custom_field>
+		</custom_fields>
+
+<testcase internalid="567469" name="01.10.01 DC On/Off">
+	<node_order><![CDATA[0]]></node_order>
+	<externalid><![CDATA[561719]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Power on system and boot to OS.<br />
+b. Clear SEL.<br />
+c. Send chassis power off command to power off system.<br />
+# ipmitool -I lanplus -H bmcip -U administrator&nbsp;-P advantech&nbsp;chassis power off<br />
+d. Send chassis power on command to power on system.<br />
+# ipmitool -I lanplus -H bmcip -U administrator&nbsp;-P advantech&nbsp;chassis power on<br />
+e. After system boot to OS, check system status, SEL and sensor reading.<br />
+f. Repeat test 100 times<br />
+g.&nbsp;Using mc info to check&nbsp;USB serial interface each round.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>f1. Payload shall not hang, crash or device lost during test.<br />
+f2. BMC shall turn on/off payload by command.<br />
+f3. BMC shall create SEL as expected result.<br />
+f4. BMC sensor shall be normal after payload power on.<br />
+g.&nbsp;USB serial interface shall get mc info 100 times.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="567472" name="01.10.02 Chassis Power Cycle 100 times">
+	<node_order><![CDATA[2]]></node_order>
+	<externalid><![CDATA[561720]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[<div><br />
+&nbsp;</div>
+
+<div>&nbsp;</div>
+]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[3]]></importance>
+	<estimated_exec_duration>30.00</estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Power on system and boot to OS.<br />
+b. Clear SEL.<br />
+c. Send chassis power cycle command.<br />
+# ipmitool -I lanplus -H bmcip -U administrator&nbsp;-P advantech&nbsp;chassis power cycle<br />
+d. After system boot to OS, check system status, SEL and sensor reading.<br />
+e. Repeat this test 100 times.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>d1. Payload shall not hang, crash or device lost during test.<br />
+d2. BMC shall reset payload by command.<br />
+d3. BMC shall create SEL as expected result.<br />
+d4. BMC sensor shall be normal after payload power on.<br />
+d5. BMC LAN shall not default mac address.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="567475" name="01.10.03 Power on &amp; System Check w/ APC (100 times)">
+	<node_order><![CDATA[4]]></node_order>
+	<externalid><![CDATA[561721]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[3]]></importance>
+	<estimated_exec_duration>60.00</estimated_exec_duration>
+	<status>2</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[3]]></step_number>
+	<actions><![CDATA[<p>a. Power on system and boot to OS.<br />
+b. Clear SEL.<br />
+c. Set power restore policy as always on.<br />
+d. Turn off AC power by APC.<br />
+e. After 30 seconds, turn on AC power.<br />
+f. After system boot to OS, check system status, SEL and sensor reading.<br />
+g. Repeat this test 100 times.<br />
+h.&nbsp;Using mc info to check USB serial interface each round.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>g1. Payload shall not hang, crash or device lost during test.<br />
+g2. Payload shall power on as power restore policy.<br />
+g3. BMC shall create SEL as expected result.<br />
+g4. BMC sensor shall be normal after payload reset.<br />
+g5. BIOS/BMC boot bank shall not be changed.<br />
+h.&nbsp;USB serial interface shall get mc info 100 times.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="567484" name="01.10.04 Chassis Power Reset 100 times">
+	<node_order><![CDATA[7]]></node_order>
+	<externalid><![CDATA[561722]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[<div><br />
+&nbsp;</div>
+
+<div>&nbsp;</div>
+]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[3]]></importance>
+	<estimated_exec_duration>30.00</estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Power on system and boot to OS.<br />
+b. Clear SEL.<br />
+c. Send chassis power reset&nbsp;command.<br />
+# ipmitool -I lanplus -H bmcip -U administrator&nbsp;-P advantech&nbsp;chassis power reset<br />
+d. After system boot to OS, check system status, SEL and sensor reading.<br />
+e. Repeat this test 100 times.<br />
+&nbsp;</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>e1. BMC shall not generate unexpected event in SEL.<br />
+e2. Sensor reading and status shall keep in normal state.<br />
+e3. FW version and boot bank shall not be changed.<br />
+e4. FRU data shall not lost<br />
+e5. BMC LAN shall not default mac address.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="520862" name="01.10.05 OS Reboot with SOL">
+	<node_order><![CDATA[8]]></node_order>
+	<externalid><![CDATA[560856]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Open SOL session.<br />
+b. Reboot OS 100 times.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>b1. SOL session shall not disconnect.<br />
+b2. It shall not have unexpected SEL.<br />
+b3. Sensor reading shall be normal during test.<br />
+b4. BIOS boot bank shall not swap.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="520865" name="01.10.06 System Idle">
+	<node_order><![CDATA[9]]></node_order>
+	<externalid><![CDATA[560857]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Power on DUT and boot into OS.<br />
+b. Clear SEL.<br />
+c. Login BMC and OS console.<br />
+d. Wait for 12 hours.<br />
+e. Check SEL and sensor reading.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>e1. The system shall not generate any abnormal sel.<br />
+e2. Sensor reading shall be normal.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="520868" name="01.10.07 BMC Reset">
+	<node_order><![CDATA[10]]></node_order>
+	<externalid><![CDATA[560858]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Execute MCReset.sh test script for this test.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>a1. Sensor reading shall be normal.<br />
+a2. Unexpected SEL shall not be created.<br />
+a3. Payload shall not be affected during test.<br />
+a4. BIOS/BMC boot bank shall not be changed.<br />
+a5. BMC shall be in normal state.<br />
+a6. USB serial interface shall get mc info 100 times.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="520874" name="01.10.08 Remote Storage Insert/Eject">
+	<node_order><![CDATA[11]]></node_order>
+	<externalid><![CDATA[560860]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>Via Web<br />
+a. Login web interface and open iKVM session.<br />
+b. Click &quot;Remote Storage&quot; button on toolbar.<br />
+c. Upload image and press &quot;Insert&quot; button.<br />
+d. After insert successful, press &quot;Eject&quot; button.<br />
+e. Repeat to insert and eject 20 loops.<br />
+f. Check remote storage function.<br />
+g. The same test method on SMB share method.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>f. Remote storage function shall be work normally.<br />
+g. Remote storage function shall be work normally.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[2]]></step_number>
+	<actions><![CDATA[<p>Via Local OS<br />
+a. Login web interface and open iKVM session.<br />
+b. Click &quot;Remote Storage&quot; button on toolbar.<br />
+c. Upload image and press &quot;Insert&quot; button.<br />
+d. After insert successful, send &quot;Eject&quot; command in iKVM session.<br />
+e. Insert image via web again.<br />
+f. Send &quot;lsblk&quot; command to check insert function.<br />
+g. Repeat &quot;Insert&quot; &gt; &quot;lsblk&quot; &gt; &quot;Eject&quot; about 5 times.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>g. Mount image shall be successfully.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="520871" name="01.10.09 Upgrade BMC 10 times">
+	<node_order><![CDATA[12]]></node_order>
+	<externalid><![CDATA[560859]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Downgrade BL version to previous release.<br />
+b. Downgrade BMC to previous release.<br />
+c. Downgrade FPGA to previous release.<br />
+d. Downgrade BIOS to previous release.<br />
+e. Downgrade NVRAM to previous release.<br />
+f. Reset DUT and boot to OS again.<br />
+g. Upgrade FW to latest version.<br />
+(BL &gt; BMC &gt; FPGA &gt; BIOS &gt; NVRAM)<br />
+h. Repeat test step 10 times.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>h. All downgrade and upgrade process shall be complete and successful.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="520878" name="01.10.10 Upgrade BIOS 10 times">
+	<node_order><![CDATA[13]]></node_order>
+	<externalid><![CDATA[560861]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Downgrade BL version to previous release.<br />
+b. Downgrade BMC to previous release.<br />
+c. Downgrade FPGA to previous release.<br />
+d. Downgrade BIOS to previous release.<br />
+e. Downgrade NVRAM to previous release.<br />
+f. Reset DUT and boot to OS again.<br />
+g. Upgrade FW to latest version.<br />
+(BL &gt; BMC &gt; FPGA &gt; BIOS &gt; NVRAM)<br />
+h. Repeat test step 10 times.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>h. All downgrade and upgrade process shall be complete and successful.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="520884" name="01.10.11 Upgrade FPGA 10 times">
+	<node_order><![CDATA[14]]></node_order>
+	<externalid><![CDATA[560863]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Downgrade BL version to previous release.<br />
+b. Downgrade BMC to previous release.<br />
+c. Downgrade FPGA to previous release.<br />
+d. Downgrade BIOS to previous release.<br />
+e. Downgrade NVRAM to previous release.<br />
+f. Reset DUT and boot to OS again.<br />
+g. Upgrade FW to latest version.<br />
+(BL &gt; BMC &gt; FPGA &gt; BIOS &gt; NVRAM)<br />
+h. Repeat test step 10 times.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>h. All downgrade and upgrade process shall be complete and successful.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="520881" name="01.10.12 RMCP Ping">
+	<node_order><![CDATA[15]]></node_order>
+	<externalid><![CDATA[560862]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>Execute RMCP_Ping.sh from remote PC for 12 hours.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>It shall not lose&nbsp;any communication during 12 hours.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="520887" name="01.10.13 KCS Stress">
+	<node_order><![CDATA[16]]></node_order>
+	<externalid><![CDATA[560864]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Power on DUT and boot to Linux.<br />
+b. Open 5 SSH session to DUT.<br />
+c. Execute KCS_Stress.sh in each SSH session.<br />
+d. Check result after 12 hours.<br />
+# dmesg | grep ipmi</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>d1. KCS and BMC shall not crash.<br />
+d2. Payload system shall not crash or hang up.<br />
+d3. It shall not display about&nbsp;ipmi error message.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="520890" name="01.10.14 USB Serial Interface">
+	<node_order><![CDATA[17]]></node_order>
+	<externalid><![CDATA[560865]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>a. Upgrade BMC FW via USB serial interface.<br />
+b. Upgrade BIOS via USB&nbsp;serial interface.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>a1. Upgrade process shall&nbsp;be successful.<br />
+a2. Record upgrade time.<br />
+b1. Upgrade process shall&nbsp;be successful.<br />
+b2. Record upgrade time.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+</testsuite><testsuite id="567403" name="01.11.00 Error Management" >
+<node_order><![CDATA[11]]></node_order>
+<details><![CDATA[]]></details> 
+<custom_fields>
+			<custom_field>
+			<name><![CDATA[Version History:]]></name>
+			<value><![CDATA[]]></value>
+			</custom_field>
+		</custom_fields>
+
+<testcase internalid="567404" name="01.11.01 MCA Register Logging">
+	<node_order><![CDATA[0]]></node_order>
+	<externalid><![CDATA[561706]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>Generate below errors IERR<br />
+a. Clear SEL list.<br />
+b. Execute CScript command.<br />
+&gt;&gt;&gt; ei.injectIERR()<br />
+c. Check SEL list.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c. SEL list shall have a&nbsp;SEL log:<br />
+- Event generator is 0x20 (From BMC)<br />
+- Sensor ID is PROC_STATE sensor.<br />
+- Description is IERR</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[2]]></step_number>
+	<actions><![CDATA[<p>Generate below errors MCERR<br />
+a. Clear SEL list.<br />
+b. Execute CScript command.<br />
+&gt;&gt;&gt;&nbsp;ei.injectMCERR()<br />
+c. Check SEL list.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>c. SEL list shall have below SEL logs:<br />
+- MCERR error log from PROC_STATE sensor.<br />
+(Event generator is 0x20, Description is&nbsp;Machine check exception (uncorrectable))</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+
+<step>
+	<step_number><![CDATA[3]]></step_number>
+	<actions><![CDATA[<p>After MCERR test case,<br />
+Send below OEM command to get Error Counter:<br />
+a. Get Dump Mask:<br />
+#ipmitool raw 0x2e 0x54 0x39 0x28 0x00<br />
+b. Get Error Dump Slot Info:<br />
+#ipmitool raw 0x2e 0x55 0x39 0x28 0x00 &lt;from step_a&gt;<br />
+c. Get Error Dump Register:<br />
+#ipmitool raw 0x2e 0x57 0x39 0x28 0x00 0x0 0x0 0x1c 0x04</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>a. Slot 0 and slot 1 shall be used.<br />
+b. Response data shall be 0x41<br />
+c.&nbsp;CPU0_MCA shall have error register value.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+
+<testcase internalid="520692" name="01.11.02 Mainboard Power Fail Detection">
+	<node_order><![CDATA[2]]></node_order>
+	<externalid><![CDATA[560815]]></externalid>
+	<version><![CDATA[1]]></version>
+	<summary><![CDATA[]]></summary>
+	<preconditions><![CDATA[]]></preconditions>
+	<execution_type><![CDATA[1]]></execution_type>
+	<importance><![CDATA[2]]></importance>
+	<estimated_exec_duration></estimated_exec_duration>
+	<status>1</status>
+	<is_open>1</is_open>
+	<active>1</active>
+<steps>
+<step>
+	<step_number><![CDATA[1]]></step_number>
+	<actions><![CDATA[<p>Trigger Power Good Fail than&nbsp;check SEL and DUT behavior.</p>
+]]></actions>
+	<expectedresults><![CDATA[<p>The SEL shall match the power fail location.</p>
+]]></expectedresults>
+	<execution_type><![CDATA[1]]></execution_type>
+</step>
+</steps>
+</testcase>
+</testsuite></testsuite>

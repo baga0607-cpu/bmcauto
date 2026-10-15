@@ -1,0 +1,8 @@
+TESTCASE_NAME = "HEAD_Method_Support_AUTO"
+FAMILY_ID = "85e155fe-64c9-418a-9b9f-693f4a86ebc9"
+
+STEPS = [
+    "testcase_database.steps.Basic_Function_Test.HEAD_Method_Support.head_request",
+    "testcase_database.steps.Basic_Function_Test.HEAD_Method_Support.verify_head_response",
+    "testcase_database.steps.common.human_check",
+]
