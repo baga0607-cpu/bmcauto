@@ -58,6 +58,166 @@ class SingleCaseRepositoryTest(unittest.TestCase):
     def update(self, tc, data, plan='a'):
         return self.client.put(f'/api/plans/{plan}/testcases/{tc["id"]}/definition', json=data)
 
+    def test_direct_plan_import_root_move_and_restart(self):
+        response=self.client.post('/api/plans/a/testcases/import-python',json={'source':SOURCE,'folder_id':None})
+        self.assertEqual(response.status_code,201,response.get_json())
+        case=response.get_json()
+        self.assertIsNone(case['folder_id'])
+        self.assertEqual(self.definition(case)['settings']['expected'],200)
+        with self.Session() as session:
+            self.assertEqual(session.query(RepositoryCase).count(),1)
+            self.assertIsNone(session.get(TestCase,case['id']).repository_id)
+        folder=self.client.post('/api/plans/a/folders',json={'name':'Folder'}).get_json()['id']
+        for destination in (folder,None):
+            response=self.client.post('/api/plans/a/testcases/move',json={'testcase_ids':[case['id']],'folder_id':destination})
+            self.assertEqual(response.status_code,200,response.get_json())
+        ps.migrate_current_state(self.engine,self.root/'migration.log')
+        with self.Session() as session:
+            self.assertIsNone(session.get(TestCase,case['id']).folder_id)
+        self.assertEqual(self.definition(case)['source'],SOURCE)
+
+    def test_direct_import_folder_validation_and_lock(self):
+        folder=self.client.post('/api/plans/a/folders',json={'name':'Folder'}).get_json()['id']
+        foreign=self.client.post('/api/plans/b/folders',json={'name':'Other'}).get_json()['id']
+        for source,target,status in [('bad syntax !',folder,400),(SOURCE,foreign,400),(SOURCE,folder,201),(SOURCE,folder,409)]:
+            response=self.client.post('/api/plans/a/testcases/import-python',json={'source':source,'folder_id':target})
+            self.assertEqual(response.status_code,status,response.get_json())
+        with self.Session() as session:
+            self.assertEqual(session.query(TestCase).count(),1)
+            self.assertEqual(session.query(RepositoryCase).count(),1)
+            self.assertEqual(session.query(TestCase).one().folder_id,folder)
+            session.get(Task,'task1').execution_active=True
+            session.commit()
+        response=self.client.post('/api/plans/a/testcases/import-python',json={'source':SOURCE.replace('Service entry','Locked')})
+        self.assertEqual(response.status_code,409,response.get_json())
+        self.assertEqual(len(list(self.root.glob('testcase_database/scripts/*/case.py'))),1)
+
+    def test_source_import_preserves_plan_settings_and_independence(self):
+        source=self.add_case('a')
+        self.assertEqual(self.update(source,{'settings':{'preset':'/adapted','expected':204},'settings_revision':0}).status_code,200)
+        folder=self.client.post('/api/plans/b/folders',json={'name':'Destination'}).get_json()['id']
+        payload={'source_type':'plan','source_plan_id':'a','kind':'case','id':source['id'],'target_folder_id':folder}
+        response=self.client.post('/api/plans/b/import-cases',json=payload)
+        self.assertEqual(response.status_code,201,response.get_json())
+        copied=response.get_json()['added'][0]
+        self.assertEqual(copied['folder_id'],folder)
+        self.assertEqual(self.definition(copied,'b')['settings'],{'preset':'/adapted','expected':204})
+        self.assertNotEqual(copied['id'],source['id'])
+        conflict=self.client.post('/api/plans/b/import-cases',json=payload).get_json()['conflicts'][0]
+        target=conflict['targets'][0]
+        self.assertTrue(conflict['same_version'])
+        skipped=self.client.post('/api/plans/b/import-cases',json={**payload,'decisions':{source['id']:{'action':'skip','target_id':target['id'],'target_token':target['token']}}})
+        self.assertEqual(skipped.get_json()['skipped'],['Service entry'])
+        self.assertEqual(self.update(copied,{'settings':{'preset':'/target','expected':205},'settings_revision':0},'b').status_code,200)
+        self.assertEqual(self.definition(source)['settings']['expected'],204)
+        repo=self.client.post('/api/repository/testcases',json={'source':SOURCE.replace('Service entry','Default case')}).get_json()
+        result=self.client.post('/api/plans/b/import-cases',json={'source_type':'repository','kind':'case','id':repo['id']}).get_json()
+        self.assertEqual(self.definition(result['added'][0],'b')['settings']['expected'],200)
+        self.assertIsNone(result['added'][0]['folder_id'])
+        with self.Session() as session:self.assertEqual(session.query(TaskTestCase).count(),0)
+
+    def test_import_nested_folders_reuses_destination_and_rolls_back(self):
+        top=self.client.post('/api/plans/a/folders',json={'name':'Top'}).get_json()['id']
+        child=self.client.post('/api/plans/a/folders',json={'name':'Child','parent_id':top}).get_json()['id']
+        self.client.post('/api/plans/a/folders',json={'name':'Empty','parent_id':child})
+        source=self.client.post('/api/plans/a/testcases/import-python',json={'source':SOURCE,'folder_id':child}).get_json()
+        payload={'source_type':'plan','source_plan_id':'a','kind':'folder','id':top}
+        response=self.client.post('/api/plans/b/import-cases',json=payload)
+        self.assertEqual(response.status_code,201,response.get_json())
+        folders=self.client.get('/api/plans/b/folders').get_json()
+        self.assertEqual(len(folders),3)
+        self.assertEqual(self.definition(response.get_json()['added'][0],'b')['source'],SOURCE)
+        conflict=self.client.post('/api/plans/b/import-cases',json=payload).get_json()['conflicts'][0]
+        target=conflict['targets'][0]
+        again=self.client.post('/api/plans/b/import-cases',json={**payload,'decisions':{source['id']:{'action':'skip','target_id':target['id'],'target_token':target['token']}}}).get_json()
+        self.assertEqual(len(again['added']),0);self.assertEqual(len(again['skipped']),1)
+        self.assertEqual(len(self.client.get('/api/plans/b/folders').get_json()),3)
+        # New source subtree fails after a first file was copied; no partial folders/files survive.
+        broken=self.client.post('/api/plans/a/folders',json={'name':'Broken'}).get_json()['id']
+        for name in ['First valid','Missing file']:
+            item=self.client.post('/api/plans/a/testcases/import-python',json={'source':SOURCE.replace('Service entry',name),'folder_id':broken}).get_json()
+        with self.Session() as session:sc.script_file(self.root,session.get(TestCase,item['id'])).unlink()
+        files=set(self.root.glob('testcase_database/scripts/*/case.py'))
+        response=self.client.post('/api/plans/b/import-cases',json={**payload,'id':broken})
+        self.assertGreaterEqual(response.status_code,400)
+        self.assertEqual(set(self.root.glob('testcase_database/scripts/*/case.py')),files)
+        self.assertEqual(len(self.client.get('/api/plans/b/folders').get_json()),3)
+
+    def test_import_conflicts_same_version_overwrite_and_different_version_coexist(self):
+        source=self.add_case('a')
+        payload={'source_type':'plan','source_plan_id':'a','kind':'case','id':source['id']}
+        copied=self.client.post('/api/plans/b/import-cases',json=payload).get_json()['added'][0]
+        self.update(source,{'settings':{'preset':'/changed','expected':202},'settings_revision':0})
+        conflict=self.client.post('/api/plans/b/import-cases',json=payload).get_json()['conflicts'][0]
+        self.assertTrue(conflict['same_version'])
+        target=conflict['targets'][0]
+        decision={'action':'overwrite','target_id':target['id'],'target_token':target['token']}
+        result=self.client.post('/api/plans/b/import-cases',json={**payload,'decisions':{source['id']:decision}})
+        self.assertEqual(result.status_code,201,result.get_json())
+        self.assertEqual(result.get_json()['updated'][0]['id'],copied['id'])
+        self.assertEqual(self.definition(copied,'b')['settings']['expected'],202)
+        # A new repository generation of the same name can coexist without renaming.
+        repo=self.client.post('/api/repository/testcases',json={'source':SOURCE}).get_json()
+        payload={'source_type':'repository','kind':'case','id':repo['id']}
+        conflict=self.client.post('/api/plans/b/import-cases',json=payload).get_json()['conflicts'][0]
+        self.assertFalse(conflict['same_version']);target=conflict['targets'][0]
+        decision={'action':'coexist','target_id':target['id'],'target_token':target['token']}
+        result=self.client.post('/api/plans/b/import-cases',json={**payload,'decisions':{repo['id']:decision}})
+        self.assertEqual(result.status_code,201,result.get_json())
+        twin=result.get_json()['added'][0]
+        self.assertEqual(twin['tc_name'],copied['tc_name'])
+        self.assertNotEqual(twin['source_version'],copied['source_version'])
+        self.assertEqual(self.definition(twin,'b')['settings']['expected'],200)
+        # Reimporting this version offers overwrite only, even with another version present.
+        conflict=self.client.post('/api/plans/b/import-cases',json=payload).get_json()['conflicts'][0]
+        self.assertTrue(conflict['same_version']);self.assertEqual(conflict['targets'][0]['id'],twin['id'])
+
+    def test_import_overwrite_update_keeps_evidence_and_restores_on_commit_failure(self):
+        copied=self.add_case('b')
+        with self.Session() as session:
+            session.add(Task(id='target-task',plan_id='b',name='Target'))
+            session.add(TaskTestCase(task_id='target-task',testcase_id=copied['id'],status='Passed',log_text='preserve log'))
+            session.commit()
+        repo=self.client.post('/api/repository/testcases',json={'source':SOURCE+'\n# newer source'}).get_json()
+        payload={'source_type':'repository','kind':'case','id':repo['id']}
+        conflict=self.client.post('/api/plans/b/import-cases',json=payload).get_json()['conflicts'][0];target=conflict['targets'][0]
+        payload['decisions']={repo['id']:{'action':'overwrite','target_id':target['id'],'target_token':target['token']}}
+        with patch.object(self.Session.class_,'commit',side_effect=RuntimeError('simulated failure')):
+            self.assertGreaterEqual(self.client.post('/api/plans/b/import-cases',json=payload).status_code,400)
+        self.assertEqual(self.definition(copied,'b')['source'],SOURCE)
+        result=self.client.post('/api/plans/b/import-cases',json=payload)
+        self.assertEqual(result.status_code,201,result.get_json())
+        self.assertEqual(result.get_json()['updated'][0]['source_version'],repo['source_version'])
+        with self.Session() as session:
+            membership=session.query(TaskTestCase).filter_by(testcase_id=copied['id']).one()
+            self.assertEqual(membership.log_text,'preserve log');self.assertTrue(membership.needs_retest)
+        self.assertEqual(self.client.post('/api/plans/b/import-cases',json=payload).status_code,409)
+
+    def test_folder_import_resolves_versions_within_the_same_batch(self):
+        folder=self.client.post('/api/repository/folders',json={'name':'Versions'}).get_json()['id']
+        for suffix in ('# one','# two'):
+            self.client.post('/api/repository/testcases',json={'source':SOURCE+'\n'+suffix,'folder_id':folder})
+        payload={'source_type':'repository','kind':'folder','id':folder}
+        response=self.client.post('/api/plans/b/import-cases',json=payload)
+        self.assertEqual(response.status_code,409,response.get_json())
+        conflict=response.get_json()['conflicts'][0];target=conflict['targets'][0]
+        self.assertTrue(target['id'].startswith('incoming:'))
+        self.assertEqual(self.client.get('/api/plans/b/folders').get_json(),[])
+        result=self.client.post('/api/plans/b/import-cases',json={**payload,'decisions':{conflict['id']:{'action':'coexist','target_id':target['id'],'target_token':target['token']}}})
+        self.assertEqual(result.status_code,201,result.get_json())
+        self.assertEqual([c['tc_name'] for c in result.get_json()['added']],['Service entry','Service entry'])
+        self.assertEqual(len({c['source_version'] for c in result.get_json()['added']}),2)
+
+    def test_import_rejects_foreign_source_destination_self_and_locked(self):
+        source=self.add_case('a')
+        folder=self.client.post('/api/plans/a/folders',json={'name':'Source'}).get_json()['id']
+        base={'source_type':'plan','source_plan_id':'a','kind':'case','id':source['id']}
+        for plan,payload in [('a',base),('b',{**base,'source_plan_id':'b'}),('b',{**base,'target_folder_id':folder})]:
+            self.assertEqual(self.client.post('/api/plans/'+plan+'/import-cases',json=payload).status_code,400)
+        with self.Session() as session:
+            session.add(Task(id='busy',plan_id='b',name='Busy',execution_active=True));session.commit()
+        self.assertEqual(self.client.post('/api/plans/b/import-cases',json=base).status_code,409)
+
     def test_independent_source_and_settings_keep_generation(self):
         a, b = self.add_case(), self.add_case('b')
         definition = self.definition(a)

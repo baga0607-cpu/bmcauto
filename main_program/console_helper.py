@@ -35,9 +35,9 @@ class ConsoleClient:
         pwd = self.cs_conf.get("password", "")
 
         if not host:
-            raise ValueError("Console Server 主機 IP 未設定！")
+            raise ValueError("Console Server host IP is not configured.")
 
-        logger.info(f"正在連線至 Console Server ({host}:{port}, 協定: {proto})...")
+        logger.info(f"Connecting to Console Server ({host}:{port}, protocol: {proto})...")
 
         if proto == "ssh":
             import paramiko
@@ -48,7 +48,7 @@ class ConsoleClient:
             # 開啟互動式 Shell 通道
             self.ssh_channel = self.ssh_client.invoke_shell()
             self.ssh_channel.setblocking(0)
-            logger.info("Console Server SSH 連線已建立。")
+            logger.info("Console Server SSH connection established.")
         elif proto == "telnet":
             self.telnet_client = telnetlib.Telnet(host, port, timeout=15)
             # 處理 Telnet 登入 Console Server (有些 Console Server 需要登入帳密)
@@ -58,9 +58,9 @@ class ConsoleClient:
             if pwd:
                 self._read_until_regex([r"[pP]assword:"])
                 self._send(pwd)
-            logger.info("Console Server Telnet 連線已建立。")
+            logger.info("Console Server Telnet connection established.")
         else:
-            raise ValueError(f"不支援的連線協定: {proto}")
+            raise ValueError(f"Unsupported connection protocol: {proto}")
 
         self.connected = True
 
@@ -91,7 +91,7 @@ class ConsoleClient:
                 empty_checks += 1
                 time.sleep(0.02)
         if flushed_data:
-            logger.debug(f"[Flush] 已清除緩衝區殘留: {repr(flushed_data)}")
+            logger.debug(f"[Flush] Discarded buffered data: {repr(flushed_data)}")
 
     def _send(self, data):
         """底層發送字串並換行"""
@@ -132,13 +132,13 @@ class ConsoleClient:
                         return idx, match, buffer
             time.sleep(0.05)
             
-        raise TimeoutError(f"等待正則式超時: {patterns}。目前收到的內容：\n{buffer}")
+        raise TimeoutError(f"Timed out waiting for patterns: {patterns}. Received content:\n{buffer}")
 
     def _connect_to_dut(self):
         """第二階段：發送轉接指令連至 DUT"""
         cmd = self.dut_conf.get("connect_cmd")
         if not cmd:
-            logger.info("未設定 DUT 轉接指令，跳過此階段。")
+            logger.info("No DUT connection command configured; skipping this stage.")
             return
             
         force_connect_cmd = self.dut_conf.get("force_connect_cmd")
@@ -146,7 +146,7 @@ class ConsoleClient:
         cmd_to_run = cmd
         
         for retry in range(max_retries + 1):
-            logger.info(f"正在送出 DUT 轉接指令: {cmd_to_run} (第 {retry + 1} 次嘗試)...")
+            logger.info(f"Sending DUT connection command: {cmd_to_run} (attempt {retry + 1})...")
             
             # 1. 發送前先清除先前 SSH 登入產生的 prompt 殘留
             self._flush_buffer()
@@ -183,12 +183,12 @@ class ConsoleClient:
                 prompt_idx = 8
 
             try:
-                logger.info("等待 Telnet 轉接建立提示 (Connected / Escape character)...")
+                logger.info("Waiting for Telnet connection indication (Connected / Escape character)...")
                 idx, match, buf = self._read_until_regex(patterns, timeout=10)
                 
                 if idx in failure_indices:
                     if force_connect_cmd and retry < max_retries:
-                        logger.warning(f"偵測到連線被佔用/拒絕 ({match.group(0)})，嘗試執行搶線指令: {force_connect_cmd}...")
+                        logger.warning(f"Connection busy/refused ({match.group(0)}); trying force-connect command: {force_connect_cmd}...")
                         self._send_raw(chr(3))  # Ctrl+C
                         time.sleep(0.5)
                         self._send("")
@@ -198,14 +198,14 @@ class ConsoleClient:
                             pass
                         
                         cmd_to_run = force_connect_cmd
-                        logger.info("已將重試指令切換為搶線指令，進行下一輪嘗試...")
+                        logger.info("Using force-connect command for the next attempt...")
                         continue
                     else:
-                        raise ConnectionError(f"Telnet 轉接失敗，無法連上 DUT Serial！錯誤訊息：{match.group(0)}")
+                        raise ConnectionError(f"Telnet connection to DUT serial failed. Error: {match.group(0)}")
                 
                 if idx == prompt_idx:
                     if force_connect_cmd and retry < max_retries:
-                        logger.warning("連線指令直接被退回提示字元，嘗試執行搶線指令...")
+                        logger.warning("Connection command returned to the prompt; trying force-connect command...")
                         self._send_raw(chr(3))  # Ctrl+C
                         time.sleep(0.5)
                         self._send("")
@@ -217,13 +217,13 @@ class ConsoleClient:
                         cmd_to_run = force_connect_cmd
                         continue
                     else:
-                        raise ConnectionError(f"Telnet 轉接失敗，直接退回提示字元！完整輸出：\n{buf.strip()}")
+                        raise ConnectionError(f"Telnet connection failed and returned to the prompt. Full output:\n{buf.strip()}")
                 
-                logger.info("Telnet 轉接通道已建立。")
+                logger.info("Telnet connection established.")
                 break
             except TimeoutError:
                 if retry < max_retries and force_connect_cmd:
-                    logger.warning("等待轉接超時，嘗試發送 Ctrl+C 並切換為搶線指令...")
+                    logger.warning("Connection timed out; sending Ctrl+C and switching to force-connect command...")
                     self._send_raw(chr(3))
                     time.sleep(0.5)
                     self._send("")
@@ -234,7 +234,7 @@ class ConsoleClient:
                     cmd_to_run = force_connect_cmd
                     continue
                 else:
-                    logger.warning("未偵測到明確的 Telnet 建立提示，嘗試發送換行以刷新畫面...")
+                    logger.warning("No explicit Telnet connection indication; sending a newline to refresh output...")
                     self._send("")
                     time.sleep(0.5)
                     break
@@ -250,14 +250,14 @@ class ConsoleClient:
         """第三階段：OS 登入狀態機 (優先實作 Linux)"""
         os_type = self.os_conf.get("os_type", "linux").lower()
         if os_type != "linux":
-            logger.info(f"非 Linux 作業系統 ({os_type})，跳過 Linux 自動登入。")
+            logger.info(f"Non-Linux operating system ({os_type}); skipping automatic Linux login.")
             return
 
         username = self.os_conf.get("username", "root")
         password = self.os_conf.get("password", "")
         prompt = self.os_conf.get("prompt_regex", ".*# ")
 
-        logger.info("進入 Linux OS 登入狀態機...")
+        logger.info("Starting Linux OS login...")
         
         # 防呆措施 1：敲 Enter 進行狀態探針
         self._send("")
@@ -272,19 +272,19 @@ class ConsoleClient:
             idx, match, buf = self._read_until_regex(patterns, timeout=8)
             if idx == 0:
                 # 停在登入提示，送帳號
-                logger.info("偵測到 login 提示，送出使用者名稱...")
+                logger.info("Login prompt detected; sending username...")
                 self._send(username)
                 
                 # 等密碼
                 idx2, _, _ = self._read_until_regex([r"[pP]assword:", prompt], timeout=8)
                 if idx2 == 0:
-                    logger.info("送出 OS 登入密碼...")
+                    logger.info("Sending OS login password...")
                     self._send(password)
                     # 等待 Prompt
                     self._read_until_regex([prompt], timeout=10)
             elif idx == 1:
                 # 停在密碼提示，可能是髒狀態，送換行重設
-                logger.info("偵測到異常的 Password 提示，發送換行以重置登入狀態...")
+                logger.info("Unexpected password prompt; sending a newline to reset login state...")
                 self._send("")
                 self._read_until_regex([r"[lL]ogin:"], timeout=8)
                 self._send(username)
@@ -293,9 +293,9 @@ class ConsoleClient:
                 self._read_until_regex([prompt], timeout=10)
             elif idx == 2:
                 # 已經登入成功
-                logger.info("偵測到已處於登入狀態，跳過登入程序。")
+                logger.info("Already logged in; skipping login.")
         except TimeoutError:
-            logger.warning("狀態探針超時，嘗試強行送出一次帳密登入...")
+            logger.warning("Login state detection timed out; attempting login once...")
             self._send(username)
             time.sleep(0.5)
             self._send(password)
@@ -303,7 +303,7 @@ class ConsoleClient:
             self._send("")
 
         # 防呆措施 4：終端規格化
-        logger.info("正在進行 terminal 環境規格化 (export TERM=dumb & stty cols 300 rows 0)...")
+        logger.info("Configuring terminal environment (export TERM=dumb & stty cols 300 rows 0)...")
         self._send("export TERM=dumb")
         time.sleep(0.2)
         self._send("stty cols 300 rows 0")
@@ -312,16 +312,16 @@ class ConsoleClient:
         # 清空規格化指令的輸出回顯
         self._read_until_regex([prompt], timeout=5)
         self._flush_buffer()
-        logger.info("Linux OS 登入就緒。")
+        logger.info("Linux OS login ready.")
 
     def exec_command(self, cmd, timeout=15):
         """防呆執行指令"""
         if not self.connected:
-            raise ConnectionError("Console 尚未連線！")
+            raise ConnectionError("Console is not connected.")
 
         prompt = self.os_conf.get("prompt_regex", ".*# ")
         
-        logger.info(f"執行指令: {cmd}")
+        logger.info(f"Executing command: {cmd}")
         
         # 1. 徹底清空接收緩衝區殘留，確保這一次讀取只包含目前指令的輸出
         self._flush_buffer()
@@ -357,7 +357,7 @@ class ConsoleClient:
         time.sleep(0.5) # 給予終端機短暫緩衝時間
         exit_cmd = self.dut_conf.get("exit_cmd", "~.")
         if exit_cmd:
-            logger.info(f"正在關閉連線，送出退回指令: {exit_cmd}...")
+            logger.info(f"Closing connection; sending exit command: {exit_cmd}...")
             # 支援組合/逸出鍵，如 ^]q
             normalized = exit_cmd.replace("Ctrl+Alt+]", "^]").replace("Ctrl+]", "^]").replace("\\x1d", "^]").replace("\\u001d", "^]")
             if "^]" in normalized:
@@ -366,10 +366,10 @@ class ConsoleClient:
                     if i > 0:
                         # 在發送轉譯字元後的動作之前，嘗試等待 telnet> 提示字元
                         try:
-                            logger.info("等待 telnet> 提示字元出現...")
+                            logger.info("Waiting for telnet> prompt...")
                             self._read_until_regex([r"telnet>"], timeout=2)
                         except TimeoutError as e:
-                            logger.warning(f"未偵測到 telnet> 提示字元 ({e})，直接繼續。")
+                            logger.warning(f"No telnet> prompt detected ({e}); continuing.")
                             time.sleep(0.5)
                     
                     if part:
@@ -400,4 +400,4 @@ class ConsoleClient:
             self.telnet_client = None
             
         self.connected = False
-        logger.info("連線已關閉。")
+        logger.info("Connection closed.")

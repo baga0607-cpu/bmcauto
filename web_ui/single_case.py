@@ -1,6 +1,7 @@
 """Repository imports and independent Plan scripts. Reading metadata never runs code."""
 import ast
 import inspect
+import hashlib
 import json
 import math
 import sys
@@ -12,6 +13,7 @@ from flask import jsonify, request
 from models import RepositoryCase, RepositoryFolder, RepositoryFolderCase, TestCase, TaskTestCase
 import plan_state as ps
 import repository_tree as rt
+import case_order as co
 
 
 def metadata(source):
@@ -85,6 +87,11 @@ def automation_for_case(root, tc):
     try: return metadata(script_file(root,tc).read_text(encoding='utf-8'))['automation']
     except (OSError, UnicodeError, SyntaxError, ps.StateError): return 'unclassified'
 
+def parameter_count_for_case(root, tc):
+    if not root or tc.script_kind != 'single': return 0
+    try: return len(metadata(script_file(root,tc).read_text(encoding='utf-8')).get('parameters',{}))
+    except (OSError, UnicodeError, SyntaxError, ps.StateError): return 0
+
 def definition(root, tc):
     source = script_file(root, tc).read_text(encoding='utf-8')
     meta = metadata(source)
@@ -128,7 +135,7 @@ def register(app, runtime):
                     return jsonify(error=f'Invalid Python source: {error}'), 400
                 except Exception as error:
                     session.rollback()
-                    return jsonify(error=str(error)), getattr(error, 'code', 500)
+                    return jsonify(error=str(error)), error.code if isinstance(error, ps.StateError) else 500
                 finally:
                     session.close()
             app.add_url_rule(rule, fn.__name__, handle, methods=methods)
@@ -137,9 +144,9 @@ def register(app, runtime):
 
     @route('/api/repository/testcases', ['GET'])
     def repository_list(s, data):
-        return jsonify([dict(id=row.id, name=row.name, source_version=row.source_version,
+        return jsonify(co.arrange(s,'repository',[dict(id=row.id, name=row.name, source_version=row.source_version,
                              folder_id=(s.get(RepositoryFolderCase,row.id).folder_id if s.get(RepositoryFolderCase,row.id) else None), metadata=metadata(row.source_text))
-                        for row in s.query(RepositoryCase).order_by(RepositoryCase.source_version.desc())])
+                        for row in s.query(RepositoryCase).order_by(RepositoryCase.source_version.desc())]))
 
     @route('/api/repository/testcases', ['POST'])
     def repository_import(s, data):
@@ -195,22 +202,23 @@ def register(app, runtime):
     @route('/api/repository/batch', ['POST'])
     def repository_batch(s,data):return jsonify(rt.batch(s,data))
 
+    @route('/api/repository/folders/<folder_id>/resort', ['POST'])
+    def repository_resort(s,data,folder_id):
+        ps.require(s,RepositoryFolder,folder_id)
+        co.reset(s,'repository',folder_id)
+        return jsonify(status='ok')
+
     @route('/api/repository/testcases/<repository_id>/folder', ['PUT'])
     def repository_case_move(s,data,repository_id):
-        ps.require(s,RepositoryCase,repository_id)
-        member=s.get(RepositoryFolderCase,repository_id)
-        if data.get('folder_id'):
-            f=ps.require(s,RepositoryFolder,data['folder_id'])
-            if member:member.folder_id=f.id
-            else:s.add(RepositoryFolderCase(repository_id=repository_id,folder_id=f.id))
-        elif member:member.folder_id=rt.ROOT
+        rt.move_cases(s,[repository_id],data)
         s.commit();return jsonify(status='ok')
 
     def copy_case(s,row,plan_id,folder,paths):
         identity=str(uuid.uuid4());meta=metadata(row.source_text)
-        tc=TestCase(system_id=identity,family_id=row.id,display_name=row.name,plan_id=plan_id,
+        tc=TestCase(system_id=identity,family_id=row.id or str(uuid.uuid4()),display_name=row.name,plan_id=plan_id,
                     script_path=f'testcase_database.scripts.{identity}',script_kind='single',repository_id=row.id,
                     source_version=row.source_version,settings_json=json.dumps({k:v['default'] for k,v in meta.get('parameters',{}).items()}),settings_revision=0)
+        if folder is None: tc.position=s.query(TestCase).filter_by(plan_id=plan_id,folder_id=None).count()
         s.add(tc);s.flush();ps.assign_folder(s,tc,folder)
         path=script_file(runtime['MAIN_PROGRAM_DIR'],tc)
         path.parent.mkdir(parents=True,exist_ok=False);paths.append(path)
@@ -220,6 +228,24 @@ def register(app, runtime):
     def remove_copies(paths):
         for path in reversed(paths):
             path.unlink(missing_ok=True);path.parent.rmdir()
+
+    @route('/api/plans/<plan_id>/testcases/import-python', ['POST'])
+    def plan_import_python(s,data,plan_id):
+        ps.unlocked(s,plan_id)
+        ps.require(s,ps.ProjectPlan,plan_id).folders_migrated=True
+        source=data.get('source')
+        if not isinstance(source,str) or not source.strip(): raise ps.StateError('Provide Python source from a .py file')
+        meta=metadata(source); name=meta['name'].strip()
+        if s.query(TestCase).filter_by(plan_id=plan_id,normalized_name=name.casefold()).first():
+            raise ps.StateError('A Test Case with this name already exists in the Plan',409)
+        folder=ps.resolve_folder(s,plan_id,data) if data.get('folder_id') else None
+        row=RepositoryCase(name=name,source_text=source,source_version=datetime.now(timezone.utc).isoformat(timespec='microseconds'))
+        paths=[]
+        try:
+            tc=copy_case(s,row,plan_id,folder,paths);s.commit()
+        except Exception:
+            s.rollback();remove_copies(paths);raise
+        return jsonify(tc.to_dict()),201
 
     @route('/api/plans/<plan_id>/repository/testcases', ['POST'])
     def repository_add_to_plan(s,data,plan_id):
@@ -254,6 +280,120 @@ def register(app, runtime):
         except Exception:
             s.rollback();remove_copies(paths);raise
         return jsonify(folder_id=folder.id,folder_name=folder.name,added=[tc.to_dict() for tc in added],skipped=skipped),201
+
+    @route('/api/plans/<plan_id>/import-cases', ['POST'])
+    def import_cases(s,data,plan_id):
+        ps.unlocked(s,plan_id)
+        destination=ps.require(s,ps.ProjectPlan,plan_id)
+        target=ps.require(s,ps.PlanFolder,data['target_folder_id']) if data.get('target_folder_id') else None
+        if target and target.plan_id!=plan_id: raise ps.StateError('Destination belongs to another Plan')
+        kind=data.get('kind'); source_type=data.get('source_type'); identity=data.get('id')
+        if kind not in ('case','folder') or source_type not in ('repository','plan'):
+            raise ps.StateError('Choose a case or folder source')
+        anchor=None
+        if 'relative_to' in data or 'insertion' in data:
+            anchor=ps.require(s,TestCase,data.get('relative_to'))
+            if kind!='case' or data.get('insertion') not in ('before','after') or anchor.plan_id!=plan_id or anchor.folder_id!=(target.id if target else None):
+                raise ps.StateError('Choose a Test Case in the destination folder and before/after insertion.')
+        source_plan=data.get('source_plan_id')
+        if source_type=='plan':
+            ps.require(s,ps.ProjectPlan,source_plan)
+            if source_plan==plan_id: raise ps.StateError('Choose another Plan as the source')
+        decisions=data.get('decisions') or {}
+        if not isinstance(decisions,dict): raise ps.StateError('Invalid conflict decisions')
+        incoming=[]
+        def read_item(row):
+            if source_type=='repository':
+                meta=metadata(row.source_text)
+                item=dict(id=row.id,name=row.name,source=row.source_text,version=row.source_version,
+                          settings={k:v['default'] for k,v in meta.get('parameters',{}).items()},repository_id=row.id,family_id=row.id)
+            else:
+                if row.plan_id!=source_plan: raise ps.StateError('Case belongs to another source Plan')
+                if row.script_kind!='single': raise ps.StateError('Only single-file Test Cases can be imported')
+                definition_data=definition(runtime['MAIN_PROGRAM_DIR'],row);meta=definition_data['metadata']
+                item=dict(id=row.system_id,name=row.display_name,source=definition_data['source'],version=row.source_version,
+                          settings=validate_settings(meta,definition_data['settings']),repository_id=row.repository_id,family_id=row.family_id)
+            item['canonical']=meta['name'].strip().casefold();incoming.append(item);return item
+        def read_folder(identity):
+            if source_type=='repository':
+                folder=ps.require(s,RepositoryFolder,identity)
+                children=[n.folder_id for n in rt.siblings(s,identity)]
+                rows=s.query(RepositoryCase).join(RepositoryFolderCase,RepositoryFolderCase.repository_id==RepositoryCase.id).filter(RepositoryFolderCase.folder_id==identity).order_by(RepositoryCase.source_version.desc(),RepositoryCase.id).all()
+            else:
+                folder=ps.require(s,ps.PlanFolder,identity)
+                if folder.plan_id!=source_plan: raise ps.StateError('Folder belongs to another source Plan')
+                children=[f.id for f in ps.siblings(s,source_plan,identity)]
+                rows=s.query(TestCase).filter_by(plan_id=source_plan,folder_id=identity).order_by(TestCase.position,TestCase.system_id).all()
+            return dict(name=folder.name,items=[read_item(row) for row in rows],children=[read_folder(child) for child in children])
+        tree=read_folder(identity) if kind=='folder' else None
+        if kind=='case':read_item(ps.require(s,RepositoryCase if source_type=='repository' else TestCase,identity))
+        def fingerprint(source,settings,version):
+            return hashlib.sha256(json.dumps([source,settings,version],sort_keys=True).encode()).hexdigest()
+        existing=[];actual={}
+        for tc in s.query(TestCase).filter_by(plan_id=plan_id).order_by(TestCase.system_id):
+            try: source=script_file(runtime['MAIN_PROGRAM_DIR'],tc).read_text(encoding='utf-8');canonical=metadata(source)['name'].strip().casefold()
+            except (OSError,UnicodeError,SyntaxError,ps.StateError): source='';canonical=tc.normalized_name
+            existing.append(dict(id=tc.system_id,name=tc.display_name,canonical=canonical,source_version=tc.source_version,
+                                 token=fingerprint(source,json.loads(tc.settings_json or '{}'),tc.source_version)))
+            actual[tc.system_id]=tc
+        conflicts=[];used_names={x['name'].casefold() for x in existing}
+        for item in incoming:
+            matches=[x for x in existing if x['canonical']==item['canonical'] or x['name'].casefold()==item['name'].casefold()]
+            same=[x for x in matches if x['source_version']==item['version']]
+            candidates=same or matches;decision=decisions.get(item['id'],{})
+            item['action']='new'
+            if candidates:
+                valid_target=next((x for x in candidates if x['id']==decision.get('target_id') and x['token']==decision.get('target_token')),None)
+                valid=valid_target and decision.get('action') in (('overwrite','skip') if same else ('overwrite','coexist','skip'))
+                if not valid:
+                    conflicts.append(dict(id=item['id'],name=item['name'],source_version=item['version'],same_version=bool(same),targets=candidates));continue
+                item['action']=decision['action'];item['target_id']=valid_target['id']
+                if item['action']=='skip':continue
+            if item['action']=='overwrite':
+                descriptor=next(x for x in existing if x['id']==item['target_id'])
+            else:
+                name=item['name'];item['display_name']=name
+                descriptor=dict(id='incoming:'+item['id'],name=name);existing.append(descriptor)
+            descriptor.update(canonical=item['canonical'],source_version=item['version'],token=fingerprint(item['source'],item['settings'],item['version']))
+        if conflicts:return jsonify(error='Resolve Test Case conflicts before importing.',conflicts=conflicts),409
+        paths=[];originals={};added=[];updated=[];skipped=[]
+        def apply_item(item,folder):
+            if item['action']=='skip':skipped.append(item['name']);return
+            if item['action']=='overwrite':
+                tc=actual[item['target_id']];path=script_file(runtime['MAIN_PROGRAM_DIR'],tc)
+                originals.setdefault(path,path.read_text(encoding='utf-8'))
+                tc.settings_revision=(tc.settings_revision or 0)+1
+                for membership in s.query(TaskTestCase).filter_by(testcase_id=tc.system_id):
+                    if membership.executed_at or membership.result_json or membership.manual_override_json or membership.status in ('Passed','Failed','Block'):
+                        membership.needs_retest=True
+                path.write_text(item['source'],encoding='utf-8');updated.append(tc)
+            else:
+                row=RepositoryCase(name=item['display_name'],source_text=item['source'],source_version=item['version'])
+                tc=copy_case(s,row,plan_id,folder,paths);actual['incoming:'+item['id']]=tc;added.append(tc)
+            tc.repository_id=item['repository_id'];tc.family_id=item['family_id'];tc.source_version=item['version']
+            tc.settings_json=json.dumps(item['settings'],ensure_ascii=False)
+        def apply_folder(node,parent):
+            parent_id=parent.id if parent else None
+            folder=next((f for f in ps.siblings(s,plan_id,parent_id) if f.normalized_name==node['name'].casefold()),None)
+            if folder is None:folder=ps.create_folder(s,plan_id,node['name'],parent_id)
+            for item in node['items']:apply_item(item,folder)
+            for child in node['children']:apply_folder(child,folder)
+        try:
+            destination.folders_migrated=True
+            if tree:apply_folder(tree,target)
+            else:apply_item(incoming[0],target)
+            if anchor and added:
+                added_ids=[tc.system_id for tc in added]
+                ordered=co.plan_rows(s,plan_id,s.query(TestCase).filter(TestCase.plan_id==plan_id,TestCase.folder_id==anchor.folder_id,TestCase.system_id.notin_(added_ids)).all())
+                index=next(i for i,tc in enumerate(ordered) if tc.system_id==anchor.system_id)+(data['insertion']=='after')
+                ordered[index:index]=added
+                ps.normalize(ordered);co.save(s,'plan:'+plan_id,anchor.folder_id,[tc.system_id for tc in ordered])
+            s.commit()
+        except Exception:
+            s.rollback()
+            for path,source in originals.items():path.write_text(source,encoding='utf-8')
+            remove_copies(paths);raise
+        return jsonify(added=[tc.to_dict() for tc in added],updated=[tc.to_dict() for tc in updated],skipped=skipped),201
 
     @route('/api/plans/<plan_id>/testcases/<tc_id>/definition', ['GET'])
     def single_definition(s, data, plan_id, tc_id):

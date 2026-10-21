@@ -306,7 +306,7 @@ class CurrentStateTest(unittest.TestCase):
         generate_task_pdf_report('t',str(out),db_path=str(Path(self.tmp.name,'test.db')))
         reader=PdfReader(out); text=''.join(p.extract_text() for p in reader.pages)
         self.assertIn('Current A',text);self.assertIn('Network/Ports',text);self.assertIn('current-fw',text)
-        self.assertEqual(reader.attachments['result_a.log'],[b'LATEST ONLY'])
+        self.assertEqual(reader.attachments['test_a.log'],[b'LATEST ONLY'])
 
     def test_flush_failure_and_restore_failure_preserve_recovery_data(self):
         import plan_state

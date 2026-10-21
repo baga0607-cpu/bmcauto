@@ -1,0 +1,7 @@
+# Plan workspace tree — 2026-10-16
+
+Latest user decision: defer breadcrumb/path links on all routes. Plan detail shows Test Plan: <name>, no description, and Rename / Delete only at the right. A Repository-style folder/case tree replaces Plan tabs and top Add / New Task controls. Tasks remain reachable through global Tasks and Matrix columns.
+
+Implementation is limited to workbench.js planPage/planCaseTable and breadcrumb rendering, plus .plan-workspace CSS. Shared folder/case, Parameters and Actions columns support collapse and search. Plus opens the existing Repository copy picker into the selected Plan folder; folder-plus opens a name dialog; trash requires confirmation. Parameters/source open a resizable side editor while preserving Plan-owned source/settings and existing execution locks. breadcrumbs() now returns empty for all routes. No backend or data changes were made for this UI increment; existing design tokens remain intact.
+
+Verification supplied by the implementation pass: isolated plan-tree-check.py passed at 1440/1920, including screenshots, exact heading/actions, absent breadcrumbs/tabs, parameter saving without modifying Repository source, source details, child folder creation, collapse/search, delete cancellation and UI Repository copying into the selected folder. Independent reviewer: Ship.

@@ -21,7 +21,7 @@ def execute(client, context, preset=None):
     post_headers = {"Content-Type": "application/json"}
     post_body = {
         "UserName": "operator",
-        "Password": "<password>"
+        "Password": "advantech"
     }
     
     print("  在服務關閉的情況下，嘗試建立新 Session...")

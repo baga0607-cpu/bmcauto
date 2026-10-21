@@ -6,13 +6,14 @@ Report Generator Module v2.0
 特點：
 1. 乾淨官方排版：封面 / 目錄 / DUT 環境配置表 / 各 Test Case 詳細步驟與驗證摘要。
 2. 方案 A 內嵌附件 (PDF Embedded File Attachments)：
-   - 每個 Test Case 的 API Log / Console Log 檔案直接嵌入 PDF 中。
+   - 每個 Test Case 的完整 Test log 檔案直接嵌入 PDF 中。
    - 頁面內顯示可點選的 📎 連結（讓使用者知道附件在哪裡並如何打開）。
    - 使用 pypdf 的 add_attachment()，在 Adobe Reader 左側「附件」面板可見。
 3. 預留多元測試類型欄位 (Redfish API, BMC Web UI, IPMITool CLI)。
 4. 未具備欄位預留 Placeholder，等待將來開發填入。
 """
 
+from case_log import test_log_text
 import os
 import json
 import sys
@@ -206,6 +207,8 @@ def _status_para(status, styles):
         return Paragraph('PASSED  [OK]', styles['status_pass'])
     elif s in ('failed', 'fail'):
         return Paragraph('FAILED  [NG]', styles['status_fail'])
+    elif s in ('block', 'blocked'):
+        return Paragraph('BLOCK', styles['status_tbd'])
     else:
         return Paragraph('TBD', styles['status_tbd'])
 
@@ -298,7 +301,7 @@ def generate_task_pdf_report(task_id, output_path, db_path=None, log_dir=None):
         log_dir = os.path.join(BASE_DIR, 'workspace', 'logs')
 
     if not os.path.exists(db_path):
-        raise FileNotFoundError(f'資料庫檔案不存在: {db_path}')
+        raise FileNotFoundError(f'Database file not found: {db_path}')
 
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
@@ -371,19 +374,22 @@ def generate_task_pdf_report(task_id, output_path, db_path=None, log_dir=None):
     total   = len(rows)
     passed  = sum(1 for r in rows if (r['status'] or '').lower() in ('passed', 'pass'))
     failed  = sum(1 for r in rows if (r['status'] or '').lower() in ('failed', 'fail'))
-    tbd     = total - passed - failed
+    blocked = sum(1 for r in rows if (r['status'] or '').lower() in ('block', 'blocked'))
+    tbd     = total - passed - failed - blocked
 
     cover_stats = [
         [Paragraph('<b>Total Cases</b>', styles['tbl_hdr']),
          Paragraph('<b>Passed</b>', styles['tbl_hdr']),
          Paragraph('<b>Failed</b>', styles['tbl_hdr']),
+         Paragraph('<b>Block</b>', styles['tbl_hdr']),
          Paragraph('<b>TBD</b>', styles['tbl_hdr'])],
         [Paragraph(str(total), styles['tbl_cell_bold']),
          Paragraph(f'<font color="#1E7E34"><b>{passed}</b></font>', styles['tbl_cell']),
          Paragraph(f'<font color="#B71C1C"><b>{failed}</b></font>', styles['tbl_cell']),
+         Paragraph(str(blocked), styles['tbl_cell']),
          Paragraph(str(tbd), styles['tbl_cell'])],
     ]
-    t_stats = Table(cover_stats, colWidths=[COL_W / 4] * 4)
+    t_stats = Table(cover_stats, colWidths=[COL_W / 5] * 5)
     t_stats.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), C_BLUE_HEADER),
         ('BACKGROUND', (0, 1), (-1, 1), C_ROW_ALT),
@@ -504,7 +510,24 @@ def generate_task_pdf_report(task_id, output_path, db_path=None, log_dir=None):
 
             from xml.sax.saxutils import escape
             result_details = r['result_json'] or ''
-            exec_notes = escape(result_details + ('\n' if result_details else '') + (r['log_text'] or 'No latest execution log.')).replace('\n', '<br/>')
+            try:
+                result_data = json.loads(result_details) if result_details else {}
+            except (ValueError, TypeError):
+                result_data = {}
+            if not isinstance(result_data, dict):
+                result_data = {}
+            log_excerpt = r['log_text'] or 'No latest execution log.'
+            if isinstance(result_data.get('log_records'), list):
+                # Table rows cannot split arbitrarily long evidence across pages.
+                records = [entry for entry in result_data['log_records'] if isinstance(entry, dict)]
+                final = next((entry for entry in reversed(records) if entry.get('kind') == 'finish'), {})
+                checks = [entry for entry in records if entry.get('kind') == 'check']
+                reason = str(final.get('reason', ''))
+                reason = reason[:300] + ('…' if len(reason) > 300 else '')
+                result_details = (f"Result: {final.get('status', status)}\nReason: {reason}\n"
+                                  f"Checks: {sum(bool(entry.get('passed')) for entry in checks)}/{len(checks)} passed")
+                log_excerpt = 'Full execution and HTTP evidence are included in the log attachments.'
+            exec_notes = escape(result_details + ('\n' if result_details else '') + log_excerpt).replace('\n', '<br/>')
             if r['needs_retest']:
                 exec_notes = '<b>Plan definition or Task connection settings changed. Rerun needed; retained evidence predates the current settings.</b><br/><br/>' + exec_notes
             manual = json.loads(r['manual_override_json']) if r['manual_override_json'] else None
@@ -513,9 +536,19 @@ def generate_task_pdf_report(task_id, output_path, db_path=None, log_dir=None):
                                + '\nReason: ' + (manual['reason'] or 'Not provided'))
                 exec_notes = escape(manual_note).replace('\n', '<br/>') + '<br/><br/>' + exec_notes
             attach_names = []
-            for label, content in [('result', r['log_text']), ('api', r['api_log_text'])]:
+            for content in [test_log_text(r['log_text'], r['api_log_text'])]:
                 if content:
-                    name = f'{label}_{tc_id}.log'
+                    name = f'test_{tc_id}.log'
+                    files = result_data.get('log_files', {})
+                    candidate = files.get('test') if isinstance(files, dict) else None
+                    if not candidate and isinstance(files, dict):
+                        candidate = files.get('execution') or files.get('api')
+                        if isinstance(candidate, str):
+                            candidate = candidate.removesuffix('__result.log').removesuffix('__http.log') + '__test.log'
+                    if (isinstance(candidate, str) and candidate.endswith('.log') and len(candidate) <= 150
+                            and not any(c in candidate for c in '<>:\"/\\|?*')
+                            and not any(ord(c) < 32 for c in candidate)):
+                        name = candidate
                     attachments_to_add.append((name, content.encode('utf-8')))
                     attach_names.append(name)
 
@@ -573,7 +606,7 @@ def generate_task_pdf_report(task_id, output_path, db_path=None, log_dir=None):
                     '[ATTACH] Full logs are embedded in this PDF as file attachments.<br/>'
                     'Open the "Attachments" panel in Adobe Acrobat / Reader to view:<br/>'
                     '</b></font>' +
-                    ''.join([f'<font color="#2E5D9E">  - {n}</font><br/>' for n in attach_names])
+                    ''.join([f'<font color="#2E5D9E">  - {escape(n)}</font><br/>' for n in attach_names])
                 )
             else:
                 attach_hint = '<br/><font color="#856404"><i>No log files found for this test case.</i></font>'
@@ -696,7 +729,7 @@ def generate_task_pdf_report(task_id, output_path, db_path=None, log_dir=None):
             embedded_count += 1
             print(f'  [Attachment] Embedded: {fname}')
         except Exception as e:
-            print(f'  [Warning] 無法嵌入附件 {fname}: {e}')
+            print(f'  [Warning] Unable to embed attachment {fname}: {e}')
 
     print(f'[Report] Total embedded attachments: {embedded_count}')
 

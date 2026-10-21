@@ -3,7 +3,9 @@
 Every write starts with SQLite BEGIN IMMEDIATE before reading lock state. A Plan
 is locked by a Task row, so independent processes observe the same lock.
 """
+from case_log import test_log_text
 import json
+import case_order as co
 import task_environment as te
 import shutil
 import uuid
@@ -102,6 +104,14 @@ def resolve_folder(session,plan_id,data,default='Custom'):
     return match
 
 def assign_folder(session,tc,folder):
+    if folder is None:
+        old=tc.folder_id
+        if old is None: return
+        tc.folder_id=None; tc.category_id=None; tc.subfolder_id=None
+        tc.position=session.query(TestCase).filter(TestCase.plan_id==tc.plan_id,TestCase.folder_id.is_(None),TestCase.system_id!=tc.system_id).count()
+        session.flush()
+        normalize(session.query(TestCase).filter_by(folder_id=old).order_by(TestCase.position,TestCase.system_id).all())
+        session.expire(tc,['folder_obj']); return
     if tc.plan_id!=folder.plan_id: raise StateError('Destination belongs to another Plan')
     old=tc.folder_id
     if old==folder.id: return
@@ -140,10 +150,15 @@ def task_case_dict(row,tc):
     case.update(status=row.status,selected=bool(row.selected),position=row.position,
                 bug_id=row.bug_id or '',executed_at=row.executed_at,
                 result=json.loads(row.result_json) if row.result_json else None,
-                log_text=row.log_text or '',api_log_text=row.api_log_text or '',
+                log_text=test_log_text(row.log_text, row.api_log_text),api_log_text='',
                 manual_override=json.loads(row.manual_override_json) if row.manual_override_json else None,
                 needs_retest=bool(row.needs_retest),
                 retest_message='Plan test conditions or Task connection settings changed; rerun this Test Case.' if row.needs_retest else '')
+    raw=case['manual_override'].get('modified_at') if case['manual_override'] else row.executed_at
+    try:
+        case['result_updated_at']=datetime.fromisoformat(raw.replace('Z','+00:00')).astimezone(timezone.utc).isoformat() if raw else None
+    except (ValueError,TypeError):
+        case['result_updated_at']=None
     return case
 
 
@@ -159,7 +174,7 @@ def set_manual_status(session,task_id,tc_id,data):
     task,row,tc=live_task_case(session,task_id,tc_id)
     unlocked(session,task.plan_id)
     status=data.get('status'); reason=data.get('reason','')
-    if status not in ('TBD','Passed','Failed'): raise StateError('Manual status must be TBD, Passed, or Failed')
+    if status not in ('TBD','Passed','Failed','Block'): raise StateError('Manual status must be TBD, Passed, Failed, or Block')
     if not isinstance(reason,str): raise StateError('Manual reason must be text')
     row.status=status
     row.manual_override_json=json.dumps(dict(status=status,reason=reason.strip(),modified_at=datetime.now(timezone.utc).isoformat()),ensure_ascii=False)
@@ -169,13 +184,13 @@ def set_manual_status(session,task_id,tc_id,data):
 
 def summary(session,task_id,root=None):
     task=require(session,Task,task_id)
-    cases=[]; counts={'Passed':0,'Failed':0,'TBD':0}
+    cases=[]; counts={'Passed':0,'Failed':0,'Block':0,'TBD':0}
     for row,tc in session.query(TaskTestCase,TestCase).join(TestCase,TaskTestCase.testcase_id==TestCase.system_id).filter(TaskTestCase.task_id==task_id,TestCase.plan_id==task.plan_id).order_by(TaskTestCase.position):
         case=task_case_dict(row,tc)
         import single_case
         case['automation']=single_case.automation_for_case(root,tc)
-        cases.append(case); counts[row.status if row.status in ('Passed','Failed') else 'TBD']+=1
-    return dict(id=task.id,task_id=task.id,name=task.name,plan_id=task.plan_id,execution_active=bool(task.execution_active),setup=json.loads(task.task_metadata or '{}'),connection_configured=bool(te.normalize(task.environment_config)["host"]),testcases=cases,counts=counts)
+        cases.append(case); counts[row.status if row.status in ('Passed','Failed','Block') else 'TBD']+=1
+    return dict(id=task.id,task_id=task.id,name=task.name,plan_id=task.plan_id,execution_active=bool(task.execution_active),setup=json.loads(task.task_metadata or '{}'),connection_configured=bool(te.normalize(task.environment_config)["host"]),testcases=co.arrange(session,'plan:'+task.plan_id,cases),counts=counts)
 
 def start_execution(session,task_id,ids):
     task=require(session,Task,task_id); unlocked(session,task.plan_id)
@@ -191,7 +206,7 @@ def start_execution(session,task_id,ids):
 
 def canonical_status(status):
     value=str(status or '').casefold()
-    return {'pass':'Passed','passed':'Passed','fail':'Failed','failed':'Failed','running':'Running','tbd':'TBD','pending':'TBD','tdb':'TBD','interrupted':'TBD'}.get(value,'Failed')
+    return {'pass':'Passed','passed':'Passed','fail':'Failed','failed':'Failed','block':'Block','blocked':'Block','running':'Running','tbd':'TBD','pending':'TBD','tdb':'TBD','interrupted':'TBD'}.get(value,'Failed')
 
 def check_execution_token(task, token):
     if not task.execution_active or not token or token != task.execution_token: raise StateError('Stale or inactive execution',409)
@@ -284,12 +299,59 @@ def delete_content(session,main_program_dir,data,folder=None,testcases=None):
             logging.exception('Committed deletion recovery cleanup pending: %s',recovery)
     return preview
 
+def migrate_block_status(conn):
+    """Expand the old SQLite CHECK while preserving every row, index and trigger."""
+    ddl=conn.exec_driver_sql("SELECT sql FROM sqlite_master WHERE type='table' AND name='task_testcases'").scalar()
+    if not ddl or 'ck_task_status' not in ddl or "'Block'" in ddl:
+        return
+    import re
+    updated=re.sub(r"status IN \([^)]*\)", "status IN ('TBD','Running','Passed','Failed','Block')", ddl, count=1, flags=re.I)
+    if updated==ddl: raise ValueError('Unrecognized Task status constraint')
+    updated=re.sub(r'CREATE TABLE\s+task_testcases', 'CREATE TABLE task_testcases_block_migration', updated, count=1, flags=re.I)
+    if updated==ddl or 'CREATE TABLE task_testcases_block_migration' not in updated: raise ValueError('Unrecognized Task table schema')
+    extra=list(conn.exec_driver_sql("SELECT sql FROM sqlite_master WHERE tbl_name='task_testcases' AND type IN ('index','trigger') AND sql IS NOT NULL"))
+    columns=[row[1] for row in conn.exec_driver_sql('PRAGMA table_info(task_testcases)')]
+    names=','.join('"'+name+'"' for name in columns)
+    conn.exec_driver_sql(updated)
+    conn.exec_driver_sql(f'INSERT INTO task_testcases_block_migration ({names}) SELECT {names} FROM task_testcases')
+    conn.exec_driver_sql('DROP TABLE task_testcases')
+    conn.exec_driver_sql('ALTER TABLE task_testcases_block_migration RENAME TO task_testcases')
+    for (sql,) in extra: conn.exec_driver_sql(sql)
+
+
+def migrate_case_versions(conn):
+    """Replace name-only uniqueness, preserving IDs, dependent rows and indexes."""
+    ddl=conn.exec_driver_sql("SELECT sql FROM sqlite_master WHERE type='table' AND name='testcases'").scalar()
+    if not ddl:return
+    conn.exec_driver_sql('DROP INDEX IF EXISTS uq_testcases_plan_normalized_name')
+    if 'uq_testcases_plan_normalized_name' not in ddl:
+        conn.exec_driver_sql("CREATE UNIQUE INDEX IF NOT EXISTS uq_testcases_plan_name_version ON testcases(plan_id, normalized_name, coalesce(source_version, ''))")
+        return
+    if conn.exec_driver_sql('PRAGMA foreign_keys').scalar():raise ValueError('Migration requires foreign keys disabled outside the transaction')
+    import re
+    updated=re.sub(r',\s*CONSTRAINT uq_testcases_plan_normalized_name UNIQUE \(plan_id, normalized_name\)', '', ddl)
+    if updated==ddl:raise ValueError('Unrecognized Test Case name constraint')
+    updated=re.sub(r'CREATE TABLE\s+testcases', 'CREATE TABLE testcases_version_migration',updated,count=1,flags=re.I)
+    if 'CREATE TABLE testcases_version_migration' not in updated:raise ValueError('Unrecognized Test Case schema')
+    extra=list(conn.exec_driver_sql("SELECT sql FROM sqlite_master WHERE tbl_name='testcases' AND type IN ('index','trigger') AND sql IS NOT NULL"))
+    names=','.join('"'+r[1]+'"' for r in conn.exec_driver_sql('PRAGMA table_info(testcases)'))
+    conn.exec_driver_sql(updated)
+    conn.exec_driver_sql(f'INSERT INTO testcases_version_migration ({names}) SELECT {names} FROM testcases')
+    conn.exec_driver_sql('DROP TABLE testcases')
+    conn.exec_driver_sql('ALTER TABLE testcases_version_migration RENAME TO testcases')
+    for (sql,) in extra:conn.exec_driver_sql(sql)
+    conn.exec_driver_sql("CREATE UNIQUE INDEX IF NOT EXISTS uq_testcases_plan_name_version ON testcases(plan_id, normalized_name, coalesce(source_version, ''))")
+
+
 def migrate_current_state(engine,log_path):
     """Atomic SQLite schema/data migration; no writes outside this engine's DB."""
     messages=[]
     with engine.connect() as conn:
+        foreign_keys=conn.exec_driver_sql('PRAGMA foreign_keys').scalar();conn.commit()
+        conn.exec_driver_sql('PRAGMA foreign_keys=OFF');conn.commit()
         conn.exec_driver_sql('BEGIN IMMEDIATE')
         try:
+            migrate_block_status(conn)
             columns={'project_plans':{'folders_migrated':'BOOLEAN NOT NULL DEFAULT 0'},'testcases':{'folder_id':'TEXT'},'tasks':{'execution_active':'BOOLEAN NOT NULL DEFAULT 0','execution_selection':'TEXT','execution_token':'TEXT','execution_worker_id':'TEXT','execution_stop_requested':'BOOLEAN NOT NULL DEFAULT 0'},'task_testcases':{'manual_override_json':'TEXT','result_json':'TEXT','log_text':'TEXT','api_log_text':'TEXT'}}
             for table, additions in columns.items():
                 present={r[1] for r in conn.exec_driver_sql(f'PRAGMA table_info({table})')}
@@ -304,6 +366,7 @@ def migrate_current_state(engine,log_path):
                 present={r[1] for r in conn.exec_driver_sql(f'PRAGMA table_info({table})')}
                 for name,kind in additions.items():
                     if name not in present: conn.exec_driver_sql(f'ALTER TABLE {table} ADD COLUMN {name} {kind}')
+            migrate_case_versions(conn)
             RepositoryCase.__table__.create(conn, checkfirst=True)
             PlanFolder.__table__.create(conn,checkfirst=True)
             with Session(bind=conn,join_transaction_mode='rollback_only') as session:
@@ -317,7 +380,7 @@ def migrate_current_state(engine,log_path):
                         if existing: return existing
                         f=create_folder(session,plan.id,name); messages.append(f'created folder {plan.id} {f.path}'); return f
                     # Existing migrated rows keep placement. Legacy structures are read only on first migration.
-                    pending=session.query(TestCase).filter_by(plan_id=plan.id,folder_id=None).order_by(TestCase.position,TestCase.system_id).all()
+                    pending=session.query(TestCase).filter_by(plan_id=plan.id,folder_id=None).order_by(TestCase.position,TestCase.system_id).all() if not plan.folders_migrated else []
                     convert_legacy_structure=not plan.folders_migrated
                     if convert_legacy_structure or pending:
                         for name in order if convert_legacy_structure else []:
@@ -356,7 +419,7 @@ def migrate_current_state(engine,log_path):
                     if not task or not tc or task.plan_id!=tc.plan_id: raise ValueError(f'Invalid Task ownership {row.task_id}/{row.testcase_id}')
                 session.flush()
                 for tc in session.query(TestCase):
-                    if not tc.folder_obj or tc.folder_obj.plan_id!=tc.plan_id: raise ValueError(f'Invalid testcase ownership {tc.plan_id}/{tc.system_id}')
+                    if tc.folder_id is not None and (not tc.folder_obj or tc.folder_obj.plan_id!=tc.plan_id): raise ValueError(f'Invalid testcase ownership {tc.plan_id}/{tc.system_id}')
                 sibling_keys=set()
                 for f in session.query(PlanFolder):
                     key=(f.plan_id,f.parent_id,f.name.strip().casefold())
@@ -373,9 +436,12 @@ def migrate_current_state(engine,log_path):
                 session.flush()
             conn.exec_driver_sql('CREATE UNIQUE INDEX IF NOT EXISTS uq_task_scope ON task_testcases(task_id,testcase_id)')
             conn.exec_driver_sql('DROP TABLE IF EXISTS task_execution_attempts')
+            if list(conn.exec_driver_sql('PRAGMA foreign_key_check')):raise ValueError('Migration foreign key validation failed')
             conn.commit()
         except Exception:
             conn.rollback(); raise
+        finally:
+            conn.exec_driver_sql('PRAGMA foreign_keys='+('ON' if foreign_keys else 'OFF'));conn.commit()
     path=Path(log_path); path.parent.mkdir(parents=True,exist_ok=True)
     with path.open('a',encoding='utf-8') as log:
         log.write('\n'.join(messages)+('\n' if messages else 'migration validated; no placement changes\n'))
@@ -401,7 +467,7 @@ def install_routes(app, runtime):
                 if source.get('task_id'): plans.add(require(session,Task,source['task_id']).plan_id)
                 for key in ('tc_id','system_id','original_id','testcase_id'):
                     if source.get(key): plans.add(require(session,TestCase,source[key]).plan_id)
-                if source.get('folder_id') and request.endpoint not in ('repository_import','repository_case_move','repository_folder_add_to_plan','repository_folder_modify','repository_batch'): plans.add(require(session,PlanFolder,source['folder_id']).plan_id)
+                if source.get('folder_id') and request.endpoint not in ('repository_import','repository_case_move','repository_folder_add_to_plan','repository_folder_modify','repository_batch','repository_resort'): plans.add(require(session,PlanFolder,source['folder_id']).plan_id)
             if request.endpoint=='save_projects':
                 for project in data.get('projects',[]):
                     for plan in project.get('plans',[]):
@@ -473,7 +539,7 @@ def install_routes(app, runtime):
         if 'tc_name' in data or 'display_name' in data:
             name=str(data.get('tc_name',data.get('display_name'))).strip()
             if not name: raise StateError('Testcase name is required')
-            duplicate=s.query(TestCase).filter_by(plan_id=tc.plan_id,normalized_name=name.casefold()).first()
+            duplicate=s.query(TestCase).filter_by(plan_id=tc.plan_id,normalized_name=name.casefold(),source_version=tc.source_version).first()
             if duplicate and duplicate.system_id!=tc_id: raise StateError('TC already exists',409)
             tc.display_name=name
         if any(k in data for k in ('folder_id','folder_path','category','custom_subfolder')): assign_folder(s,tc,resolve_folder(s,tc.plan_id,data))
@@ -488,29 +554,43 @@ def install_routes(app, runtime):
         if any(t.plan_id!=plan_id for t in rows): raise StateError('Testcase belongs to another Plan')
         destination=dict(data)
         if not any(k in destination for k in ('folder_id','folder_path')): destination['folder_path']=data.get('target_key','Custom').replace('custom:','Custom/').replace('category:','')
-        f=resolve_folder(s,plan_id,destination)
+        f=None if 'folder_id' in data and data['folder_id'] is None else resolve_folder(s,plan_id,destination)
+        destination_id=f.id if f else None
         relative=None
         if 'relative_to' in data or 'insertion' in data:
             if not isinstance(data.get('relative_to'),str) or data.get('insertion') not in ('before','after'):
                 raise StateError('Supply a relative testcase and before/after insertion')
             relative=require(s,TestCase,data['relative_to'])
-            if relative.system_id in ids or relative.plan_id!=plan_id or relative.folder_id!=f.id:
+            if relative.system_id in ids or relative.plan_id!=plan_id or relative.folder_id!=destination_id:
                 raise StateError('Relative testcase must be another testcase in the destination Plan and folder')
-        for tc in rows: assign_folder(s,tc,f)
+        ordered=co.plan_rows(s,plan_id,s.query(TestCase).filter(TestCase.plan_id==plan_id,TestCase.folder_id==destination_id,TestCase.system_id.notin_(ids)).all())
+        for tc in rows:
+            co.forget(s,'plan:'+plan_id,tc.folder_id,ids)
+            assign_folder(s,tc,f)
         if relative:
-            ordered=s.query(TestCase).filter(TestCase.plan_id==plan_id,TestCase.folder_id==f.id,TestCase.system_id.notin_(ids)).order_by(TestCase.position,TestCase.system_id).all()
             position=next(i for i,tc in enumerate(ordered) if tc.system_id==relative.system_id)+(data['insertion']=='after')
             ordered[position:position]=rows
             normalize(ordered)
-        result=dict(status='ok',folder_id=f.id,moved=len(rows)); s.commit(); return jsonify(result)
+            co.save(s,'plan:'+plan_id,destination_id,[tc.system_id for tc in ordered])
+        result=dict(status='ok',folder_id=destination_id,moved=len(rows)); s.commit(); return jsonify(result)
 
     @route('/api/plans/<plan_id>/testcases/reorder',['POST'],endpoint='reorder_plan_testcases')
     def current_case_reorder(s,data,plan_id):
-        unlocked(s,plan_id); folder=resolve_folder(s,plan_id,data)
-        rows=s.query(TestCase).filter_by(plan_id=plan_id,folder_id=folder.id).all(); ids=data.get('testcase_ids',data.get('ids',data.get('order')))
+        unlocked(s,plan_id); folder=None if 'folder_id' in data and data['folder_id'] is None else resolve_folder(s,plan_id,data)
+        folder_id=folder.id if folder else None
+        rows=s.query(TestCase).filter_by(plan_id=plan_id,folder_id=folder_id).all(); ids=data.get('testcase_ids',data.get('ids',data.get('order')))
         if not isinstance(ids,list): raise StateError('Supply testcase IDs as a list')
         if len(ids)!=len(set(ids)) or set(ids)!={r.system_id for r in rows}: raise StateError('Supply exactly the folder testcase collection')
-        by_id={r.system_id:r for r in rows}; normalize([by_id[i] for i in ids]); s.commit(); return jsonify(status='ok')
+        by_id={r.system_id:r for r in rows}; normalize([by_id[i] for i in ids]); co.save(s,'plan:'+plan_id,folder_id,ids); s.commit(); return jsonify(status='ok')
+
+    @route('/api/plans/<plan_id>/testcases/resort',['POST'])
+    def current_case_resort(s,data,plan_id):
+        unlocked(s,plan_id)
+        folder_id=data.get('folder_id')
+        if folder_id and require(s,PlanFolder,folder_id).plan_id!=plan_id: raise StateError('Folder belongs to another Plan')
+        co.reset(s,'plan:'+plan_id,folder_id)
+        normalize(co.plan_rows(s,plan_id,s.query(TestCase).filter_by(plan_id=plan_id,folder_id=folder_id).all()))
+        s.commit(); return jsonify(status='ok')
 
     @route('/api/tasks/<task_id>/testcases/import',['POST'],endpoint='import_task_testcases')
     def current_scope(s,data,task_id):

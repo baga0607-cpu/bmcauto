@@ -1,0 +1,2133 @@
+{
+  "schema_version": 1,
+  "categories": [
+    {
+      "id": "category-1",
+      "name": "Form factor",
+      "items": [
+        {
+          "id": "item-4",
+          "name": "Rackmount/Tabletop/Others",
+          "guidance": "Physical mounting style.\ne.g. 1U Rackmount, 2U Rackmount, Tabletop",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-5",
+          "name": "Dimension",
+          "guidance": "Chassis size W × D × H (mm).\ne.g. 438 × 600 × 88 mm",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-6",
+          "name": "Slide rail support",
+          "guidance": "Rack slide rails required? Yes / No. If Yes, PM to coordinate with ME for rail P/N",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-7",
+          "name": "Others",
+          "guidance": "Additional form factor notes not covered above.\ne.g. N/A",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        }
+      ]
+    },
+    {
+      "id": "category-2",
+      "name": "Processor",
+      "items": [
+        {
+          "id": "item-9",
+          "name": "Processor name",
+          "guidance": "CPU model; confirm with HW team.\ne.g. AMD EPYC 9005 (SP5 Turin), Intel Xeon D-2796NT",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-10",
+          "name": "CPU Type",
+          "guidance": "CPU 架構型態。Socket CPU（插槽可換）/ SoC（板上焊死）/ Others（chiplet、hybrid 等特殊架構，於備註說明）",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-11",
+          "name": "Number of CPU socket",
+          "guidance": "Number of CPU sockets on board.\ne.g. 1 (single socket), 2 (dual socket)",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-12",
+          "name": "Core",
+          "guidance": "Maximum core count supported.\ne.g. Up to 192-core per socket",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-13",
+          "name": "Clock speed",
+          "guidance": "CPU base/boost frequency.\ne.g. Based on processor SKU — refer to CPU datasheet",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-14",
+          "name": "Cache",
+          "guidance": "CPU cache size — refer to CPU spec sheet.\ne.g. L3: 64 MB",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-15",
+          "name": "CPU Watt & TDP (Thermal Design Power)",
+          "guidance": "CPU power draw.\ne.g. TDP 500W — confirm with HW/EE team",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        }
+      ]
+    },
+    {
+      "id": "category-3",
+      "name": "Chipset",
+      "items": [
+        {
+          "id": "item-17",
+          "name": "Main chipset name",
+          "guidance": "Platform chipset — confirm with HW team.\ne.g. Intel C741; write \"N/A\" if CPU integrates all I/O",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        }
+      ]
+    },
+    {
+      "id": "category-4",
+      "name": "Memory",
+      "items": [
+        {
+          "id": "item-19",
+          "name": "Memory spec & connector type",
+          "guidance": "RAM type and connector.\ne.g. DDR5 / 288-pin DIMM, DDR4 SO-DIMM",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-20",
+          "name": "ECC support or not",
+          "guidance": "Error-Correcting Code improves reliability (required for servers). ECC / Non-ECC",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-21",
+          "name": "Supported memory module type",
+          "guidance": "可複選常見且穩定的模組類型。若支援多種類型，請於備註補充限制(不可混插、依 SKU 區分、需依 CPU/RD 確認等)。特殊類型請勾 Others 並於備註說明。",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-22",
+          "name": "Number of DIMM Slots per CPU",
+          "guidance": "How many DIMM slots each CPU socket has (數量).\ne.g. 12 × DIMM per CPU",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-23",
+          "name": "Supported DPC Configuration",
+          "guidance": "DIMM per channel (DPC) — memory topology / population rule.\ne.g. 1DPC / 2DPC; 1DPC only",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-24",
+          "name": "DIMM total in FWA system",
+          "guidance": "Total memory slot count in system.\ne.g. Total 12 × DIMM",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-25",
+          "name": "Max memory capacity in FWA system",
+          "guidance": "Maximum installable RAM.\ne.g. RDIMM: up to 1152 GB (with 96 GB modules)",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-26",
+          "name": "Memory speed",
+          "guidance": "Memory data transfer rate.\ne.g. Max 6000 MT/s, DDR4-3200",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-27",
+          "name": "NVDIMM support",
+          "guidance": "Non-Volatile DIMM (retains data on power loss). Yes / No; if Yes, specify vendor",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        }
+      ]
+    },
+    {
+      "id": "category-5",
+      "name": "PCI-Express design NMC slot",
+      "items": [
+        {
+          "id": "item-29",
+          "name": "NMC slot qty",
+          "guidance": "Total NMC (Network Module Card) slots.\ne.g. 8 NMC slots (4 bottom + 4 top)",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-30",
+          "name": "NMC slot order",
+          "guidance": "Slot numbering direction.\ne.g. Left→Right = Slot 1→N; specify top/bottom rows",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-31",
+          "name": "PCIe speed",
+          "guidance": "PCIe generation for NMC slots.\ne.g. PCIe Gen4, PCIe Gen5",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-32",
+          "name": "PCIe lane",
+          "guidance": "PCIe lane width per NMC slot.\ne.g. x8, x4",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-33",
+          "name": "NMC slot mechanical type",
+          "guidance": "Card locking mechanism.\ne.g. N/A; Thumb screw type NMC (新機種); Latch type NMC (舊機種, 如 FWA-6170)",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-34",
+          "name": "Power per NMC slot",
+          "guidance": "Power budget per NMC slot.\ne.g. 25W, 35W",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-35",
+          "name": "Hot-plug",
+          "guidance": "NMC cards can be inserted/removed while system is running. Yes / No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-36",
+          "name": "Double wide NMC support",
+          "guidance": "Supports double-width NMC cards occupying 2 adjacent slots. Yes / No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-37",
+          "name": "LAN bypass",
+          "guidance": "Network traffic bypasses NMC if system loses power. Yes / No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-38",
+          "name": "Global LAN Bypass",
+          "guidance": "All NMC LAN ports stay live even if system is off. Yes / No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-39",
+          "name": "PoE (NMC-E02)",
+          "guidance": "Power over Ethernet via NMC-E02 module. Yes / No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-40",
+          "name": "NMC card list",
+          "guidance": "List all NMC modules needed.\ne.g. NMC-S01 (4×SATA storage), NMC-E01 (4×1G Ethernet)",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        }
+      ]
+    },
+    {
+      "id": "category-6",
+      "name": "PCI-Express design PCIe card slot",
+      "items": [
+        {
+          "id": "item-42",
+          "name": "PCIe slot qty",
+          "guidance": "Number of standard PCIe expansion card slots.\ne.g. 3 × x16 slots",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-43",
+          "name": "PCIe speed",
+          "guidance": "PCIe generation for expansion cards.\ne.g. PCIe Gen4, PCIe Gen5",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-44",
+          "name": "PCIe lane",
+          "guidance": "Lane width per PCIe expansion slot.\ne.g. x16, x8, x4",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-45",
+          "name": "PCIe card form factor",
+          "guidance": "Physical card size.\ne.g. Low-Profile (LP), Full-Height Half-Length (FH/HL)",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-46",
+          "name": "PCIe card location",
+          "guidance": "Card slot position.\ne.g. Internal slot, External (rear bracket)",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-47",
+          "name": "Power for PCIe slots",
+          "guidance": "Power budget per PCIe slot.\ne.g. 25W (slot only), 150W (with aux connector)",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-48",
+          "name": "PCIe card list",
+          "guidance": "List all planned add-in cards.\ne.g. RAID card 96RC-SAS-8P, QAT accelerator card",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-49",
+          "name": "GPU Support",
+          "guidance": "PCIe slot 是否支援 GPU 卡。Yes / No；適用的 slot、功耗與散熱限制寫在備註",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        }
+      ]
+    },
+    {
+      "id": "category-7",
+      "name": "Onboard Ethernet",
+      "items": [
+        {
+          "id": "item-51",
+          "name": "Port order",
+          "guidance": "Port numbering direction.\ne.g. Left→Right = Port 1→N (standard); note any exceptions",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-52",
+          "name": "Management Port",
+          "guidance": "",
+          "heading": true,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-53",
+          "name": "Mangement ports",
+          "guidance": "Number of out-of-band management ports (IPMI/BMC, separate from data).\ne.g. 2",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-54",
+          "name": "10/100/1000 LAN",
+          "guidance": "Management port supports 1 GbE speed. Yes / No; specify port count",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-55",
+          "name": "Ethernet controller",
+          "guidance": "NIC chip model.\ne.g. Intel I210-AT, Intel I350-AM4",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-56",
+          "name": "RJ45 spec",
+          "guidance": "RJ45 connector standard.\ne.g. Advantech std (with status LED), custom",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-57",
+          "name": "Traffic Port",
+          "guidance": "",
+          "heading": true,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-58",
+          "name": "10/100/1000/10G LAN",
+          "guidance": "Traffic port speed. Yes / No; specify count and speed.\ne.g. 4 × 10G RJ45",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-59",
+          "name": "Ethernet controller",
+          "guidance": "NIC chip model.\ne.g. Intel I210-AT, Intel I350-AM4",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-60",
+          "name": "RJ45 spec",
+          "guidance": "RJ45 connector standard.\ne.g. Advantech std (with status LED), custom",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-61",
+          "name": "1G SFP spec",
+          "guidance": "1G fiber port.\ne.g. Advantech std SFP; write \"No\" if not required",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-62",
+          "name": "10G SFP+ spec",
+          "guidance": "10G fiber port.\ne.g. Advantech std SFP+; write \"No\" if not required",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-63",
+          "name": "LAN bypass",
+          "guidance": "Traffic ports keep data flowing if system OS crashes. Yes / No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-64",
+          "name": "Global LAN Bypass",
+          "guidance": "All traffic ports bypass system on power loss. Yes / No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        }
+      ]
+    },
+    {
+      "id": "category-8",
+      "name": "WLAN",
+      "items": [
+        {
+          "id": "item-66",
+          "name": "Module vendor",
+          "guidance": "Wi-Fi module manufacturer.\ne.g. Intel, Qualcomm; write \"No\" if not needed",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-67",
+          "name": "Module part number",
+          "guidance": "Wi-Fi module P/N.\ne.g. Intel AX210; write \"No\" if not needed",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-68",
+          "name": "Module interface",
+          "guidance": "Connection to mainboard.\ne.g. M.2 PCIe (E-key), USB 2.0",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-69",
+          "name": "Antenna number",
+          "guidance": "Number of Wi-Fi antennas.\ne.g. 2 (2×2 MIMO); write \"No\" if not needed",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-70",
+          "name": "Antenna solution",
+          "guidance": "Antenna placement.\ne.g. External (rear bracket), Internal; write \"No\" if not needed",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        }
+      ]
+    },
+    {
+      "id": "category-9",
+      "name": "WWAN",
+      "items": [
+        {
+          "id": "item-72",
+          "name": "Module vendor",
+          "guidance": "Cellular modem manufacturer.\ne.g. Quectel, Sierra Wireless; write \"No\" if not needed",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-73",
+          "name": "Module part number",
+          "guidance": "Modem P/N.\ne.g. Quectel EM05-G (LTE Cat4); write \"No\" if not needed",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-74",
+          "name": "Module interface",
+          "guidance": "Connection to mainboard.\ne.g. M.2 PCIe (B-key), USB",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-75",
+          "name": "Antenna number",
+          "guidance": "Number of cellular antennas.\ne.g. 2; write \"No\" if not needed",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-76",
+          "name": "Antenna solution",
+          "guidance": "Antenna placement.\ne.g. External (SMA connector); write \"No\" if not needed",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        }
+      ]
+    },
+    {
+      "id": "category-10",
+      "name": "PoE",
+      "items": [
+        {
+          "id": "item-78",
+          "name": "Management interface",
+          "guidance": "Interface used to control PoE settings.\ne.g. COM port, USB-to-UART",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-79",
+          "name": "Power source",
+          "guidance": "PoE power origin.\ne.g. Mainboard PSU, External adapter (specify wattage)",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-80",
+          "name": "Maximum power",
+          "guidance": "Total PoE power budget across all ports.\ne.g. 60W, 120W via NMC-E02",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-81",
+          "name": "Port count",
+          "guidance": "Number of PoE-capable ports.\ne.g. 4, 8",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-82",
+          "name": "PoE spec",
+          "guidance": "PoE standard.\ne.g. PoE AF (15.4W/port), PoE+ AT (30W/port), PoE++ BT (60–90W/port)",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        }
+      ]
+    },
+    {
+      "id": "category-11",
+      "name": "Storage controller",
+      "items": [
+        {
+          "id": "item-84",
+          "name": "Built in storage",
+          "guidance": "CPU-integrated storage controller (no extra RAID card needed). Yes / No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-85",
+          "name": "Others",
+          "guidance": "Third-party storage controller — specify vendor & P/N; write \"No\" if not needed",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        }
+      ]
+    },
+    {
+      "id": "category-12",
+      "name": "System storage",
+      "items": [
+        {
+          "id": "item-87",
+          "name": "HDD qty",
+          "guidance": "Number of drive bays.\ne.g. 2, 4, 8",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-88",
+          "name": "HDD type (SAS, SATA….etc)",
+          "guidance": "Drive interface.\ne.g. SATA III (6 Gb/s), NVMe (PCIe), SAS 12G",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-89",
+          "name": "HDD form factor (3.5\", 2.5\"…etc)",
+          "guidance": "Physical drive size.\ne.g. 2.5\" (small/light), 3.5\" (high capacity)",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-90",
+          "name": "HDD: Internal or external access",
+          "guidance": "Drive bay accessibility.\ne.g. External (front hot-swap), Internal (inside chassis)",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-91",
+          "name": "Hot-swappable",
+          "guidance": "Drives can be replaced without powering off system. Yes / No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-92",
+          "name": "Onboard flash",
+          "guidance": "Built-in flash storage for OS/boot.\ne.g. 32 GB eMMC; write \"No\" if none",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-93",
+          "name": "CFast  slot",
+          "guidance": "CompactFlash Advanced slot (rugged storage).\ne.g. 1 × CFast; write \"No\" if none",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-94",
+          "name": "mSATA slot",
+          "guidance": "Mini-SATA slot for compact SSD.\ne.g. 1 × mSATA; write \"No\" if none",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-95",
+          "name": "M.2 SATA slot",
+          "guidance": "M.2 slot for SATA SSD.\ne.g. 2 × M.2 2280 SATA; write \"No\" if none",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-96",
+          "name": "M.2 NVMe slot",
+          "guidance": "M.2 slot for high-speed NVMe SSD.\ne.g. 2 × M.2 2280 PCIe x4; write \"No\" if none",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-97",
+          "name": "eUSB DOM",
+          "guidance": "Internal USB flash (hidden OS drive).\ne.g. 1 × eUSB 2.0 (8 GB); write \"No\" if none",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-98",
+          "name": "Others",
+          "guidance": "Additional storage options.\ne.g. microSD slot; write \"No\" if none",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        }
+      ]
+    },
+    {
+      "id": "category-13",
+      "name": "IPMI/BMC (Platform Management)",
+      "items": [
+        {
+          "id": "item-100",
+          "name": "BMC design",
+          "guidance": "Baseboard Management Controller for remote monitoring & management. Yes / No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-101",
+          "name": "Onboard BMC or BMC Module LOM",
+          "guidance": "BMC chip location.\ne.g. Onboard Aspeed AST-2600",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-102",
+          "name": "Network",
+          "guidance": "BMC network interface.\ne.g. Dedicated 1GbE RJ45 port, NC-SI shared port",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-103",
+          "name": "Hardware monitor",
+          "guidance": "Voltage/temperature/fan sensor chip (managed by BMC). Yes / No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-104",
+          "name": "Watchdog control",
+          "guidance": "Watchdog timer auto-reboots system if it hangs. Yes / No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-105",
+          "name": "Temperature monitoring",
+          "guidance": "CPU and system temperature sensors reported via BMC. Yes / No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-106",
+          "name": "Fan Control",
+          "guidance": "BMC adjusts fan speed based on thermal readings. Yes / No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-107",
+          "name": "Redundant BIOS",
+          "guidance": "Backup BIOS chip auto-recovers if primary BIOS is corrupted. Yes / No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-108",
+          "name": "FRU EEPROM",
+          "guidance": "Chip storing board S/N and P/N for asset tracking. Yes / No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        }
+      ]
+    },
+    {
+      "id": "category-14",
+      "name": "BIOS",
+      "items": [
+        {
+          "id": "item-110",
+          "name": "UEFI",
+          "guidance": "Modern BIOS firmware standard (required for most current OS). Yes / No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-111",
+          "name": "Configurable boot order",
+          "guidance": "Boot sequence (HDD, USB, PXE…) can be changed in BIOS setup. Yes / No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-112",
+          "name": "Boot options",
+          "guidance": "Supported boot sources.\ne.g. HDD, USB, PXE (network boot), optical drive",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-113",
+          "name": "Self test",
+          "guidance": "POST (Power-On Self-Test) checks hardware at every startup. Yes / No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-114",
+          "name": "fast boot",
+          "guidance": "Shortened POST for quicker system startup. Yes / No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-115",
+          "name": "Watchdog support",
+          "guidance": "BIOS-level watchdog to auto-recover from hangs. Yes / No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-116",
+          "name": "Serial Console",
+          "guidance": "BIOS output redirected over serial port (useful for headless servers). Yes / No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-117",
+          "name": "Display board specific info",
+          "guidance": "Board S/N, P/N, and asset tag shown in BIOS setup screen. Yes / No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-118",
+          "name": "IPMI Support",
+          "guidance": "BIOS supports IPMI out-of-band management protocol. Yes / No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-119",
+          "name": "DCMIv1.5  Support",
+          "guidance": "Data Center Manageability Interface v1.5 for power management. Yes / No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-120",
+          "name": "TPM Support",
+          "guidance": "Trusted Platform Module for hardware security and secure boot. Yes / No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-121",
+          "name": "ACPI support",
+          "guidance": "Advanced power management — enables sleep states and power events. Yes / No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-122",
+          "name": "Per Core P-State",
+          "guidance": "Each CPU core independently scales frequency for power efficiency. Yes / No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-123",
+          "name": "DMI Info",
+          "guidance": "System info (product name, S/N, asset tag) accessible via BIOS. Yes / No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-124",
+          "name": "FRU EEPROM support",
+          "guidance": "BIOS reads/writes FRU asset data per Advantech guideline. Yes / No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-125",
+          "name": "UUID sync",
+          "guidance": "Unique system ID generated and synced per Advantech standard. Yes / No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-126",
+          "name": "SW define button",
+          "guidance": "A physical button whose function is configurable by software. Yes / No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-127",
+          "name": "SW define LED",
+          "guidance": "An LED indicator whose state is controlled by software. Yes / No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-128",
+          "name": "APDI support (Network)",
+          "guidance": "Advantech Platform Driver Interface for network devices. Yes / No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-129",
+          "name": "APDI support (Storage)",
+          "guidance": "Advantech Platform Driver Interface for storage devices. Yes / No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        }
+      ]
+    },
+    {
+      "id": "category-15",
+      "name": "Software features",
+      "items": [
+        {
+          "id": "item-131",
+          "name": "OS Support",
+          "guidance": "Target operating systems.\ne.g. Linux (CentOS, Ubuntu, RHEL), Windows Server",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-132",
+          "name": "DPDK",
+          "guidance": "High-speed packet processing framework for network applications. Yes / No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-133",
+          "name": "Intel QuickAssist Technology (QAT)",
+          "guidance": "Hardware accelerator for encryption/compression (via QAT card). Yes / No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-134",
+          "name": "IPMI2.0",
+          "guidance": "Remote management protocol v2.0 — see BMC table for details. Yes / No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-135",
+          "name": "Wi-Fi",
+          "guidance": "Wi-Fi support. If Yes, specify standard.\ne.g. Wi-Fi 6 (802.11ax), Wi-Fi 5 (802.11ac)",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-136",
+          "name": "3G/4G/LTE",
+          "guidance": "Cellular connectivity support. Yes / No; if Yes, specify band requirements",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-137",
+          "name": "Others",
+          "guidance": "Other software requirements.\ne.g. VPP, OVS-DPDK; write \"No\" if none",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        }
+      ]
+    },
+    {
+      "id": "category-16",
+      "name": "Product software (SW deliverable to customer)",
+      "items": [
+        {
+          "id": "item-139",
+          "name": "Ethernet/APDI",
+          "guidance": "Ethernet APDI driver package delivered to customer. Yes / No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-140",
+          "name": "Storage/APDI",
+          "guidance": "Storage APDI driver package delivered to customer. Yes / No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-141",
+          "name": "LAN bypass",
+          "guidance": "LAN bypass control tool (ALBPU/lbptool) in SW package. Yes / No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-142",
+          "name": "PoE",
+          "guidance": "PoE control utility (APOECU) included in SW package. Yes / No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-143",
+          "name": "Software defined button",
+          "guidance": "SDK/readme for software-defined button delivered. Yes / No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-144",
+          "name": "Software defined LED",
+          "guidance": "SDK/readme for software-defined LED delivered. Yes / No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-145",
+          "name": "Wi-Fi",
+          "guidance": "Wi-Fi driver/readme in SW deliverable. Yes / No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-146",
+          "name": "LTE",
+          "guidance": "LTE/cellular driver/readme included in SW deliverable. Yes / No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-147",
+          "name": "LCD",
+          "guidance": "LCD control software (lcd4linux) included in SW deliverable. Yes / No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-148",
+          "name": "Watchdog",
+          "guidance": "Watchdog control utility with readme delivered. Yes / No; write \"N/A\" for BMC-managed systems",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-149",
+          "name": "APM/lm-sensor",
+          "guidance": "Power/thermal sensor monitoring tool. Yes / No; write \"N/A\" for BMC-managed systems",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-150",
+          "name": "FRU/AFRU",
+          "guidance": "FRU read/write utility (afru) in SW deliverable. Yes / No; write \"N/A\" for BMC systems",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-151",
+          "name": "Server Monitoring",
+          "guidance": "Server health monitoring software included in SW deliverable. Yes / No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-152",
+          "name": "Others",
+          "guidance": "Additional SW deliverables — specify if Yes; write \"No\" if none",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        }
+      ]
+    },
+    {
+      "id": "category-17",
+      "name": "System PSU",
+      "items": [
+        {
+          "id": "item-154",
+          "name": "System PSU",
+          "guidance": "Power supply type and wattage.\ne.g. 1600W CRPS (hot-swap redundant), 800W ATX",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-155",
+          "name": "Redundancy",
+          "guidance": "Redundant PSUs keep system running if one fails.\ne.g. 1+1 redundant; write \"No\" if single PSU",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-156",
+          "name": "Hot pluggable",
+          "guidance": "PSU can be swapped while system is powered on. Yes / No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-157",
+          "name": "DC SKU",
+          "guidance": "DC power input version.\ne.g. DC -48V; write \"No\" if AC-only",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-158",
+          "name": "PSU efficiency",
+          "guidance": "Energy efficiency rating.\ne.g. 80 PLUS Gold, 80 PLUS Platinum, 80 PLUS Titanium",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-159",
+          "name": "PMBus monitoring",
+          "guidance": "PSU power telemetry via PMBus protocol — confirm with EE team if required. Yes / No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        }
+      ]
+    },
+    {
+      "id": "category-18",
+      "name": "System LED",
+      "items": [
+        {
+          "id": "item-161",
+          "name": "Type",
+          "guidance": "LED indicator category on the system panel.\ne.g. Single-color, Bi-color (Green/Amber)",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-162",
+          "name": "Pin Header",
+          "guidance": "LED connected via internal pin header on board. Yes / No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-163",
+          "name": "Power LED",
+          "guidance": "Indicates system power state. Specify qty and color.\ne.g. 1 × Green (solid when on)",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-164",
+          "name": "HDD LED",
+          "guidance": "Indicates storage activity (blinks during disk access).\ne.g. 1 × Amber blink; or No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-165",
+          "name": "SW Defined LED",
+          "guidance": "LED controlled by software for custom status. Specify qty and color.\ne.g. 1 × Green/Amber",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-166",
+          "name": "Alert LED",
+          "guidance": "BMC fault/alarm indicator. Specify qty and color.\ne.g. 1 × Amber (solid on fault)",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-167",
+          "name": "ID/locate LED",
+          "guidance": "Controlled by BMC Define \"qty, color and LED spec if any\"",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-168",
+          "name": "LED location",
+          "guidance": "Where LEDs are physically located.\ne.g. Front panel, Rear panel",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        }
+      ]
+    },
+    {
+      "id": "category-19",
+      "name": "System buttons",
+      "items": [
+        {
+          "id": "item-170",
+          "name": "Power on/off button",
+          "guidance": "Physical power button to turn system on/off. Yes / No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-171",
+          "name": "Power on/off button location",
+          "guidance": "Power button location.\ne.g. Front panel, Rear panel",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-172",
+          "name": "Reset button",
+          "guidance": "Physical reset button to reboot system. Yes / No; or \"Reserve pin header\"",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-173",
+          "name": "Reset button location",
+          "guidance": "Reset button location.\ne.g. Front panel (recessed), or No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-174",
+          "name": "SW defined button",
+          "guidance": "System w/ BMC: please support MUX for BMC or PCH pin System w/o BMC: please connect to PCH pin",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-175",
+          "name": "SW defined button location",
+          "guidance": "Software-defined button location.\ne.g. Front panel",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        }
+      ]
+    },
+    {
+      "id": "category-20",
+      "name": "GPIO",
+      "items": [
+        {
+          "id": "item-177",
+          "name": "Onboard Pin definition",
+          "guidance": "GPIO pin header spec.\ne.g. FWA standard GPIO matrix; write \"N/A\" if not required",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        }
+      ]
+    },
+    {
+      "id": "category-21",
+      "name": "LCM module",
+      "items": [
+        {
+          "id": "item-179",
+          "name": "LCM required",
+          "guidance": "LCD panel module for front-panel status display. Yes / No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-180",
+          "name": "Text/Graphic mode",
+          "guidance": "Display type.\ne.g. Text (characters only), Graphic (icons/images)",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-181",
+          "name": "Interface",
+          "guidance": "LCM connection to system.\ne.g. Console port (RS-232), USB",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        }
+      ]
+    },
+    {
+      "id": "category-22",
+      "name": "Serial port",
+      "items": [
+        {
+          "id": "item-183",
+          "name": "Serial port qty",
+          "guidance": "Number of serial (COM) ports.\ne.g. 1, 2",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-184",
+          "name": "Connector type (header, DB9, RJ45)",
+          "guidance": "Serial connector type.\ne.g. 1 × RJ45 console (front), 1 × pin header (LCM)",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-185",
+          "name": "Connector location",
+          "guidance": "Serial port connector location.\ne.g. Front panel, Rear panel",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-186",
+          "name": "Controller",
+          "guidance": "Serial port chip.\ne.g. PCH-integrated; write \"N/A\" if CPU-integrated",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        }
+      ]
+    },
+    {
+      "id": "category-23",
+      "name": "Video port",
+      "items": [
+        {
+          "id": "item-188",
+          "name": "Connector type",
+          "guidance": "Video output connector.\ne.g. VGA (DB15), HDMI 2.0, DisplayPort 1.4",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-189",
+          "name": "Connector location",
+          "guidance": "Video port location.\ne.g. Front panel, Rear panel",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        }
+      ]
+    },
+    {
+      "id": "category-24",
+      "name": "USB port",
+      "items": [
+        {
+          "id": "item-191",
+          "name": "USB port qty",
+          "guidance": "Total USB ports.\ne.g. 2 × external USB 3.0 + 1 × internal header",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-192",
+          "name": "Connector type (header, USB)",
+          "guidance": "USB connector types.\ne.g. Type-A (external), internal 2.0 header",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-193",
+          "name": "Connector location",
+          "guidance": "USB port location.\ne.g. Front panel, Rear panel, Internal",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-194",
+          "name": "Controller",
+          "guidance": "USB controller chip.\ne.g. CPU-integrated (AMD); write \"N/A\" if CPU-integrated",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        }
+      ]
+    },
+    {
+      "id": "category-25",
+      "name": "Security",
+      "items": [
+        {
+          "id": "item-196",
+          "name": "FIPS",
+          "guidance": "FIPS 140-2/3 cryptographic standard compliance. Yes / No; if Yes, specify level",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-197",
+          "name": "Intrusion detection",
+          "guidance": "Chassis intrusion sensor — alerts if case is opened. Yes / No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-198",
+          "name": "TPM",
+          "guidance": "Trusted Platform Module security chip. Yes / No;\ne.g. fTPM 2.0, discrete TPM 2.0 module",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-199",
+          "name": "TPM Type",
+          "guidance": "TPM 形式。Module（外接模組）/ Onboard（板載）/ N/A / Others（於備註說明）",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-200",
+          "name": "TPM Chip / Chipset",
+          "guidance": "TPM 晶片型號（自由文字）。\ne.g. Infineon SLB9672, Nuvoton NPCT760；未定可先寫在備註",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        }
+      ]
+    },
+    {
+      "id": "category-26",
+      "name": "System cooling",
+      "items": [
+        {
+          "id": "item-202",
+          "name": "Fan/Fanless",
+          "guidance": "Cooling method.\ne.g. Fan (active), Fanless (passive/silent)",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-203",
+          "name": "N+1 cooling",
+          "guidance": "",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-204",
+          "name": "Fan model",
+          "guidance": "Fan module spec.\ne.g. 4 × 8038 mm hot-swap fans",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-205",
+          "name": "Fan speed",
+          "guidance": "Maximum fan speed.\ne.g. 7,000 RPM, 17,000 RPM",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-206",
+          "name": "Swappable",
+          "guidance": "Fan modules replaceable while system is running. Yes / No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-207",
+          "name": "Fan module LED indicator",
+          "guidance": "LED on each fan module shows its health status. Yes / No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-208",
+          "name": "PCIe card fan",
+          "guidance": "PCIe add-in cards have their own built-in fans. Yes / No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-209",
+          "name": "FAN connector on board",
+          "guidance": "Fan header count on board.\ne.g. 4 × 4-pin PWM connectors on MB",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        }
+      ]
+    },
+    {
+      "id": "category-27",
+      "name": "Environmental",
+      "items": [
+        {
+          "id": "item-211",
+          "name": "Operational temperature",
+          "guidance": "Ambient temperature during operation.\ne.g. 0°C ~ 40°C",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-212",
+          "name": "Humidity operational (non-condensing)",
+          "guidance": "Humidity during operation (no condensation).\ne.g. 95% @ 40°C",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-213",
+          "name": "Storage temperature",
+          "guidance": "Safe temperature range when stored/off.\ne.g. -40°C ~ 70°C",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-214",
+          "name": "Humidity Storage (non-condensing)",
+          "guidance": "Humidity during storage (no condensation).\ne.g. 95% @ 60°C",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-215",
+          "name": "RoHS6 Compliant",
+          "guidance": "EU restriction on hazardous substances in electronics. Yes / No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-216",
+          "name": "REACH Compliant",
+          "guidance": "EU chemical safety regulation for substances of concern. Yes / No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-217",
+          "name": "WEEE Compliant",
+          "guidance": "EU responsible e-waste disposal directive. Yes / No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        }
+      ]
+    },
+    {
+      "id": "category-28",
+      "name": "Compliance",
+      "items": [
+        {
+          "id": "item-219",
+          "name": "CB",
+          "guidance": "IEC international safety certification. Yes / No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-220",
+          "name": "UL",
+          "guidance": "UL safety certification for North American market. Yes / No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-221",
+          "name": "CE",
+          "guidance": "CE marking for European market (safety + EMC). Yes / No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-222",
+          "name": "FCC",
+          "guidance": "FCC EMI/EMC certification for US market. Yes / No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-223",
+          "name": "CCC",
+          "guidance": "China Compulsory Certificate for Chinese market. Yes / No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-224",
+          "name": "VCCI",
+          "guidance": "Japanese voluntary EMC standard. Yes / No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-225",
+          "name": "C-tick",
+          "guidance": "Australia/New Zealand EMC compliance mark (RCM). Yes / No",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        },
+        {
+          "id": "item-226",
+          "name": "Others",
+          "guidance": "Additional certifications.\ne.g. ATEX, MIL-STD-810, IEEE 1613; write \"No\" if none",
+          "heading": false,
+          "target": "",
+          "remarks": "",
+          "source_ref": "",
+          "sku_values": {}
+        }
+      ]
+    }
+  ]
+}

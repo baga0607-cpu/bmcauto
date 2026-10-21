@@ -2,7 +2,28 @@
 import uuid
 from models import RepositoryFolder as Folder,RepositoryFolderCase as Member,RepositoryFolderNode as Node,RepositoryCase
 import plan_state as ps
+import case_order as co
 ROOT='repository-bmc-root'
+
+
+def move_cases(s,ids,data):
+ target=data.get('folder_id') or ROOT;ps.require(s,Folder,target)
+ members=[ps.require(s,Member,i) for i in ids]
+ relative=data.get('relative_to');insertion=data.get('insertion')
+ if relative is not None or insertion is not None:
+  anchor=ps.require(s,Member,relative)
+  if relative in ids or anchor.folder_id!=target or insertion not in ('before','after'):
+   raise ps.StateError('Choose another Test Case in the destination folder and before/after insertion.')
+ records=[dict(id=r.id,name=r.name,source_version=r.source_version,folder_id=target)
+          for r in s.query(RepositoryCase).join(Member,Member.repository_id==RepositoryCase.id).filter(Member.folder_id==target,RepositoryCase.id.notin_(ids))]
+ ordered=[r['id'] for r in co.arrange(s,'repository',records)]
+ for member in members:
+  co.forget(s,'repository',member.folder_id,ids)
+  member.folder_id=target
+ if relative is not None:
+  index=ordered.index(relative)+(insertion=='after');ordered[index:index]=ids
+  co.save(s,'repository',target,ordered)
+ s.flush()
 
 def siblings(s,parent):
  return s.query(Node).filter_by(parent_id=parent).order_by(Node.position,Node.folder_id).all()
@@ -103,6 +124,7 @@ def batch(s,data):
   if target in covered:raise ps.StateError('Cannot move a selection into its own directory tree.',409)
   for i in roots:validate(s,s.get(Folder,i).name,target,i)
   for i in roots:change(s,i,{'parent_id':target})
-  for i in direct:s.get(Member,i).folder_id=target
+  if data.get('relative_to') is not None and roots:raise ps.StateError('Only Test Cases can be inserted beside a Test Case.')
+  if direct:move_cases(s,direct,data)
   s.flush();return dict(status='ok',moved_folders=len(roots),moved_cases=len(direct))
  raise ps.StateError('Choose move or delete.')

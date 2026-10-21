@@ -36,6 +36,14 @@ class Project(Base):
     )
 
 
+class ProjectInformation(Base):
+    __tablename__ = 'project_information'
+    project_id = Column(String(36), ForeignKey('projects.id', ondelete='CASCADE'), primary_key=True)
+    document = Column(Text, nullable=False)
+    revision = Column(Integer, nullable=False, default=1)
+    updated_at = Column(String(64), nullable=False)
+
+
 class ProjectPlan(Base):
     __tablename__ = 'project_plans'
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
@@ -103,7 +111,7 @@ class PlanFolder(Base):
 class TestCase(Base):
     __tablename__ = 'testcases'
     __table_args__ = (
-        UniqueConstraint('plan_id', 'normalized_name', name='uq_testcases_plan_normalized_name'),
+        Index('uq_testcases_plan_name_version', 'plan_id', 'normalized_name', text("coalesce(source_version, '')"), unique=True),
     )
     system_id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     family_id = Column(String(36), nullable=False, default=lambda: str(uuid.uuid4()))
@@ -178,7 +186,7 @@ class Task(Base):
 class TaskTestCase(Base):
     __tablename__ = 'task_testcases'
     __table_args__ = (UniqueConstraint('task_id', 'testcase_id', name='uq_task_scope'),
-                      CheckConstraint("status IN ('TBD','Running','Passed','Failed')", name='ck_task_status'))
+                      CheckConstraint("status IN ('TBD','Running','Passed','Failed','Block')", name='ck_task_status'))
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     task_id = Column("task_id", String(100), ForeignKey('tasks.id', ondelete='CASCADE'), nullable=False)
 
@@ -223,3 +231,11 @@ class RepositoryFolderNode(Base):
     folder_id = Column(String(36), ForeignKey('repository_folders.id', ondelete='CASCADE'), primary_key=True)
     parent_id = Column(String(36), ForeignKey('repository_folders.id', ondelete='RESTRICT'), nullable=True)
     position = Column(Integer, nullable=False, default=0)
+
+
+class CaseListOrder(Base):
+    """Explicit user order; absence means natural Test Case number order."""
+    __tablename__ = 'case_list_orders'
+    scope = Column(String(100), primary_key=True)
+    folder = Column(String(36), primary_key=True, default='')
+    case_ids = Column(Text, nullable=False, default='[]')

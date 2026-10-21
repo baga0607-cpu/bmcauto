@@ -35,9 +35,10 @@ window.TaskManagement = (() => {
     }).join('')}</div></div>`;
   }
 
-  function content(tasks, query) {
+  function content(tasks, query, tab='schedule') {
     const visible=filter(tasks,query);
-    return `<section aria-labelledby="task-list-title"><div class="toolbar"><h2 id="task-list-title">Task list</h2><span class="help">${visible.length} of ${tasks.length} Tasks</span></div>${table(visible,Boolean(query.trim()))}</section><section class="section" aria-labelledby="task-timeline-title"><h2 id="task-timeline-title">Task timeline</h2>${gantt(visible)}</section>`;
+    if(['list','my-task'].includes(tab))return `<section aria-labelledby="task-list-title"><div class="toolbar"><h2 id="task-list-title">Task List</h2><span class="help">${visible.length} of ${tasks.length} Tasks</span></div>${table(visible,Boolean(query.trim()))}</section>`;
+    return `<section aria-labelledby="task-timeline-title"><h2 id="task-timeline-title">Task Timeline</h2>${gantt(visible)}</section>`;
   }
 
   function planOptions(project, selected) {

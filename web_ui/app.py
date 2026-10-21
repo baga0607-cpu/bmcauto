@@ -24,6 +24,7 @@ from models import Base, TestCase, PlanSubfolder, Task, TaskTestCase, Project, P
 import sqlite3
 import plan_state as ps
 import single_case as sc
+from case_log import CaseLog, PrintLogWriter, open_log_files
 
 
 def _normalized_tc_name_for_schema(value):
@@ -79,13 +80,16 @@ try:
         except sqlite3.OperationalError: pass
         try: cursor.execute("ALTER TABLE testcases ADD COLUMN normalized_name TEXT")
         except sqlite3.OperationalError: pass
+        try: cursor.execute("ALTER TABLE testcases ADD COLUMN source_version TEXT")
+        except sqlite3.OperationalError: pass
+        cursor.execute("DROP INDEX IF EXISTS uq_testcases_plan_normalized_name")
         rows = cursor.execute(
-            "SELECT system_id, plan_id, display_name FROM testcases ORDER BY rowid"
+            "SELECT system_id, plan_id, display_name, source_version FROM testcases ORDER BY rowid"
         ).fetchall()
         seen_normalized_names = set()
-        for system_id, existing_plan_id, display_name in rows:
+        for system_id, existing_plan_id, display_name, source_version in rows:
             normalized_name = _normalized_tc_name_for_schema(display_name)
-            unique_key = (existing_plan_id, normalized_name)
+            unique_key = (existing_plan_id, normalized_name, source_version or "")
             if unique_key in seen_normalized_names:
                 normalized_name = f"{normalized_name}::legacy::{system_id}"
             seen_normalized_names.add(unique_key)
@@ -93,10 +97,6 @@ try:
                 "UPDATE testcases SET normalized_name = ? WHERE system_id = ?",
                 (normalized_name, system_id),
             )
-        cursor.execute(
-            "CREATE UNIQUE INDEX IF NOT EXISTS uq_testcases_plan_normalized_name "
-            "ON testcases(plan_id, normalized_name)"
-        )
         try: cursor.execute("ALTER TABLE project_plans ADD COLUMN category_order TEXT")
         except sqlite3.OperationalError: pass
         try: cursor.execute("ALTER TABLE plan_subfolders ADD COLUMN position INTEGER DEFAULT 0")
@@ -245,8 +245,8 @@ import task_management as tm
 
 class WebLoggingRedfishClient:
     """API 透明代理：
-    - 一行摘要將 print() 輸出 (SSE 面板 + result.log)
-    - 完整 Response Body 直接寫入 api.log，不經過 stdout
+    - 摘要與完整 response 共用 Test log，並推送 SSE
+    - 完整 Response Body 直接寫入同一檔案，不經過 stdout
     """
     def __init__(self, client, api_file=None, msg_queue=None, environment=None):
         self._environment = environment or {}
@@ -260,10 +260,10 @@ class WebLoggingRedfishClient:
             config = self._environment
             cs = config.get("console_server", {})
             if cs.get("host"):
-                print("  [Console] 偵測到配置 Console Server，正在建立連線代理...")
+                print("  [Console] Console Server configured; establishing connection...")
                 self._console_client = ConsoleClient(config)
                 self._console_client.connect()
-                print("  [Console] Console Server 連線成功！")
+                print("  [Console] Connected to Console Server.")
         return self._console_client
 
     def run_ipmitool(self, command_args, interface_options=None, ipmitool_args=None, **kwargs):
@@ -284,7 +284,7 @@ class WebLoggingRedfishClient:
         cmd_str = " ".join(cmd)
 
         if use_remote:
-            print(f"  [Console][IPMI] 遠端執行指令: {cmd_str}")
+            print(f"  [Console][IPMI] Executing remote command: {cmd_str}")
             if self._api_f:
                 import datetime as _dt
                 now_str = _dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S,%f")[:-3]
@@ -311,19 +311,19 @@ class WebLoggingRedfishClient:
                         "returncode": 0
                     }
             except Exception as e:
-                print(f"         遠端 IPMI 執行失敗: {e}")
+                print(f"         Remote IPMI execution failed: {e}")
                 if self._api_f:
-                    self._api_f.write(f"  遠端 IPMI 執行失敗, 錯誤: {e}\n\n")
+                    self._api_f.write(f"  Remote IPMI execution failed, error: {e}\n\n")
                     self._api_f.flush()
                 if self._mq is not None:
-                    self._mq.put({"type": "api_body", "text": f"  遠端 IPMI 執行失敗, 錯誤: {e}"})
+                    self._mq.put({"type": "api_body", "text": f"  Remote IPMI execution failed, error: {e}"})
                 return {
                     "stdout": "",
                     "stderr": str(e),
                     "returncode": 1
                 }
         else:
-            print(f"  [IPMI] 本機執行指令: {cmd_str}")
+            print(f"  [IPMI] Executing local command: {cmd_str}")
             if self._api_f:
                 import datetime as _dt
                 now_str = _dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S,%f")[:-3]
@@ -343,12 +343,12 @@ class WebLoggingRedfishClient:
                     "returncode": res.returncode
                 }
             except Exception as e:
-                print(f"         本機 IPMI 執行失敗: {e}")
+                print(f"         Local IPMI execution failed: {e}")
                 if self._api_f:
-                    self._api_f.write(f"  本機 IPMI 執行失敗, 錯誤: {e}\n\n")
+                    self._api_f.write(f"  Local IPMI execution failed, error: {e}\n\n")
                     self._api_f.flush()
                 if self._mq is not None:
-                    self._mq.put({"type": "api_body", "text": f"  本機 IPMI 執行失敗, 錯誤: {e}"})
+                    self._mq.put({"type": "api_body", "text": f"  Local IPMI execution failed, error: {e}"})
                 return {
                     "stdout": "",
                     "stderr": str(e),
@@ -377,7 +377,7 @@ class WebLoggingRedfishClient:
         cmd_str = " ".join(cmd)
 
         if use_remote:
-            print(f"  [Console][IPMI] 遠端執行指令: {cmd_str}")
+            print(f"  [Console][IPMI] Executing remote command: {cmd_str}")
             if self._api_f:
                 import datetime as _dt
                 now_str = _dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S,%f")[:-3]
@@ -406,20 +406,20 @@ class WebLoggingRedfishClient:
                                 parsed_data.append(int(token, 16))
                             except ValueError:
                                 pass
-                    print(f"         IPMI 成功: {parsed_data}")
+                    print(f"         IPMI succeeded: {parsed_data}")
                     if self._api_f:
-                        self._api_f.write(f"  IPMI 成功, 回傳: {parsed_data}\n\n")
+                        self._api_f.write(f"  IPMI succeeded, response: {parsed_data}\n\n")
                         self._api_f.flush()
                     if self._mq is not None:
-                        self._mq.put({"type": "api_body", "text": f"  IPMI 成功, 回傳: {parsed_data}"})
+                        self._mq.put({"type": "api_body", "text": f"  IPMI succeeded, response: {parsed_data}"})
                     return IpmiResponse(stdout_str, "", 0, parsed_data)
             except Exception as e:
-                print(f"         遠端 IPMI 執行失敗: {e}")
+                print(f"         Remote IPMI execution failed: {e}")
                 if self._api_f:
-                    self._api_f.write(f"  遠端 IPMI 執行失敗, 錯誤: {e}\n\n")
+                    self._api_f.write(f"  Remote IPMI execution failed, error: {e}\n\n")
                     self._api_f.flush()
                 if self._mq is not None:
-                    self._mq.put({"type": "api_body", "text": f"  遠端 IPMI 執行失敗, 錯誤: {e}"})
+                    self._mq.put({"type": "api_body", "text": f"  Remote IPMI execution failed, error: {e}"})
                 return IpmiResponse("", str(e), 1, [])
         else:
             print(f"  [API][IPMI  ] {cmd_str}")
@@ -447,28 +447,28 @@ class WebLoggingRedfishClient:
                 
                 # Log output
                 if res.returncode == 0:
-                    print(f"         IPMI 成功: {parsed_data}")
+                    print(f"         IPMI succeeded: {parsed_data}")
                     if self._api_f:
-                        self._api_f.write(f"  IPMI 成功, 回傳: {parsed_data}\n\n")
+                        self._api_f.write(f"  IPMI succeeded, response: {parsed_data}\n\n")
                         self._api_f.flush()
                     if self._mq is not None:
-                        self._mq.put({"type": "api_body", "text": f"  IPMI 成功, 回傳: {parsed_data}"})
+                        self._mq.put({"type": "api_body", "text": f"  IPMI succeeded, response: {parsed_data}"})
                 else:
-                    print(f"         IPMI 失敗: {res.stderr.strip()}")
+                    print(f"         IPMI failed: {res.stderr.strip()}")
                     if self._api_f:
-                        self._api_f.write(f"  IPMI 失敗, 錯誤: {res.stderr.strip()}\n\n")
+                        self._api_f.write(f"  IPMI failed, error: {res.stderr.strip()}\n\n")
                         self._api_f.flush()
                     if self._mq is not None:
-                        self._mq.put({"type": "api_body", "text": f"  IPMI 失敗, 錯誤: {res.stderr.strip()}"})
+                        self._mq.put({"type": "api_body", "text": f"  IPMI failed, error: {res.stderr.strip()}"})
                     
                 return resp
             except Exception as e:
-                print(f"         IPMI 異常: {e}")
+                print(f"         IPMI exception: {e}")
                 if self._api_f:
-                    self._api_f.write(f"  IPMI 異常: {e}\n\n")
+                    self._api_f.write(f"  IPMI exception: {e}\n\n")
                     self._api_f.flush()
                 if self._mq is not None:
-                    self._mq.put({"type": "api_body", "text": f"  IPMI 異常: {e}"})
+                    self._mq.put({"type": "api_body", "text": f"  IPMI exception: {e}"})
                 return IpmiResponse("", str(e), -1)
 
     def _log(self, method, uri, status, resp_dict=None):
@@ -476,7 +476,7 @@ class WebLoggingRedfishClient:
         now_str = _dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S,%f")[:-3]
         icon = "[OK]" if status and str(status).isdigit() and int(status) < 300 else "[!!]"
         
-        # 摘要行：透過 stdout 到 SSE + result.log
+        # 摘要行：透過 stdout 到 SSE + Test log
         print(f"  [API][{method:<6}] {uri} -> {status} {icon}")
         
         # 嘗試從 resp_dict 或 response 對象中提取 body
@@ -485,7 +485,7 @@ class WebLoggingRedfishClient:
             # 如果傳進來的是 None，嘗試從 context 獲取 (這取決於呼叫者，但這裡維持原樣)
             pass
 
-        # 完整 body：直接寫入 api.log (只有首行帶時間戳記，Body 維持純淨縮排)
+        # 完整 body：直接寫入 Test log (只有首行帶時間戳記，Body 維持純淨縮排)
         if self._api_f:
             self._api_f.write(f"{now_str} - DEBUG - [{method:<6}] {uri} -> {status} {icon}\n")
             if body_to_log:
@@ -553,7 +553,7 @@ class WebLoggingRedfishClient:
     def logout(self):
         if self._console_client:
             try:
-                print("  [Console] 正在關閉 Console Server 連線...")
+                print("  [Console] Closing Console Server connection...")
                 self._console_client.close()
             except Exception:
                 pass
@@ -636,7 +636,7 @@ def get_projects():
         for project in s.query(Project).order_by(Project.name):
             plans = []
             for plan in project.plans:
-                cases = [dict(tc.to_dict(), automation=sc.automation_for_case(MAIN_PROGRAM_DIR,tc)) for tc in sorted(plan.testcases, key=lambda tc: tc.position or 0)]
+                cases = [dict(tc.to_dict(), automation=sc.automation_for_case(MAIN_PROGRAM_DIR,tc), parameter_count=sc.parameter_count_for_case(MAIN_PROGRAM_DIR,tc)) for tc in ps.co.plan_rows(s,plan.id,plan.testcases)]
                 tasks = [ps.summary(s, task.id, MAIN_PROGRAM_DIR) for task in plan.tasks]
                 for task in tasks:
                     for case in task['testcases']:
@@ -653,6 +653,18 @@ def get_projects():
 # ============================================================================
 # V9 新增：create_plan API（前端 newPlan() 呼叫此端點取得 UUID plan_id）
 # ============================================================================
+def validate_plan_name(session, project_id, name, exclude_id=None):
+    name = (name or '').strip()
+    if not name:
+        raise ps.StateError('Enter a name.')
+    duplicate = session.query(ProjectPlan).filter(ProjectPlan.project_id == project_id, ProjectPlan.name == name)
+    if exclude_id:
+        duplicate = duplicate.filter(ProjectPlan.id != exclude_id)
+    if duplicate.first():
+        raise ps.StateError('A Plan with this name already exists.', 409)
+    return name
+
+
 @app.route("/api/create_plan", methods=["POST"])
 def create_plan():
     data = request.json
@@ -665,6 +677,7 @@ def create_plan():
         proj = session.query(Project).filter_by(name=project_name).first()
         if not proj:
             return jsonify({"error": f"Project '{project_name}' not found"}), 404
+        plan_name = validate_plan_name(session, proj.id, plan_name)
         new_plan_id = str(uuid.uuid4())
         new_plan = ProjectPlan(
             id=new_plan_id,
@@ -791,7 +804,7 @@ def rename_plan():
         if not plan:
             return jsonify({"error": f"Plan '{old_plan_name}' not found in project '{project_name}'"}), 404
             
-        plan.name = new_plan_name
+        plan.name = validate_plan_name(session, proj.id, new_plan_name, plan.id)
         session.commit()
         return jsonify({"status": "ok", "plan_id": plan.id, "new_name": new_plan_name})
     except Exception as e:
@@ -978,7 +991,7 @@ def patch_plan(plan_id):
             return jsonify({"error": "Plan not found"}), 404
             
         if "name" in data:
-            plan.name = data["name"].strip()
+            plan.name = validate_plan_name(session, plan.project_id, data["name"], plan.id)
 
         if "category_order" in data:
             category_order = data["category_order"]
@@ -1153,6 +1166,7 @@ def run_testcase():
         session = ps.request_session(DbSession)
         try:
             task = ps.require(session, Task, task_id)
+            task_log_name = task.name
             membership = session.query(TaskTestCase).filter_by(task_id=task_id, testcase_id=testcase_id).first()
             if membership is None: raise ps.StateError("Execution cannot add Task scope")
             ps.check_execution_token(task, execution_token)
@@ -1204,7 +1218,7 @@ def run_testcase():
 
     if project_id:
         locked_project_ids.add(project_id)
-        print(f"[API] 專案 {project_id} 測試啟動，全域唯讀鎖定已啟用。")
+        print(f"[API] Project {project_id} execution started; global read-only lock enabled.")
 
     def execute_in_thread():
         original_put = msg_queue.put
@@ -1232,30 +1246,6 @@ def run_testcase():
                 raise TestInterrupted()
             return val
 
-        class TeeWriter:
-            """同時將輸出送往 SSE Queue 和本地 result.log。"""
-            def __init__(self, result_f):
-                self._result_f = result_f
-
-            def write(self, msg):
-                if msg.strip():
-                    # 送往網頁 SSE (不帶時間戳記，維持版面乾淨)
-                    msg_queue.put({"type": "log", "text": msg.strip()})
-                    
-                    # 寫入本地檔案 (模擬標準 logging 格式：加上時間戳記與 INFO 標籤)
-                    if not self._result_f.closed:
-                        import datetime as _dt
-                        now_str = _dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S,%f")[:-3]
-                        formatted_msg = f"{now_str} - INFO - {msg.strip()}\n"
-                        try:
-                            self._result_f.write(formatted_msg)
-                            self._result_f.flush()
-                        except ValueError:
-                            pass
-
-            def flush(self):
-                self._result_f.flush()
-
         original_stdout = sys.stdout
         import builtins
         original_input = builtins.input
@@ -1269,16 +1259,16 @@ def run_testcase():
             
         log_dir = os.path.join(WORKSPACE_DIR, "logs")
         os.makedirs(log_dir, exist_ok=True)
-        log_key = f"{task_id}_{testcase_id}" if task_id else session_id
-        log_key = "".join(c if c.isalnum() or c in "-_" else "_" for c in log_key)
-        result_log_path = os.path.join(log_dir, f"result_{log_key}.log")
-        api_log_path = os.path.join(log_dir, f"api_{log_key}.log")
-        result_file = open(result_log_path, "w", encoding="utf-8")
-        api_file    = open(api_log_path,    "w", encoding="utf-8")
-        log_header  = f"=== Web UI Run Log ===\nTestCase: {tc_name}\nTimestamp: {timestamp}\n" + "=" * 40 + "\n\n"
+        log_files, result_file = open_log_files(log_dir, task_log_name, tc_name, task_id, testcase_id)
+        result_log_path = os.path.join(log_dir, log_files['test'])
+        log_header = (f"=== Web UI Run Log ===\nTask: {task_log_name}\nTask ID: {task_id}\n"
+                      f"TestCase: {tc_name}\nTestCase ID: {testcase_id}\nTimestamp: {timestamp}\n"
+                      + "=" * 40 + "\n\n")
         result_file.write(log_header)
-        api_file.write(log_header)
-        sys.stdout = TeeWriter(result_file)  # api_file 不再經過 stdout
+        print_writer = PrintLogWriter(result_file, msg_queue.put)
+        case_log = CaseLog(result_file, msg_queue.put)
+        sys.stdout = print_writer
+        case_log.section("Platform connection")
 
         try:
             import urllib3
@@ -1301,8 +1291,8 @@ def run_testcase():
                 )
                 real_client.login(auth="basic")
                 msg_queue.put({"type": "status", "text": f"[OK] Connected to BMC: {conf['host']}"})
-                # 套上透明代理，將 api_file 與 msg_queue 傳進去，同時寫 full body 並推送 SSE
-                client = WebLoggingRedfishClient(real_client, api_file=api_file, msg_queue=msg_queue, environment=environment)
+                # 套上透明代理，將 Test log 與 msg_queue 傳進去，同時寫 full body 並推送 SSE
+                client = WebLoggingRedfishClient(real_client, api_file=result_file, msg_queue=msg_queue, environment=environment)
             except Exception as e:
                 msg_queue.put({"type": "error", "text": f"[FAIL] Connection failed: {e}"})
                 run_sessions[session_id]["status"] = "error"
@@ -1313,6 +1303,7 @@ def run_testcase():
                 "_tc_status": "PASS",
                 "redfish": conf
             }
+            context['log'] = case_log
             context['console_server'] = environment['console_server']
             context['dut_console'] = environment['dut_console']
             context['dut_os'] = environment['dut_os']
@@ -1356,11 +1347,19 @@ def run_testcase():
                 except Exception:
                     pass
 
+            print_writer.flush()
+            if not case_log.finished:
+                state = run_sessions[session_id]["status"]
+                stopped = state == "stopped" or run_sessions[session_id].get("stop_requested")
+                status = "Stopped" if stopped else ("Pass" if state == "done" and locals().get("context", {}).get("_tc_status") == "PASS" else "Fail")
+                errors = [event.get("error") or event.get("text") for event in run_sessions[session_id]["log_history"]
+                          if event.get("type") == "error" or event.get("error")]
+                case_log.finish(status, next((error for error in reversed(errors) if error),
+                                             "Execution stopped by operator" if stopped else "Execution finished"))
             sys.stdout = original_stdout
             builtins.input = original_input
             result_file.write("\n" + "=" * 40 + "\n=== End of Log ===\n")
             result_file.close()
-            api_file.close()
             if task_id:
                 result_session = DbSession()
                 try:
@@ -1369,8 +1368,6 @@ def run_testcase():
                     outcome = "TBD" if stopped else ("Passed" if run_sessions[session_id]["status"] == "done" and locals().get("context", {}).get("_tc_status") == "PASS" else "Failed")
                     with open(result_log_path, encoding="utf-8") as result_log:
                         latest_log = result_log.read()
-                    with open(api_log_path, encoding="utf-8") as api_log:
-                        latest_api_log = api_log.read()
                     # Persist this testcase's current structured evidence before the stream closes.
                     # SSE-only failures are otherwise lost when the operational session disappears.
                     events = list(run_sessions[session_id].get("log_history", []))
@@ -1386,11 +1383,12 @@ def run_testcase():
                                 evidence.append(f"Test Case: {event.get('result')} {event.get('case_name', '')} {event.get('error', '')}".rstrip())
                         evidence.extend(f"[ERROR] {error}" for error in errors)
                         latest_log += "\n".join(evidence) + "\n"
-                    ps.save_result(result_session, task_id, {"id": testcase_id, "execution_token": execution_token, "status": outcome, "executed_at": datetime.datetime.now().isoformat(), "result": {"status": outcome, "events": case_details, "errors": errors}, "log_text": latest_log, "api_log_text": latest_api_log})
+                    ps.save_result(result_session, task_id, {"id": testcase_id, "execution_token": execution_token, "status": outcome, "executed_at": datetime.datetime.now(datetime.timezone.utc).isoformat(), "result": {"status": outcome, "events": case_details, "errors": errors, "log_records": case_log.records}, "log_text": latest_log, "api_log_text": ""})
                     if single_execution:
                         saved = result_session.query(TaskTestCase).filter_by(task_id=task_id, testcase_id=testcase_id).one()
                         result_data = json.loads(saved.result_json)
-                        result_data.update(source_version=case_source_version, plan_settings_revision=case_revision, settings=case_settings)
+                        result_data.update(source_version=case_source_version, plan_settings_revision=case_revision,
+                                           settings=case_settings, log_files=log_files)
                         saved.result_json = json.dumps(result_data, ensure_ascii=False)
                     result_session.commit()
                 except Exception as persistence_error:
@@ -1409,8 +1407,8 @@ def run_testcase():
                     result_session.close()
             if project_id and project_id in locked_project_ids:
                 locked_project_ids.discard(project_id)
-                print(f"[API] 專案 {project_id} 測試結束，解除全域鎖定。")
-            print(f"[Log] 執行結果已儲存至 workspace/logs/result_{safe_tc_name}_{timestamp}.log")
+                print(f"[API] Project {project_id} execution finished; global lock released.")
+            print(f"[Log] Test log saved: {result_log_path}")
 
 
 
@@ -1570,11 +1568,13 @@ def index():
 
 ps.install_routes(app, globals())
 sc.register(app, globals())
+import project_information
+project_information.register(app, globals())
 
 if __name__ == "__main__":
     print("=" * 60)
     print("  Redfish Test Manager - Web UI")
-    print("  可透過 http://localhost:5000 或 http://<伺服器IP>:5000 存取")
+    print("  Available at http://localhost:5000 or http://<server-ip>:5000")
     print("=" * 60)
     app.run(host="0.0.0.0", debug=True, port=5000, threaded=True, use_reloader=False)
 

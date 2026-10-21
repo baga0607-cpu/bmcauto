@@ -43,7 +43,7 @@ body.repository-page .inline-form .form-actions{margin-top:14px}
 .repository-workspace{display:grid;grid-template-columns:210px minmax(0,1fr);gap:16px;align-items:start}.repository-layout{min-width:0}.repository-tree{border:1px solid var(--line);border-radius:var(--radius);padding:8px;position:sticky;top:78px;max-height:calc(100vh - 96px);overflow:auto}.repository-tree ul{list-style:none;margin:0;padding:0}.repository-tree li ul{padding-left:14px}.repository-node{display:flex;align-items:center;gap:6px;width:100%;text-align:left;border:0;padding:7px 6px;border-radius:4px;min-height:32px;background:transparent;font-size:.86rem}.repository-node svg{width:16px;height:16px;flex-shrink:0}.repository-node>span:not(.count){overflow-wrap:anywhere;min-width:0}.repository-node[aria-pressed=true]{background:var(--selected);color:var(--accent)}.repository-folder-actions{display:flex;gap:4px;flex-wrap:wrap;padding-top:10px;margin-top:6px;border-top:1px solid var(--line)}.repository-current-path{font-size:.84rem;color:var(--muted);margin:0 0 8px}.repository-node[data-drop=inside]{outline:2px solid var(--accent);background:var(--selected)}.repository-node[data-drop=before]{box-shadow:0 -2px 0 var(--accent)}.repository-node[data-drop=after]{box-shadow:0 2px 0 var(--accent)}#repository-table tr[draggable=true]{cursor:grab}#repository-table tr[draggable=true]:active{cursor:grabbing}
 
 /* Direct directory and case operations in one hierarchical list. */
-body.repository-page #repository-table.repository-hierarchy td:first-child{padding-left:calc(12px + var(--depth,0)*20px)}
+body.repository-page #repository-table.repository-hierarchy td:first-child{padding-left:calc(12px + var(--depth,0)*1ch)}
 .repository-hierarchy .repository-folder-row td{background:var(--ground);padding-top:6px;padding-bottom:6px}
 .repository-folder-line{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
 .repository-folder-name{display:inline-flex;align-items:center;gap:7px;border:0;background:transparent;padding:2px 4px;min-height:28px;text-align:left}
@@ -114,3 +114,303 @@ body.resizing-repository,body.resizing-repository *{cursor:col-resize!important;
 /* Align Repository controls with their column labels. */
 body.repository-page #repository-table th:nth-child(n+2),body.repository-page #repository-table td:nth-child(n+2){text-align:left;padding-left:12px;padding-right:12px}
 body.repository-page #repository-table td .actions{justify-content:flex-start}
+
+/* Project-scoped navigation; global function pages use the full workspace. */
+body.global-page .app-shell{grid-template-columns:minmax(0,1fr)}
+body.global-page #navigator,body.global-page #nav-toggle{display:none}
+.project-switcher{display:flex;align-items:center;gap:8px;padding:0 8px;margin-bottom:24px;font-size:.9rem;font-weight:600}
+.project-switcher>span{flex-shrink:0}.project-switcher select{flex:1;width:0;min-width:0;font-weight:400}
+.plan-list-footer{margin-top:20px}
+.project-sections{display:flex;flex-direction:column;gap:6px;flex:0}
+.project-sections a{padding:11px 12px}
+
+.status.blocked,.status.block{background:var(--warn-bg);color:var(--warn)}
+.plan-overview>table{table-layout:fixed}.plan-overview>table>thead th:first-child{width:28%}.plan-overview>table>thead th:nth-child(3){width:20%}
+.plan-overview>table>thead th{white-space:normal}.plan-overview>table>tbody>tr>td{vertical-align:middle;overflow-wrap:anywhere}
+.plan-overview .matrix-row>td{padding:16px;background:var(--ground)}
+.plan-matrix{max-height:460px;overflow:auto;background:var(--surface)}.plan-matrix table{width:100%;min-width:600px}
+.plan-matrix th,.plan-matrix td{white-space:nowrap}.plan-matrix thead th{position:sticky;top:0;z-index:1}.plan-matrix th:first-child{max-width:360px;white-space:normal;min-width:180px}.plan-matrix td:last-child,.plan-matrix th:last-child{font-weight:700;background:var(--selected)}
+.matrix-toggle{min-width:38px;color:var(--accent)}.matrix-toggle[aria-expanded=true]{background:var(--selected)}
+
+/* Center Plan summary columns while retaining left-aligned names and matrix. */
+.plan-overview>table>thead>tr>th:not(:first-child),.plan-overview>table>tbody>tr:not(.matrix-row)>td:not(:first-child){text-align:center}
+
+/* Equal, non-wrapping summary columns across both interface languages.
+   The rendered table measures both languages; 12ch is its loading fallback. */
+.plan-overview{--summary-column-width:calc(12ch + 28px)}
+.plan-overview>table{min-width:calc(180px + 7 * var(--summary-column-width))}
+.plan-overview>table>thead>tr>th:first-child{width:auto}
+.plan-overview>table>thead>tr>th:not(:first-child){width:var(--summary-column-width);white-space:nowrap;height:48px}
+
+/* Shared dimensions for the project sections in either interface language. */
+.project-sections a{width:var(--project-entry-width,100%);height:42px;min-height:42px;white-space:nowrap;flex-shrink:0}
+
+.project-sections a{justify-content:center;text-align:center}
+.plan-list-footer button{height:36px;min-height:36px;white-space:nowrap;text-align:center}
+
+/* Reserve the longer bilingual label so the project selector never shifts. */
+.project-switcher>span{width:60px;flex:0 0 60px;white-space:nowrap}
+
+.global-nav a{width:var(--global-entry-width,180px);flex:0 0 var(--global-entry-width,180px);text-align:center;white-space:nowrap}
+
+#plan-inline-form{display:flex;flex-direction:column;gap:8px}#new-plan-name{width:100%}.plan-draft-row{background:var(--ground)}
+
+.plan-create-error{color:var(--bad);margin:12px 0 0}.plan-create-error:empty{display:none}
+
+/* Plan list shares the Repository table design while keeping project navigation. */
+
+body.plan-workspace .repository-layout.has-preview{gap:16px}
+body.plan-workspace #repository-table th{padding:9px 12px}
+body.plan-workspace #repository-table td{padding:9px 12px;vertical-align:middle}
+body.plan-workspace #repository-table td .help{margin:3px 0 0;font-size:.8rem;line-height:1.35}
+body.plan-workspace #repository-table .actions{gap:6px;flex-wrap:nowrap}
+body.plan-workspace .small-button{min-height:28px;padding:3px 8px}
+
+/* Direct directory and case operations in one hierarchical list. */
+body.plan-workspace #repository-table.repository-hierarchy td:first-child{padding-left:calc(12px + var(--depth,0)*1ch)}
+body.plan-workspace .repository-page-controls{flex:0 0 auto;justify-content:flex-start;gap:8px;margin-bottom:10px}
+body.plan-workspace .repository-page-controls input[type=search]{width:260px;padding:7px 10px}
+body.plan-workspace .repository-layout{flex:1;min-height:0}
+body.plan-workspace .repository-layout.has-preview{align-items:stretch}
+body.plan-workspace .repository-list{display:flex;flex-direction:column;height:100%;min-height:0}
+body.plan-workspace .repository-scroll{flex:1;min-height:0;overflow:auto;border:1px solid var(--line)}
+body.plan-workspace #repository-table{border-collapse:separate;border-spacing:0}
+body.plan-workspace #repository-table th{position:sticky;top:0;z-index:2;padding:3px 12px;line-height:16px;font-size:.8rem;background:var(--ground);border-bottom:1px solid var(--line)}
+body.plan-workspace #repository-table .repository-folder-row td{padding-top:2px;padding-bottom:2px;line-height:18px}
+body.plan-workspace .repository-folder-line{gap:5px;flex-wrap:nowrap;min-height:18px}
+body.plan-workspace .repository-folder-name{min-height:18px;padding:0 3px;line-height:18px;font-size:.86rem;gap:5px}
+body.plan-workspace .repository-folder-name svg{width:14px;height:14px}
+body.plan-workspace .folder-collapse{min-height:18px;min-width:16px;padding:0;line-height:18px}
+body.plan-workspace #repository-table .actions .icon-button{width:20px;height:20px;min-width:20px;min-height:20px;flex:0 0 20px;padding:2px;line-height:16px}
+body.plan-workspace #repository-table .actions .icon-button svg{width:14px;height:14px}
+
+/* Borderless Repository list; retain drag/drop target feedback. */
+body.plan-workspace .repository-scroll{border:0}
+body.plan-workspace #repository-table th,body.plan-workspace #repository-table td{border:0}
+body.plan-workspace #repository-table .repository-folder-row[data-drop=before] td{border-top:2px solid var(--accent)}
+body.plan-workspace #repository-table .repository-folder-row[data-drop=after] td{border-bottom:2px solid var(--accent)}
+
+/* Increase folder/header density spacing by 25% from 24px/22px. */
+body.plan-workspace #repository-table .repository-folder-row td{padding-top:5px;padding-bottom:5px}
+body.plan-workspace #repository-table th{padding-top:6px;padding-bottom:6px}
+
+/* Larger labels/icons with the existing 28px header and 30px folder rows. */
+body.plan-workspace #repository-table th{font-size:1rem;line-height:20px;padding-top:4px;padding-bottom:4px}
+body.plan-workspace .repository-folder-name{font-size:1.075rem;line-height:20px;min-height:20px}
+body.plan-workspace .repository-folder-name svg{width:17.5px;height:17.5px}
+body.plan-workspace #repository-table .repository-folder-row td{padding-top:5px;padding-bottom:5px;line-height:20px}
+
+/* Resizable details pane with a fixed heading and independently scrolling content. */
+body.plan-workspace .repository-layout.has-preview{grid-template-columns:minmax(0,1fr) 12px minmax(0,var(--preview-width,45%));gap:0}
+
+/* Align Repository controls with their column labels. */
+body.plan-workspace #repository-table th:nth-child(n+2),body.plan-workspace #repository-table td:nth-child(n+2){text-align:left;padding-left:12px;padding-right:12px}
+body.plan-workspace #repository-table td .actions{justify-content:flex-start}
+body.plan-workspace .app-shell{height:calc(100vh - 62px);min-height:0}
+body.plan-workspace #workspace{display:flex;flex-direction:column;overflow:hidden;padding:18px 24px 24px}
+body.plan-workspace .page-heading{flex:none;align-items:center;margin-bottom:16px}
+body.plan-workspace .page-heading h1{margin:0;font-size:1.5rem}
+body.plan-workspace .page-heading p:empty{display:none}
+body.plan-workspace .plan-case-details{display:flex;flex-direction:column;min-width:0;min-height:0;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+body.plan-workspace .plan-case-close{justify-content:flex-end;padding:8px 12px;flex:none}
+body.plan-workspace #case-editor{overflow:auto;min-height:0;padding:16px}
+body.plan-workspace .repository-folder-name{color:var(--ink)}
+
+body.plan-workspace [data-plan-folder][data-drop=inside] td{outline:2px solid var(--accent);outline-offset:-2px;background:var(--selected)}
+body.plan-workspace [data-plan-folder][data-drop=before] td{border-top:2px solid var(--accent)!important}
+body.plan-workspace [data-plan-folder][data-drop=after] td{border-bottom:2px solid var(--accent)!important}
+body.plan-workspace [draggable=true]{cursor:grab}
+
+/* Plan details use the Repository header and scrolling-content layout. */
+body.plan-workspace .plan-case-details{padding:16px}
+body.plan-workspace .plan-case-details .repository-preview-header{flex:0 0 auto;margin:0;padding-bottom:12px;align-items:flex-start;gap:12px}
+body.plan-workspace .plan-case-details h2{min-width:0;overflow-wrap:anywhere;font-size:1.05rem;margin:0}
+body.plan-workspace .plan-case-details h3{font-size:.95rem;margin:14px 0 10px}
+body.plan-workspace .plan-case-details .preview-close{flex:none;font-size:.75rem;height:27px;min-height:27px;line-height:1;padding:6px 9px}
+body.plan-workspace #case-editor{flex:1;min-height:0;overflow:auto;scrollbar-gutter:stable;padding:0}
+body.plan-workspace #case-editor .fields{grid-template-columns:minmax(0,1fr)}
+body.plan-workspace #case-editor section[hidden]{display:none}
+body.plan-workspace #case-editor .source-editor{resize:vertical}
+
+body.plan-workspace .plan-case-details{height:100%;max-height:100%;box-sizing:border-box}
+
+body.plan-workspace #case-editor .log{max-height:none;overflow:visible;padding:12px;margin-top:8px;line-height:1.45}
+
+/* Side-by-side Plan import: independent trees with explicit source identity. */
+.plan-import-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;flex:1;min-height:0}
+.import-target-pane,.import-source-pane{display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden}
+.import-target-pane>h2,.import-source-pane h2{font-size:1rem;margin:0;overflow-wrap:anywhere}
+.import-target-pane>h2{min-height:36px;padding:4px 0 12px}
+.import-source-pane{border-left:1px solid var(--line);padding-left:20px}
+.import-source-pane .toolbar{margin:0 0 8px;gap:12px;align-items:flex-start}
+.import-source-pane .help{font-size:.85rem;margin:0 0 10px}
+.import-source-pane input[type=search]{width:100%;margin-bottom:10px}
+#import-source-list{display:flex;flex:1;min-height:0;overflow:hidden}
+body.plan-workspace .import-target-pane .repository-list{height:auto;flex:1}
+.import-source-table{width:100%;table-layout:fixed}
+.import-source-table th{position:sticky;top:0;background:var(--ground)}
+.import-source-table td{overflow-wrap:anywhere;border:0;padding-top:9px;padding-bottom:9px}
+.import-source-table .repository-folder-row{background:var(--ground)}
+.import-source-table [draggable=true]{cursor:grab}
+#plan-import-dialog{max-width:560px}#plan-import-source{width:100%}
+
+body.plan-workspace .case-source-version{margin:3px 0 0;font-size:.8rem;overflow-wrap:anywhere;font-weight:400}
+body.plan-workspace #repository-table th:nth-child(2){width:75px}
+body.plan-workspace #repository-table th:nth-child(3){width:78px}
+#import-conflict-dialog{max-width:640px;max-height:85vh;overflow:auto}
+.import-conflict-item{margin:12px 0;padding:14px;border:1px solid var(--line);min-width:0}
+.import-conflict-item legend{font-weight:600;overflow-wrap:anywhere}
+.import-conflict-item p{font-size:.85rem;overflow-wrap:anywhere}
+.import-conflict-item .field{margin-top:12px}
+
+/* Full-height peer workspaces, with a shared draggable divider. */
+.plan-import-layout{width:100%;grid-template-columns:minmax(0,var(--import-left,1fr)) 12px minmax(0,var(--import-right,1fr));gap:0;overflow:hidden}
+.import-target-pane{padding-right:12px}.import-source-pane{padding-left:12px;border-left:0}
+.import-pane-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;min-height:64px;flex:none}
+.import-pane-heading h1,.import-source-pane .import-pane-heading h2{font-size:1.5rem;line-height:1.25;min-width:0;margin:0;overflow-wrap:anywhere}
+.import-pane-heading .preview-close{flex:none}
+.import-pane-controls{display:flex;align-items:center;gap:8px;min-height:46px;margin-bottom:8px;flex:none}
+.import-pane-controls label{flex:1;min-width:0}
+body.plan-workspace .import-pane-controls input[type=search]{width:100%;margin:0;padding:7px 10px}
+.import-pane-controls button{flex:none}
+#import-source-list,.import-target-pane .repository-list{min-width:0;width:100%}
+#import-source-list .repository-scroll{min-width:0;width:100%;scrollbar-gutter:stable}
+.import-source-table .repository-folder-line,.import-source-table .repository-folder-name{min-width:0;white-space:normal}
+.import-source-table .repository-folder-name strong{min-width:0;overflow-wrap:anywhere}
+.import-resizer{cursor:col-resize;touch-action:none;position:relative;align-self:stretch}
+.import-resizer::after{content:'';position:absolute;left:5px;top:0;bottom:0;width:2px;background:var(--line)}
+.import-resizer:hover::after,.import-resizer:focus-visible::after{background:var(--accent)}
+body.plan-workspace #repository-table{max-width:900px;table-layout:fixed}
+body.plan-workspace #repository-table th:first-child{width:64%}
+body.plan-workspace #repository-table th:nth-child(2),body.plan-workspace #repository-table th:nth-child(3){width:18%}
+body.plan-workspace .plan-import-layout #repository-table{max-width:none}
+body.plan-workspace .plan-import-layout #repository-table th:first-child{width:calc(100% - 96px)}
+body.plan-workspace .plan-import-layout #repository-table th:nth-child(2){width:96px}
+body.plan-workspace #repository-table td:first-child{overflow-wrap:anywhere}
+.conflict-case-name{display:flex;flex-direction:column;gap:8px;margin:20px 0;overflow-wrap:anywhere}
+.conflict-case-name>span{font-size:.9rem;color:var(--muted)}
+.conflict-case-name>strong{font-size:1.1rem}
+.conflict-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}
+#import-conflict-dialog{max-width:520px}
+
+#import-conflict-dialog .conflict-actions{flex-wrap:nowrap;justify-content:flex-start}
+#import-conflict-dialog .conflict-actions button{white-space:nowrap}
+
+/* Repository is the shared visual baseline for all three case trees. */
+body:is(.repository-page,.plan-workspace) :is(#repository-table,.import-source-table).repository-hierarchy{border-collapse:separate;border-spacing:0;font-size:1rem}
+body:is(.repository-page,.plan-workspace) :is(#repository-table,.import-source-table).repository-hierarchy th{font-size:1rem;font-weight:600;line-height:20px;padding:4px 12px;border:0;background:var(--ground);position:sticky;top:0;z-index:2}
+body:is(.repository-page,.plan-workspace) :is(#repository-table,.import-source-table).repository-hierarchy td{font-size:1rem;padding:9px 12px;vertical-align:middle;border:0}
+body:is(.repository-page,.plan-workspace) :is(#repository-table,.import-source-table).repository-hierarchy td:first-child{padding-left:calc(12px + var(--depth,0)*1ch)}
+body:is(.repository-page,.plan-workspace) :is(#repository-table,.import-source-table) td>strong{font-size:1rem;font-weight:700;display:inline-block}
+body:is(.repository-page,.plan-workspace) :is(#repository-table,.import-source-table) td .help{font-size:.8rem;font-weight:400;line-height:1.35;margin:3px 0 0}
+body:is(.repository-page,.plan-workspace) :is(#repository-table,.import-source-table) .repository-folder-row td{padding-top:5px;padding-bottom:5px;line-height:20px}
+body:is(.repository-page,.plan-workspace) .repository-hierarchy .repository-folder-line{gap:5px;flex-wrap:nowrap;min-height:18px}
+body:is(.repository-page,.plan-workspace) .repository-hierarchy .repository-folder-name{font-size:1.075rem;font-weight:600;line-height:20px;min-height:20px;padding:0 3px;gap:5px}
+body:is(.repository-page,.plan-workspace) .repository-hierarchy .repository-folder-name strong{font-weight:900}
+body:is(.repository-page,.plan-workspace) .repository-hierarchy .repository-folder-name svg{width:17.5px;height:17.5px}
+body:is(.repository-page,.plan-workspace) .repository-hierarchy .automation-tag{width:20px;height:20px;margin-right:6px}
+body:is(.repository-page,.plan-workspace) .repository-hierarchy .automation-tag svg{width:18px;height:18px}
+body:is(.repository-page,.plan-workspace) .repository-hierarchy .folder-collapse{min-height:18px;min-width:16px;padding:0;line-height:18px}
+.folder-collapse-spacer{width:16px;min-width:16px;flex:none}
+
+/* Folder/case drop areas remain in layout; insertion boxes never shift rows. */
+.repository-hierarchy tr[data-drop-allowed] { position:relative; outline:1px dashed var(--line); outline-offset:-2px; }
+.repository-hierarchy tr[data-drop] { position:relative; }
+.repository-hierarchy tr[data-drop]::after { content:''; position:absolute; left:2px; right:2px; top:2px; bottom:2px; border:2px solid var(--accent); border-radius:4px; background:color-mix(in srgb,var(--selected) 45%,transparent); pointer-events:none; z-index:2; }
+.repository-hierarchy tr[data-drop=before]::after { bottom:50%; }
+.repository-hierarchy tr[data-drop=after]::after { top:50%; }
+.repository-hierarchy tr[data-drop] td { outline:none!important; }
+body.plan-workspace .plan-import-layout #repository-table th:first-child { width:calc(100% - 104px); }
+body.plan-workspace .plan-import-layout #repository-table th:nth-child(2) { width:104px; }
+
+.repository-hierarchy tr[draggable=true] { user-select:none; }
+body.repository-page #repository-table tr[data-drop] td,body.plan-workspace #repository-table tr[data-drop] td { border-top:0!important; border-bottom:0!important; }
+
+/* Import mode uses the full workspace; all exits restore the project navigator. */
+body.plan-workspace:has(.plan-import-layout) .app-shell{grid-template-columns:minmax(0,1fr)}
+body.plan-workspace:has(.plan-import-layout) #navigator,
+body.plan-workspace:has(.plan-import-layout) #nav-toggle{display:none}
+
+/* Enlarge case-tree controls within existing row/column spacing. */
+body:is(.repository-page,.plan-workspace) .repository-hierarchy .actions .icon-button{
+  transform:scale(1.2);transform-origin:center;
+}
+body:is(.repository-page,.plan-workspace) .repository-hierarchy .folder-collapse{
+  transform:scale(1.4);transform-origin:center;
+}
+
+/* Persistent left navigation replaces the former top app bar on every workspace. */
+body .app-shell,body.plan-workspace:has(.plan-import-layout) .app-shell{display:grid!important;grid-template-columns:260px minmax(0,1fr)!important;min-height:100vh}
+body #navigator,body.plan-workspace:has(.plan-import-layout) #navigator{display:flex!important;position:sticky;top:0;height:100vh;width:auto;padding:24px 16px 16px;background:var(--ground);border-right:1px solid var(--line);overflow:auto;z-index:20}
+#navigator .brand{padding:0 8px 28px}
+#navigation-content{flex:1;min-height:0}
+.sidebar-navigation{display:flex;flex-direction:column;gap:20px}
+.sidebar-navigation a{display:block;color:var(--ink);text-decoration:none;padding:9px 10px;min-height:36px;border-radius:var(--radius);font-weight:600}
+.sidebar-navigation a:hover{background:var(--layer)}
+.sidebar-navigation a[aria-current=page]{background:var(--selected);color:var(--accent)}
+.sidebar-children{padding-left:16px;margin-top:4px;display:grid;gap:3px}
+.sidebar-children a{font-weight:400}
+.sidebar-project-heading{display:flex;align-items:center;gap:3px;min-width:0}
+.sidebar-project-heading>a{flex:none;padding-left:10px;padding-right:4px}
+.project-picker{min-width:0;flex:1;margin:0;padding:0;border:0;position:relative}
+.project-picker summary{margin:0;padding:8px 6px;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);font-weight:400;font-size:.9rem;overflow-wrap:anywhere}
+.project-picker-menu{position:absolute;top:100%;right:0;width:220px;padding:10px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);z-index:30}
+.project-picker-menu input{width:100%}.project-options{max-height:240px;overflow:auto;margin-top:8px;display:grid;gap:3px}
+.project-options button{text-align:left;border:0;overflow-wrap:anywhere;font-weight:400}.project-options button[aria-pressed=true]{background:var(--selected);color:var(--accent)}.project-options button[hidden]{display:none}
+.sidebar-preferences{display:flex;align-items:center;gap:10px;margin-top:28px;padding:16px 8px 0;border-top:1px solid var(--line)}
+body #workspace{min-width:0;padding:28px 32px 50px}
+
+.project-picker>input{width:100%;min-width:0;padding:8px 6px;font-size:.9rem;background:var(--surface)}
+.project-picker-menu[hidden]{display:none}
+.project-picker-menu .project-options{margin-top:0}
+.project-options button[aria-selected=true]{background:var(--selected);color:var(--accent)}
+
+/* Project requirements share one model across overview, specifications and SKU comparison. */
+.info-save{justify-content:space-between;margin:0 0 12px}.info-basic{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;max-width:1000px;margin-top:24px}
+.info-summary{display:flex;gap:32px;padding:20px 0;border-top:1px solid var(--line);margin-top:24px;color:var(--muted)}
+.info-source{display:grid;grid-template-columns:180px minmax(0,1fr);gap:18px;max-width:1000px}.info-source dd{margin:0;overflow-wrap:anywhere}
+.info-sku-names{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:24px}.info-sku-names>div{display:flex;align-items:end;gap:8px}
+.info-specifications table{min-width:760px;table-layout:fixed}.info-specifications th:first-child,.info-specifications td:first-child{width:250px}
+.info-specifications td{vertical-align:top}.info-specifications textarea{width:100%;min-width:160px;resize:vertical;min-height:80px}.info-specifications details{margin-top:8px}.info-specifications details p{white-space:pre-wrap}
+#project-information-form .toolbar select{max-width:450px}#info-content{padding-top:20px}
+
+.info-value{white-space:pre-wrap;overflow-wrap:anywhere;padding:8px 0;line-height:1.6;min-height:32px}.info-basic .field>span{color:var(--muted)}
+
+.info-project-heading{display:flex;align-items:center;justify-content:space-between;gap:24px}.info-project-heading h1{margin:0;overflow-wrap:anywhere}.info-category-toggle{display:flex;align-items:center;gap:12px;width:100%;text-align:left;border:0;background:transparent;font-weight:600;padding:12px}.info-category-heading th{padding:0;background:var(--surface-alt,rgba(128,128,128,.10))}.info-grouped tbody[hidden]{display:none}.info-grouped th[scope="row"]{font-weight:400;vertical-align:top}.info-chevron{width:16px}
+
+.info-expand-actions{margin-bottom:20px}.info-sku-different .info-value,.info-sku-different textarea{color:#1462c4}[data-theme="dark"] .info-sku-different .info-value,[data-theme="dark"] .info-sku-different textarea{color:#79b8ff}
+
+/* Overlay navigation: widening the sidebar never shifts the workspace. */
+body .app-shell,body.plan-workspace:has(.plan-import-layout) .app-shell{grid-template-columns:64px minmax(0,1fr)!important}
+body #workspace{grid-column:2}
+body #navigator,body.plan-workspace:has(.plan-import-layout) #navigator{position:fixed;inset:0 auto 0 0;width:64px;height:100vh;padding:20px 8px 12px;overflow-x:hidden;overflow-y:auto;transition:width .22s ease,box-shadow .22s ease;z-index:50}
+body #navigator.sidebar-open{width:280px;box-shadow:var(--shadow)}
+#navigator .brand{display:flex;align-items:center;gap:12px;white-space:nowrap;padding:0 10px 24px;min-height:52px;flex-shrink:0}
+#navigator .brand-mark{flex-shrink:0}
+#navigation-content{flex:1 0 auto}
+.sidebar-navigation{gap:14px}
+.sidebar-navigation a{display:flex;align-items:center;gap:12px;white-space:nowrap;min-height:40px;padding:9px 12px}
+.sidebar-icon{display:inline-flex;width:20px;min-width:20px;height:20px;align-items:center;justify-content:center}
+.sidebar-icon svg{width:20px;height:20px}
+.sidebar-label{transition:opacity .15s ease}
+.sidebar-children{padding-left:0}
+.sidebar-project-heading>a{padding:9px 12px;gap:12px}
+#navigator:not(.sidebar-open) .sidebar-label{opacity:0;pointer-events:none}
+#navigator:not(.sidebar-open) .project-picker{visibility:hidden;pointer-events:none;width:0;flex:0}
+#navigator.sidebar-open .project-picker{flex:1}
+.sidebar-preferences{flex-wrap:wrap;padding:12px 0 0;gap:8px;margin-top:20px}
+#navigator:not(.sidebar-open) #language-toggle{font-size:0;width:40px;padding:8px}
+#navigator:not(.sidebar-open) #language-toggle::after{content:'文';font-size:14px}
+@media(prefers-reduced-motion:reduce){body #navigator,.sidebar-label{transition:none}}
+
+/* One scroll region keeps column and row labels visible on both axes. */
+.info-grouped{max-height:calc(100vh - 210px);min-height:180px;overflow:auto;position:relative;isolation:isolate;scrollbar-gutter:stable}
+.info-grouped table{border-collapse:separate;border-spacing:0}
+.info-grouped thead th{position:sticky;top:0;z-index:4;background:var(--ground);border-bottom:1px solid var(--line)}
+.info-grouped th[scope="row"]{position:sticky;left:0;z-index:2;background:var(--ground);border-right:1px solid var(--line)}
+.info-grouped thead th:first-child{left:0;z-index:5;border-right:1px solid var(--line)}
+.info-grouped .info-category-heading th{background:var(--ground)}
+
+#project-information-form .info-project-heading{margin-bottom:6px}
+
+.project-create-options{display:flex;gap:16px;margin-top:20px}.project-create-options button{flex:1;text-align:left;padding:20px;max-width:420px}.project-create-options strong,.project-create-options span{display:block}.project-create-options span{font-weight:400;color:var(--muted);line-height:1.6;margin-top:8px}

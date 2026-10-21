@@ -42,7 +42,7 @@ class ManualResultTest(unittest.TestCase):
         return self.client.patch(f'/api/tasks/t/testcases/{identity}/status', json={'status': status, 'reason': reason})
 
     def test_never_executed_manual_result_has_no_fabricated_evidence(self):
-        for status in ('Passed', 'Failed', 'TBD'):
+        for status in ('Passed', 'Failed', 'Block', 'TBD'):
             response = self.change(status=status)
             self.assertEqual(response.status_code, 200, response.get_json())
             case = response.get_json()
@@ -112,12 +112,13 @@ class ManualResultTest(unittest.TestCase):
     def test_pdf_exposes_manual_marker_reason_and_time_without_execution(self):
         from report_generator import generate_task_pdf_report
         from pypdf import PdfReader
-        self.assertEqual(self.change(reason='QA acceptance <confirmed>').status_code, 200)
+        self.assertEqual(self.change(status='Block', reason='QA acceptance <confirmed>').status_code, 200)
         marker = self.client.get('/api/tasks/t/summary').get_json()['testcases'][0]['manual_override']
         pdf = Path(self.tmp.name) / 'report.pdf'
         generate_task_pdf_report('t', str(pdf), db_path=str(self.db))
         reader = PdfReader(str(pdf))
         content = '\n'.join(page.extract_text() for page in reader.pages)
+        self.assertIn('BLOCK', content)
         self.assertIn('Manual status', content)
         self.assertIn('QA acceptance <confirmed>', content)
         self.assertIn(marker['modified_at'], content)
