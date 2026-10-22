@@ -464,7 +464,14 @@ def install_routes(app, runtime):
             data=request.get_json(silent=True) or {}; args=request.view_args or {}; plans=set()
             for source in (data,args):
                 if source.get('plan_id'): plans.add(source['plan_id'])
-                if source.get('task_id'): plans.add(require(session,Task,source['task_id']).plan_id)
+                if source.get('task_id'):
+                    task = session.get(Task, source['task_id'])
+                    if task is not None:
+                        plans.add(task.plan_id)
+                    else:
+                        from models import PlanningTask
+                        if request.endpoint not in ('handle_task', 'update_task_schedule') or session.get(PlanningTask, source['task_id']) is None:
+                            require(session, Task, source['task_id'])
                 for key in ('tc_id','system_id','original_id','testcase_id'):
                     if source.get(key): plans.add(require(session,TestCase,source[key]).plan_id)
                 if source.get('folder_id') and request.endpoint not in ('repository_import','repository_case_move','repository_folder_add_to_plan','repository_folder_modify','repository_batch','repository_resort'): plans.add(require(session,PlanFolder,source['folder_id']).plan_id)
@@ -720,11 +727,11 @@ def install_routes(app, runtime):
                 for item in plan_data.get('tasks',[]):
                     task=s.get(Task,item.get('id'))
                     if task is None:
-                        task=Task(id=item.get('id') or str(uuid.uuid4()),plan_id=plan.id,name=item.get('name','Task')); s.add(task); s.flush()
+                        raise StateError('Create Tasks through /api/tasks to generate their names.')
                     if task.plan_id!=plan.id: raise StateError('Task belongs to another Plan')
                     if 'testcases' in item: replace_scope(s,task.id,item['testcases'])
                     import task_management
-                    if 'name' in item: task.name=task_management.validate_name(item['name'])
+                    if 'name' in item: task_management.immutable_name(task,item['name'])
                     if 'setup' in item: task.task_metadata=json.dumps(task_management.merge_setup(task.task_metadata,item['setup']))
                     if 'environment_config' in item: te.save(task,item['environment_config'],s)
         s.commit(); return jsonify(status='ok')

@@ -8,7 +8,7 @@ V10 架構終極正規化重點：
 4. 全面採用 UUID 作為 Foreign Key 關聯 (包含 `plan_id`, `project_id`, `category_id`, `subfolder_id`)。
 """
 
-from sqlalchemy import Column, String, Boolean, Integer, ForeignKey, Text, UniqueConstraint, CheckConstraint, Index, text, event
+from sqlalchemy import DDL, Column, String, Boolean, Integer, ForeignKey, Text, UniqueConstraint, CheckConstraint, Index, text, event
 from sqlalchemy.orm import declarative_base, relationship
 import uuid
 
@@ -239,3 +239,77 @@ class CaseListOrder(Base):
     scope = Column(String(100), primary_key=True)
     folder = Column(String(36), primary_key=True, default='')
     case_ids = Column(Text, nullable=False, default='[]')
+
+
+class PlanningTask(Base):
+    """Non-executable Plan work, owned by a Project and optional saved SKU."""
+    __tablename__ = 'planning_tasks'
+    id = Column(String(100), primary_key=True)
+    project_id = Column(String(36), ForeignKey('projects.id', ondelete='CASCADE'), nullable=False)
+    sku_id = Column(String(100), nullable=True)
+    sku_name = Column(String(255), nullable=False, default='')
+    name = Column(String(255), nullable=False)
+    task_metadata = Column(Text, nullable=True)
+
+
+class PlanSKU(Base):
+    __tablename__ = 'plan_skus'
+    plan_id = Column(String(36), ForeignKey('project_plans.id', ondelete='CASCADE'), primary_key=True)
+    sku_id = Column(String(100), nullable=False)
+
+
+class TaskNameSeries(Base):
+    __tablename__ = 'task_name_series'
+    scope = Column(String(500), primary_key=True)
+    last_number = Column(Integer, nullable=False)
+
+
+class TaskNameReservation(Base):
+    """Issued names survive Task deletion, so numbers are never recycled."""
+    __tablename__ = 'task_name_reservations'
+    __table_args__ = (UniqueConstraint('project_id', 'task_type', 'name', name='uq_issued_task_name'),)
+    task_id = Column(String(100), primary_key=True)
+    project_id = Column(String(36), ForeignKey('projects.id', ondelete='CASCADE'), nullable=False)
+    task_type = Column(String(10), nullable=False)
+    sku_id = Column(String(100), nullable=True)
+    sku_name = Column(String(255), nullable=False, default='')
+    plan_id = Column(String(36), nullable=True)
+    name = Column(String(255), nullable=False)
+
+
+class GlobalTaskName(Base):
+    """Global, permanent Task-name claims, independent of Project/Task deletion."""
+    __tablename__ = 'global_task_names'
+    name_key = Column(String(255), primary_key=True)
+    name = Column(String(255), nullable=False)
+    task_id = Column(String(100), nullable=False)
+
+
+class ScheduleDayOverride(Base):
+    __tablename__ = 'schedule_day_overrides'
+    date = Column(String(10), primary_key=True)
+    is_working = Column(Boolean, nullable=False)
+
+
+class TaskScheduleHistory(Base):
+    """Append-only planning changes; retained even when the owning Task is removed."""
+    __tablename__ = 'task_schedule_history'
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    # Either Task type may own this ID. No cascading FK: history must never be deleted.
+    task_id = Column(String(100), nullable=False, index=True)
+    task_type = Column(String(10), nullable=False)
+    task_name = Column(String(255), nullable=False)
+    created_at = Column(String(64), nullable=False)
+    previous_start_date = Column(String(10), nullable=False)
+    previous_end_date = Column(String(10), nullable=False)
+    start_date = Column(String(10), nullable=False)
+    end_date = Column(String(10), nullable=False)
+    history = Column(Text, nullable=False)
+
+
+for operation in ('UPDATE', 'DELETE'):
+    event.listen(TaskScheduleHistory.__table__, 'after_create', DDL(
+        "CREATE TRIGGER task_schedule_history_no_" + operation.lower() +
+        " BEFORE " + operation + " ON task_schedule_history "
+        "BEGIN SELECT RAISE(ABORT, 'Task History is immutable'); END"
+    ).execute_if(dialect='sqlite'))

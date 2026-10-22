@@ -1,8 +1,12 @@
 # Current handoff
 
-Read [2026-10-21 handoff](2026-10-21-handoff.md) first. This supersedes older navigation and publication instructions.
+先讀 [2026-10-22 handoff](2026-10-22-handoff.md)。目前最終決定、內網/本機啟動規則與發布注意事項均以該文件為準。
 
-# Latest update
+# Earlier updates
+
+2026-10-22: [Owner History and hover navigation](2026-10-22-owner-history.md) deployed; 86 related tests and formal data-preservation checks passed.
+
+2026-10-21: [Test Plan SKU naming](2026-10-21-plan-sku-naming.md): SKU selection or Project-name fallback fills an editable Plan name; duplicate names require correction.
 
 2026-10-21: See [Project view/edit and workbook import](2026-10-21-project-import.md). New Project workbook import is now implemented; this supersedes earlier notes describing it as future work.
 
@@ -62,3 +66,20 @@ Log filenames (2026-10-19): per-execution timestamp/Task/Case ID/type plus UUID;
 
 2026-10-19: Platform-owned Test log / PDF messages now English; user, test source and device text retained. See `2026-10-19-english-test-log.md`.
 2026-10-19: Test log checks now render inside their section, with explicit no-check notices and clear HTTP/final-result boundaries. See `2026-10-19-grouped-test-log.md`.
+
+
+Latest local delivery: [2026-10-22 Dashboard/import Skip](2026-10-22-dashboard-import-skip.md). Read this and the 10/22 handoff before continuing.
+
+Latest local delivery: [2026-10-22 Schedule working calendar](2026-10-22-schedule-calendar.md). Shared persistent manual day overrides affect both Task types; official holidays currently cover 2025–2027.
+
+Latest UI delivery: [Schedule compact controls / drag panning](2026-10-22-schedule-compact.md). This supersedes the 120-day window and previous/next/date controls.
+
+Latest delivery: [Schedule schedule editing / date dialog](2026-10-22-schedule-editing.md). Task bars now edit dates with mandatory new Note; date header uses a modal with two working-state choices.
+
+Latest delivery: [Task Owner](2026-10-22-task-owner.md). Roster is web_ui/task_owners.json, initially TBD/David; add further user-supplied names there.
+
+Latest UI delivery: [Schedule Task Info and reschedule dialog](2026-10-22-schedule-info-dialog.md). Name links and bars have independent navigation/edit behaviors.
+
+Latest delivery: [Immutable Task History](2026-10-22-task-history.md). New Schedule reasons go to the append-only table; never put them in Notes or mutate/delete History.
+
+Latest delivery: [Edit Task mandatory History](2026-10-22-edit-task-history.md). PATCH /api/tasks date changes now require History and original-date expectations.

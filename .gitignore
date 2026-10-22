@@ -63,13 +63,3 @@ web_ui/tests/_sandboxes/
 /verification/github-docs-publish/
 /verification/baseline-workspace/
 /verification/2026-09-30/
-
-# Backup repository: keep local-only data out of future commits.
-/bmca-runtime/
-access.json
-*.pem
-*.key
-*.pid
-*.db
-*.db-wal
-*.db-shm

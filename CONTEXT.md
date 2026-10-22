@@ -80,3 +80,30 @@ Plan source import (2026-10-16): toolbar Import Test Case replaces folder Add Ca
 Test Case ordering (2026-10-19): all case-list views use folder-local natural numeric name ordering by default. A manual before/after drag stores a folder-specific custom order; folder Actions > Resorting restores automatic numbering for direct cases. Repository case-only batches and Plan case/source-case insertion support before/after anchors. Dashed allowed-area frames and active inside/upper/lower-half boxes show placement; self/cycle/locked/reverse-source targets are rejected. Source panes remain read-only. Persistent overrides are additive case_list_orders records, independent of definitions and Task evidence. See docs/status/2026-10-19-case-ordering.md.
 
 2026-10-19: Platform now emits one complete Test log per execution, displayed in Task and attached once per case in PDF. Split legacy evidence merges on read; test .py contracts unchanged. See docs/status/2026-10-19-unified-test-log.md.
+
+
+**Plan Task / Test Task** (2026-10-21): Task Type distinguishes Project/SKU-owned planning work from Plan-owned executable test work. PlanningTask has no Plan or executable scope. Test Tasks retain tasks.plan_id and live Task Test Case ownership. Task names are generated, immutable identifiers for display; all relationships and statistics use stable IDs. PlanSKU preserves SKU ownership even when Plan/Project/SKU names change. Per-Project/SKU Plan counters and per-Plan Test counters survive Task deletion and source renames. See docs/status/2026-10-21-task-types.md.
+
+
+**Task Name / Unique Code** (2026-10-21 correction): Task Name must be globally unique across Projects and Plan/Test types. Candidate suffixes advance over all used/reserved normalized names. GlobalTaskName claims survive Task/Project deletion; generated names remain immutable. Stable UUIDs continue owning relationships and statistics. Earlier per-source series still advance monotonically but never bypass the global uniqueness check. See docs/status/2026-10-21-global-task-names.md.
+
+
+Task-code format (2026-10-21): newly issued codes prepend the Task Type (Plan-/Test-) to the existing compact source-name prefix and three-digit suffix. Established per-source counters continue; existing issued codes stay unchanged. Global uniqueness checks apply to the complete prefixed code. See docs/status/2026-10-21-task-type-prefix.md.
+
+
+**Parsed SKU Promotion** (2026-10-22): Automatic Project import first resolves all SKU specification values, then asks the user whether each parsed SKU is actually a separate Project. A promoted SKU becomes an independent no-SKU Project retaining only its already parsed column values as target specifications; retained SKUs stay under the main Project. One confirmed import may create multiple Projects atomically. Existing Projects are never overwritten or retroactively split. See docs/status/2026-10-22-project-promotion.md.
+
+
+Schedule calendar (2026-10-22): Start/end remain inclusive calendar dates. Task working_days is a derived count using the shared official Taiwan office calendar (2025–2027) plus persisted workspace-wide day overrides; changing a day never shifts Task dates or changes execution evidence. Outside covered years use weekday/weekend defaults with explicit coverage warning. Both PlanningTask and executable Test Task use this calendar.
+
+Schedule rescheduling (2026-10-22): the Task-bar schedule-edit operation requires a fresh reason, validates expected old dates, and appends the UTC date-change description and reason to existing Task Notes. This is planning information, not execution history; preserve execution results/connections/ownership and active Plan locks.
+
+Task Owner (2026-10-22): Task.task_metadata.owner / PlanningTask.task_metadata.owner owns the assignment label. Creation defaults TBD, UI selects from the shared task_owners.json roster. Legacy missing values display TBD without rewriting stored metadata. Owner is independent of tester, stable Project/Plan/Task IDs and execution evidence.
+
+Task schedule History (2026-10-22 user decision): supersedes appending future Schedule reasons to Notes. A successful Schedule reschedule atomically adds an immutable TaskScheduleHistory row with stable Task ID/name snapshot, UTC time, old/new dates and reason. Task Info shows the read-only list. SQLite UPDATE/DELETE triggers enforce immutability; History survives Task removal. Prior Notes remain verbatim without synthesized backfill. This is planning-change history, not retired execution attempt/run-history storage.
+
+Edit Task History (2026-10-22): Edit Task date changes, including setting/clearing paired dates, require a new History reason and original-date expectations. They use the same atomic immutable-history helper as Schedule. Unchanged dates and unrelated metadata edits do not add History; initial New Task dates are setup rather than rescheduling.
+
+2026-10-22 Owner History: actual Edit Task Owner changes append server-generated immutable old/new Owner text in the existing History table, transactionally with metadata; unchanged Owner adds nothing. Combined date changes still require an independent manual reason. expected_owner guards stale edits. History form sits between dates and Owner. Left navigation pointer entry/exit controls expansion; clicks retain its state.
+
+2026-10-22 launch authorization: user says 啟動BMCAgent means loopback-only local service using bmca-runtime/server.py. Only explicit 啟動內網服務 authorizes LAN binding using separate server-lan.py and same-subnet firewall. Never automatically reuse LAN mode for ordinary launch. Current LAN setup was explicitly approved in this conversation.

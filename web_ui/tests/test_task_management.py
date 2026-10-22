@@ -27,13 +27,13 @@ class TaskManagementTest(unittest.TestCase):
         self.assertEqual(response.status_code,200,response.get_json())
         tid=response.get_json()['id']
         self.assertEqual(self.rows()[tid]['setup']['end_date'],'2026-10-16')
-        result=self.client.patch('/api/tasks/'+tid,json={'name':'Regression revised','setup':{'start_date':'2026-10-15','end_date':'2026-10-15','notes':'One-day run'}})
+        result=self.client.patch('/api/tasks/'+tid,json={'setup':{'start_date':'2026-10-15','end_date':'2026-10-15','notes':'One-day run'},'history':'Adjust duration','expected_start_date':'2026-10-14','expected_end_date':'2026-10-16'})
         self.assertEqual(result.status_code,200,result.get_json())
         setup=self.rows()[tid]['setup']
         self.assertEqual(setup['tester'],'Alice');self.assertEqual(setup['firmware'],'v1')
         self.assertEqual(setup['notes'],'One-day run')
         self.assertEqual(self.client.get('/api/tasks/'+tid+'/settings').get_json()['host'],'https://task.invalid')
-        self.assertEqual(self.client.patch('/api/tasks/'+tid,json={'setup':{'start_date':'','end_date':''}}).status_code,200)
+        self.assertEqual(self.client.patch('/api/tasks/'+tid,json={'setup':{'start_date':'','end_date':''},'history':'Clear planned dates','expected_start_date':'2026-10-15','expected_end_date':'2026-10-15'}).status_code,200)
         self.assertEqual(self.rows()[tid]['setup']['start_date'],'')
 
     def test_invalid_dates_and_names_are_rejected_atomically(self):
@@ -44,11 +44,10 @@ class TaskManagementTest(unittest.TestCase):
                 {'start_date':False,'end_date':'2026-10-14'}, {'start_date':False,'end_date':False}]
         for setup in values:
             with self.subTest(setup=setup):
-                response=self.client.patch('/api/tasks/task1',json={'name':'Should roll back','setup':setup})
+                response=self.client.patch('/api/tasks/task1',json={'setup':setup})
                 self.assertEqual(response.status_code,400,response.get_json())
                 self.assertEqual(self.rows()['task1']['name'],'Task 1')
-        for name in ['', '  ', None, 'x'*256]:
-            self.assertEqual(self.client.post('/api/tasks',json={'name':name,'plan_id':'a'}).status_code,400)
+        self.assertEqual(self.client.post('/api/tasks',json={'task_type':'Other','plan_id':'a'}).status_code,400)
         self.assertEqual(len(self.rows()),2)
 
     def test_delete_only_task_scope_preserves_plan_cases_and_peer_evidence(self):
@@ -75,7 +74,7 @@ class TaskManagementTest(unittest.TestCase):
             self.assertEqual(response.status_code,409,response.get_json())
 
     def test_bulk_update_cannot_bypass_date_validation(self):
-        data={'projects':[{'id':'project','plans':[{'id':'a','tasks':[{'id':'task1','name':'Rollback','setup':{'start_date':'2026-10-20','end_date':'2026-10-10'}}]}]}]}
+        data={'projects':[{'id':'project','plans':[{'id':'a','tasks':[{'id':'task1','setup':{'start_date':'2026-10-20','end_date':'2026-10-10'}}]}]}]}
         response=self.client.post('/api/projects',json=data)
         self.assertEqual(response.status_code,400,response.get_json())
         self.assertEqual(self.rows()['task1']['name'],'Task 1')

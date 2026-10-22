@@ -106,21 +106,38 @@ def register(app, runtime):
             if request.path.endswith('/preview'):
                 return jsonify(name=suggested, categories=len(document['categories']),
                                items=sum(len(c['items']) for c in document['categories']),
-                               skus=len(document['skus']), sheets=[v for k,v in document['source'].items() if k.endswith('_sheet') and v])
+                               skus=len(document['skus']), columns=document['skus'], specifications=document['categories'], source_sha256=document['source']['sha256'], sheets=[v for k,v in document['source'].items() if k.endswith('_sheet') and v])
             name = request.form.get('name', suggested).strip()
             if not name or len(name)>100:
                 raise ValueError('Enter a Project name of 1 to 100 characters.')
-            if any(p.name.casefold()==name.casefold() for p in session.query(Project).all()):
-                return jsonify(error='A Project with this name already exists.'),409
-            stamp=datetime.now(timezone.utc).isoformat()
-            document['source']['imported_at']=stamp
-            encoded=json.dumps(document,ensure_ascii=False)
-            if len(encoded.encode('utf-8'))>2_000_000:
-                raise ValueError('Project information exceeds 2 MB.')
-            project=Project(name=name);session.add(project);session.flush()
-            session.add(ProjectInformation(project_id=project.id,document=encoded,revision=1,updated_at=stamp))
+            try:
+                choices = json.loads(request.form.get('classifications', '[]'))
+            except (TypeError, ValueError):
+                raise ValueError('Invalid comparison column classification.')
+            if document['skus'] and request.form.get('review_confirmed') != 'true':
+                raise ValueError('Confirm the SKU or Project classification before creating Projects.')
+            if document['skus'] and request.form.get('source_sha256') != document['source']['sha256']:
+                raise ValueError('The workbook changed. Preview and classify it again.')
+            from project_import_review import split_projects
+            candidates = split_projects(name, document, choices)
+            existing = {p.name.casefold() for p in session.query(Project)}
+            conflicts = [n for n, _ in candidates if n.casefold() in existing]
+            if conflicts:
+                return jsonify(error='Project names already exist: ' + ', '.join(conflicts) + '. No Projects were created.'), 409
+            stamp = datetime.now(timezone.utc).isoformat()
+            result = []
+            for project_name, project_doc in candidates:
+                project_doc['source']['imported_at'] = stamp
+                encoded = json.dumps(project_doc, ensure_ascii=False)
+                if len(encoded.encode('utf-8')) > 2_000_000:
+                    raise ValueError('Project information exceeds 2 MB.')
+                project = Project(name=project_name)
+                session.add(project)
+                session.flush()
+                session.add(ProjectInformation(project_id=project.id, document=encoded, revision=1, updated_at=stamp))
+                result.append(dict(id=project.id, name=project_name, skus=len(project_doc['skus'])))
             session.commit()
-            return jsonify(id=project.id,name=name),201
+            return jsonify(id=result[0]['id'], name=result[0]['name'], projects=result), 201
         except ValueError as exc:
             session.rollback()
             return jsonify(error=str(exc)),400

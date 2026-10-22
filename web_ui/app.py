@@ -20,7 +20,7 @@ from sqlalchemy import create_engine, event
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import sessionmaker
-from models import Base, TestCase, PlanSubfolder, Task, TaskTestCase, Project, ProjectPlan, Category
+from models import Base, TestCase, PlanSubfolder, Task, TaskTestCase, Project, ProjectPlan, Category, PlanningTask
 import sqlite3
 import plan_state as ps
 import single_case as sc
@@ -242,6 +242,7 @@ class IpmiResponse:
 
 import task_environment as te
 import task_management as tm
+import schedule_calendar as calendar
 
 class WebLoggingRedfishClient:
     """API 透明代理：
@@ -644,7 +645,8 @@ def get_projects():
                 plans.append(dict(id=plan.id, name=plan.name, testcases=cases, tasks=tasks,
                     folders=[f.to_dict() for f in s.query(ps.PlanFolder).filter_by(plan_id=plan.id).order_by(ps.PlanFolder.position)],
                     locked=any(task['execution_active'] for task in tasks)))
-            projects.append(dict(id=project.id, name=project.name, plans=plans))
+            projects.append(dict(id=project.id, name=project.name, plans=plans,
+                                 planning_task_count=s.query(PlanningTask).filter_by(project_id=project.id).count()))
         return jsonify(projects=projects)
 
 
@@ -682,10 +684,12 @@ def create_plan():
         new_plan = ProjectPlan(
             id=new_plan_id,
             project_id=proj.id,
-            name=plan_name
+            name=plan_name,
+            folders_migrated=True
         )
         session.add(new_plan)
         session.flush()
+        tm.bind_plan_sku(session, new_plan, data.get("sku_id"))
         paths = list(data.get("folder_paths", []))
         for path in paths: ps.resolve_folder(session, new_plan_id, {"folder_path": path})
         session.commit()
@@ -861,42 +865,67 @@ def patch_task_testcases(task_id):
         session.close()
 
 
+@app.route('/api/schedule/calendar', methods=['GET'])
+def schedule_calendar_range():
+    with DbSession() as session:
+        try:
+            return jsonify(calendar.range_info(request.args.get('start'), request.args.get('end'), calendar.overrides(session)))
+        except ps.StateError as exc:
+            return jsonify(error=str(exc)), exc.code
+
+
+@app.route('/api/schedule/calendar/<day>', methods=['PATCH'])
+def schedule_calendar_day(day):
+    session = ps.request_session(DbSession)
+    try:
+        result = calendar.set_day(session, day, request.get_json(silent=True))
+        session.commit()
+        return jsonify(result)
+    except Exception as exc:
+        session.rollback()
+        return jsonify(error=str(exc)), getattr(exc, 'code', 500)
+    finally:
+        session.close()
+
+
 @app.route("/api/tasks", methods=["GET", "POST"])
 def create_task():
     if request.method == 'GET':
         session = DbSession()
         try: return jsonify(tasks=tm.task_list(session))
         finally: session.close()
-    data = request.get_json(silent=True) or {}
-    plan_id = data.get("plan_id")
-    task_id = data.get("id") or data.get("task_id") or str(uuid.uuid4())
-    name = data.get("name", task_id)
-    task_metadata = data.get("setup") or data.get("task_metadata") or {}
-    
-    if not plan_id:
-        return jsonify({"error": "Missing plan_id"}), 400
-        
     session = ps.request_session(DbSession)
     try:
-        plan = session.query(ProjectPlan).filter_by(id=plan_id).first()
-        if not plan:
-            return jsonify({"error": f"Plan {plan_id} not found"}), 404
-            
-        name = tm.validate_name(name)
-        task_metadata = tm.merge_setup(None, task_metadata)
-        new_task = Task(
-            id=task_id,
-            plan_id=plan_id,
-            name=name,
-            task_metadata=json.dumps(task_metadata if isinstance(task_metadata, dict) else {}, ensure_ascii=False)
-        )
-        if 'environment_config' in data: te.save(new_task, data['environment_config'], session)
-        session.add(new_task)
+        result = tm.create(session, request.get_json(silent=True) or {})
         session.commit()
-        return jsonify({"status": "ok", "id": task_id, "task_id": task_id, "name": name})
-    except Exception as e:
+        return jsonify(result)
+    except Exception as exc:
         session.rollback()
-        return jsonify({"error": str(e)}), getattr(e, "code", 500)
+        return jsonify(error=str(exc)), getattr(exc, 'code', 500)
+    finally:
+        session.close()
+
+
+@app.route('/api/tasks/<task_id>/history', methods=['GET'])
+def task_schedule_history(task_id):
+    with DbSession() as session:
+        try:
+            return jsonify(history=tm.history_list(session, task_id))
+        except ps.StateError as exc:
+            return jsonify(error=str(exc)), exc.code
+
+
+@app.route('/api/tasks/<task_id>/schedule', methods=['PATCH'])
+def update_task_schedule(task_id):
+    session = ps.request_session(DbSession)
+    try:
+        result = tm.reschedule(session, task_id, request.get_json(silent=True))
+        session.commit()
+        return jsonify(result)
+    except Exception as exc:
+        session.rollback()
+        code = getattr(exc, 'code', 500)
+        return jsonify(error=str(exc)), code if isinstance(code, int) else 500
     finally:
         session.close()
 
@@ -905,39 +934,13 @@ def create_task():
 def handle_task(task_id, entity_label="Task"):
     session = ps.request_session(DbSession)
     try:
-        task = session.query(Task).filter_by(id=task_id).first()
-        if not task:
-            return jsonify({"error": f"{entity_label} not found"}), 404
-            
-        if request.method == "PATCH":
-            data = request.json
-            if "name" in data:
-                task.name = tm.validate_name(data["name"])
-            if 'plan_id' in data and data['plan_id'] != task.plan_id:
-                raise ps.StateError('A Task stays in its original Plan. Create a new Task for another Plan.')
-            if 'environment_config' in data: te.save(task, data['environment_config'], session)
-            if 'setup' in data or 'task_metadata' in data:
-                task_metadata = data.get('setup', data.get('task_metadata'))
-                task.task_metadata = json.dumps(tm.merge_setup(task.task_metadata, task_metadata), ensure_ascii=False)
-            session.commit()
-            return jsonify({"status": "ok"})
-            
-        elif request.method == "DELETE":
-            import glob
-            pattern = os.path.join(RESULTS_DIR, f"{task_id}_*")
-            for f in glob.glob(pattern):
-                try:
-                    if os.path.isfile(f):
-                        os.remove(f)
-                except Exception as ex:
-                    print(f"Error deleting result file {f}: {ex}")
-            session.delete(task)
-            session.commit()
-            return jsonify({"status": "ok"})
-            
-    except Exception as e:
+        tm.manage(session, task_id, request.get_json(silent=True) or {}, delete=request.method == 'DELETE')
+        session.commit()
+        return jsonify(status='ok')
+    except Exception as exc:
         session.rollback()
-        return jsonify({"error": str(e)}), getattr(e, "code", 500)
+        code = getattr(exc, 'code', 500)
+        return jsonify(error=str(exc)), code if isinstance(code, int) else 500
     finally:
         session.close()
 
@@ -1570,6 +1573,7 @@ ps.install_routes(app, globals())
 sc.register(app, globals())
 import project_information
 project_information.register(app, globals())
+tm.register(app, globals())
 
 if __name__ == "__main__":
     print("=" * 60)
