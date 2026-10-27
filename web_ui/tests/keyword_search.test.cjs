@@ -1,0 +1,14 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
+const context={};context.window=context;
+vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../static/task_management_ui.js'),'utf8'),context);
+const matches=context.KeywordSearch.matches;
+assert.equal(matches('Plan-FWA6084BMC-001','FWA6084'),true);
+assert.equal(matches('Plan-FWA6084BMC-001','fwa6084, plan'),true);
+assert.equal(matches('Test-FWA6084BMC-001','fwa6084, plan'),false);
+assert.equal(matches('Redfish service discovery',' service , REDFISH ,,'),true);
+assert.equal(matches('中文規格測試','規格,測試'),true);
+assert.equal(matches('RF-01-001','01,003'),false);
+assert.equal(matches('anything',', ,'),true);
+const rows=[{id:'a',name:'Plan-FWA6084-001',project_name:'FWA6084',plan_name:'',setup:{}},{id:'b',name:'Test-FWA6084-001',project_name:'FWA6084',plan_name:'BMC',setup:{}}];
+const html=context.TaskManagement.content(rows,'FWA6084,Plan','list');
+assert.ok(html.includes('Plan-FWA6084-001'));assert.ok(!html.includes('Test-FWA6084-001'));

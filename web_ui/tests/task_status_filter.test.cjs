@@ -1,0 +1,13 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
+const listeners={};const c={document:{querySelector:()=>null,documentElement:{dataset:{}},addEventListener:(name,fn)=>listeners[name]=fn},addEventListener:()=>{}};c.window=c;
+vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../static/task_management_ui.js'),'utf8'),c);
+c.TaskManagement.bindSchedule(null,()=>Promise.resolve(),()=>{});
+const row=(id,status)=>({id,name:id,task_type:'Plan',project_id:'p',project_name:'Project',plan_name:'',setup:{task_status:status}});
+const tasks=[row('new-task','New'),row('pending-task','Pending')];
+const change=(value,checked)=>listeners.change({target:{matches:()=>true,value,checked}});
+change('New',false);
+let html=c.TaskManagement.content(tasks,'','list');
+assert.ok(!html.includes('>new-task</a>'));assert.ok(html.includes('>pending-task</a>'));
+change('Pending',false);html=c.TaskManagement.content(tasks,'','list');assert.ok(html.includes('No matching Tasks'));assert.ok(html.includes('Filter Status'));
+change('Pending',true);html=c.TaskManagement.content(tasks,'pending','list');assert.ok(html.includes('>pending-task</a>'));
+html=c.TaskManagement.form([],null);assert.ok(html.includes('id="manager-status" disabled'));assert.ok(html.includes('value="New" selected'));

@@ -534,3 +534,15 @@ body #workspace:has(.gantt-scroll){padding-bottom:24px}
 .info-specifications thead th{position:sticky;top:0;z-index:3;background:var(--ground)}
 body #workspace:has(.info-specifications){padding-bottom:24px}
 .info-specifications{max-height:none;min-height:120px}
+
+.task-status-filter{position:relative;margin:0;padding:0;border:0}.task-status-filter summary{margin:0;padding:8px 12px;border:1px solid var(--line);border-radius:var(--radius);font-weight:600}.task-status-filter>div{position:absolute;top:100%;left:0;z-index:10;min-width:160px;background:var(--surface);border:1px solid var(--line);padding:12px;display:grid;gap:10px}
+.task-status-heading{display:flex;align-items:center;gap:6px}.task-status-filter summary{display:flex;align-items:center;justify-content:center;list-style:none;padding:4px;cursor:pointer;min-width:26px;min-height:26px}.task-status-filter summary::-webkit-details-marker{display:none}.task-status-filter>div{font-size:1rem;font-weight:400;color:var(--ink)}
+
+/* Keep the complete Status menu accessible when the table has no matches. */
+.managed-tasks-wrap{min-height:260px}
+
+/* Stable Task columns for populated, filtered and empty states. */
+html:has(.managed-tasks){scrollbar-gutter:stable}
+.managed-tasks{table-layout:fixed;min-width:1100px}
+.managed-tasks th:last-child,.managed-tasks td:first-child{min-width:0}
+.managed-tasks td{overflow-wrap:anywhere}

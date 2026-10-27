@@ -24,7 +24,7 @@ class TaskOwnerHistoryTest(unittest.TestCase):
         for tid,model in [('task1',Task),('planning',PlanningTask)]:
             self.assertEqual(self.edit(tid).status_code,200)
             entries=self.entries(tid);self.assertEqual(len(entries),1)
-            self.assertEqual(entries[0]['history'],'Owner: TBD → David')
+            self.assertEqual(entries[0]['history'],'Assignee: TBD → David')
             self.assertEqual(entries[0]['previous_start_date'],entries[0]['start_date'])
             with self.Session() as s:
                 setup=json.loads(s.get(model,tid).task_metadata)
@@ -34,11 +34,11 @@ class TaskOwnerHistoryTest(unittest.TestCase):
         self.assertEqual(self.edit().status_code,200)
         self.assertEqual(self.edit(expected_owner='David').status_code,200);self.assertEqual(len(self.entries()),1)
         self.assertEqual(self.edit(owner='TBD',expected_owner='David').status_code,200)
-        self.assertEqual([r['history'] for r in self.entries()],['Owner: David → TBD','Owner: TBD → David'])
+        self.assertEqual([r['history'] for r in self.entries()],['Assignee: David → TBD','Assignee: TBD → David'])
     def test_date_and_owner_changes_preserve_manual_reason_and_auto_owner_entry(self):
         result=self.edit(setup={'owner':'David','start_date':'2026-10-20','end_date':'2026-10-28'},history='Waiting for equipment',expected_start_date='2026-10-19',expected_end_date='2026-10-23')
         self.assertEqual(result.status_code,200,result.get_json())
-        self.assertEqual({r['history'] for r in self.entries()},{'Waiting for equipment','Owner: TBD → David'})
+        self.assertEqual({r['history'] for r in self.entries()},{'Waiting for equipment','Assignee: TBD → David'})
     def test_stale_owner_cannot_overwrite_new_owner_or_add_history(self):
         self.assertEqual(self.edit().status_code,200)
         self.assertEqual(self.edit(owner='Alice').status_code,409)

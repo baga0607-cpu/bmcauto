@@ -11,6 +11,8 @@ from models import Task, TaskTestCase, ProjectPlan, Project, ProjectInformation,
 from project_naming import compact_name, full_sku_name
 from plan_state import StateError, require, unlocked, begin_write
 
+TASK_STATUSES = ('New', 'On-Going', 'Complete', 'Cancel', 'Pending')
+
 OWNER_FILE = Path(__file__).with_name('task_owners.json')
 
 def owner_options(current=None):
@@ -20,7 +22,7 @@ def owner_options(current=None):
 
 def validate_owner(value, current=None):
     if not isinstance(value, str) or value not in owner_options(current):
-        raise StateError('Choose an Owner from the list.')
+        raise StateError('Choose an Assignee from the list.')
     return value
 
 
@@ -36,6 +38,8 @@ def merge_setup(current, incoming):
     result = dict(json.loads(current or '{}'))
     if 'owner' in incoming:
         validate_owner(incoming['owner'], result.get('owner'))
+    if 'task_status' in incoming and incoming['task_status'] not in TASK_STATUSES:
+        raise StateError('Choose a valid Task Status.')
     result.update(incoming)
     dates = [result.get('start_date'), result.get('end_date')]
     if any(v is not None and not isinstance(v,str) for v in dates): raise StateError('Task dates must be valid YYYY-MM-DD dates.')
@@ -245,6 +249,9 @@ def create(session, data):
     kind, project, plan, sku, prefix, scope = choice
     setup = merge_setup(None, data.get('setup', data.get('task_metadata', {})))
     setup.setdefault('owner', 'TBD')
+    if setup.get('task_status', 'New') != 'New':
+        raise StateError('New Tasks must start with Status New.')
+    setup['task_status'] = 'New'
     name, number = next_name(session, choice)
     identity = str(uuid.uuid4())
     if kind == 'Plan':
@@ -306,15 +313,21 @@ def manage(session, task_id, data, delete=False):
         updated = merge_setup(task.task_metadata, data.get('setup', data.get('task_metadata')))
         previous_owner, owner = current.get('owner') or 'TBD', updated.get('owner') or 'TBD'
         if 'expected_owner' in data and data['expected_owner'] != previous_owner:
-            raise StateError('The Task Owner changed. Reload and try again.', 409)
+            raise StateError('The Task Assignee changed. Reload and try again.', 409)
+        previous_status, task_status = current.get('task_status', 'New'), updated.get('task_status', 'New')
+        status_changed = previous_status != task_status
+        if ('expected_task_status' in data or status_changed) and data.get('expected_task_status') != previous_status:
+            raise StateError('The Task Status changed. Reload and try again.', 409)
         original_dates = [current.get('start_date') or '', current.get('end_date') or '']
         new_dates = [updated['start_date'], updated['end_date']]
         if ('expected_start_date' in data or 'expected_end_date' in data) and [data.get('expected_start_date'), data.get('expected_end_date')] != original_dates:
             raise StateError('The Task schedule changed. Reload and try again.', 409)
         if original_dates != new_dates:
             append_schedule_history(session, task, original_dates, new_dates, data)
-        elif 'history' in data:
+        elif 'history' in data and not status_changed:
             raise StateError('Change the start or end date before saving.')
+        if status_changed:
+            append_status_history(session, task, new_dates, previous_status, task_status, data)
         if previous_owner != owner:
             append_owner_history(session, task, new_dates, previous_owner, owner)
         task.task_metadata = json.dumps(updated, ensure_ascii=False)
@@ -338,13 +351,25 @@ def append_schedule_history(session, task, original, new_dates, data):
         start_date=new_dates[0], end_date=new_dates[1], history=history.strip()))
 
 
+def append_status_history(session, task, dates, previous, status, data):
+    reason = data.get('history')
+    if not isinstance(reason, str) or not reason.strip() or len(reason.strip()) > 4000:
+        raise StateError('Enter History explaining the status change (1 to 4000 characters).')
+    session.add(TaskScheduleHistory(task_id=task.id,
+        task_type='Plan' if isinstance(task, PlanningTask) else 'Test', task_name=task.name,
+        created_at=datetime.now(timezone.utc).isoformat(timespec='microseconds'),
+        previous_start_date=dates[0], previous_end_date=dates[1],
+        start_date=dates[0], end_date=dates[1],
+        history=f'Status: {previous} → {status}\n{reason.strip()}'))
+
+
 def append_owner_history(session, task, dates, previous_owner, owner):
     session.add(TaskScheduleHistory(task_id=task.id,
         task_type='Plan' if isinstance(task, PlanningTask) else 'Test', task_name=task.name,
         created_at=datetime.now(timezone.utc).isoformat(timespec='microseconds'),
         previous_start_date=dates[0], previous_end_date=dates[1],
         start_date=dates[0], end_date=dates[1],
-        history=f'Owner: {previous_owner} → {owner}'))
+        history=f'Assignee: {previous_owner} → {owner}'))
 
 
 def reschedule(session, task_id, data):
@@ -359,13 +384,22 @@ def reschedule(session, task_id, data):
     original = [current.get('start_date') or '', current.get('end_date') or '']
     if [data.get('expected_start_date'), data.get('expected_end_date')] != original:
         raise StateError('The Task schedule changed. Reload and try again.', 409)
-    updated = merge_setup(task.task_metadata, dict(start_date=data.get('start_date'), end_date=data.get('end_date')))
+    incoming = dict(start_date=data.get('start_date'), end_date=data.get('end_date'))
+    if 'task_status' in data: incoming['task_status'] = data['task_status']
+    updated = merge_setup(task.task_metadata, incoming)
+    previous_status, task_status = current.get('task_status', 'New'), updated.get('task_status', 'New')
+    status_changed = previous_status != task_status
+    if ('expected_task_status' in data or status_changed) and data.get('expected_task_status') != previous_status:
+        raise StateError('The Task Status changed. Reload and try again.', 409)
     new_dates = [updated['start_date'], updated['end_date']]
     if not all(new_dates):
         raise StateError('Supply both start and end dates.')
-    if original == new_dates:
+    if original == new_dates and not status_changed:
         raise StateError('Change the start or end date before saving.')
-    append_schedule_history(session, task, original, new_dates, data)
+    if original != new_dates:
+        append_schedule_history(session, task, original, new_dates, data)
+    if status_changed:
+        append_status_history(session, task, new_dates, previous_status, task_status, data)
     task.task_metadata = json.dumps(updated, ensure_ascii=False)
     session.flush()
     return dict(status='ok', task_id=task.id, setup=updated)
