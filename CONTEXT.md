@@ -182,10 +182,9 @@ A Task Report represents one current Task. A Final Report merges eligible curren
 
 2026-10-29 Plan selection: active Plan tab is a per-Project browser preference restored on reload/reopen. Newly created Plans become active; missing/deleted saved Plans fall back to an existing ordered tab.
 
-2026-10-29 Case tools: declared automation types are automatic (gear), semi_automatic (wrench) and manual (person; workflow reserved). Plan Parameters buttons indicate saved completeness; 0/False are filled, blank strings are missing. Source Viewer and Parameter Editor are independent modeless draggable/resizable windows; each stores explicit Case/Plan identity and protects unsaved drafts. Repository defaults remain read-only. See docs/status/2026-10-29-case-floating-tools.md.
 
-2026-10-29: Viewer/Parameter Editor use native browser popup windows for cross-monitor movement; see docs/status/2026-10-29-case-floating-tools.md (latest amendment).
-2026-10-29 latest: Viewer/Editor default to right-side dock; Open in Window explicitly detaches while retaining drafts. See latest amendment in docs/status/2026-10-29-case-floating-tools.md.
 2026-10-29 latest user decision: cancel independent Viewer/Editor windows entirely; right-side main-page panels only. No detach button.
 2026-10-29 latest: normal Plan Case list uses Task List bottom gap (24px); Case clicks only update already-open Viewer/Editor, never open them implicitly.
 2026-10-29 latest Plan layout: title/Project subtitle, Plan tabs, toolbar (search/Import/Rename/Delete), Case list.
+
+2026-10-30: Read docs/status/2026-10-30-handoff.md. Service started; source updates published to baga0607-cpu/bmcauto main (d3cb74a). Use the publication checkout, never retired origin. Viewer/Editor only dock on the right. Runtime assets and existing binary fixture changes remain local.

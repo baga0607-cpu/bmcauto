@@ -1,3 +1,6 @@
+# 最新交接 — 2026-10-30
+
+先讀[最新handoff](2026-10-30-handoff.md)與[發布驗證](2026-10-30-release-verification.md)。BMCAgent已啟動，Task/Report/Plan/Execution更新已推送baga0607-cpu/bmcauto main。Viewer/Editor僅右側面板，獨立視窗取消。Plan依序為名稱+Project、頁籤、搜尋/Import/Rename/Delete、Case列表；點Case只切換已開啟工具。下方「尚未發布」屬歷史狀態。依使用者下一指示繼續。
 # 最新本機更新 — 2026-10-28 Task Info 頁籤
 
 [Task Info 分頁](2026-10-28-task-info-tabs.md) 已套用。Test：Content／Scope／Connection／DUT Config／Note & History；Plan：Content／Note & History。DUT Config 僅名稱，編輯草稿／History／執行鎖定已驗證。僅前端變更，正式資料未異動，尚未發布 GitHub。
