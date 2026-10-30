@@ -232,3 +232,44 @@ Use a persistent 260px left sidebar and flexible right workspace on desktop. No 
 ## Project Information — 2026-10-21
 
 Four local sections: Basic information, Product specifications, SKU comparison, Source document. Use category selection rather than a single long form for 28 requirement categories. Keep source wording and user-entered values intact. SKU values are independent and blank means unspecified. Project information is reference data, not Task connection or executable test settings. Future import boundary and source mapping: docs/status/2026-10-21-project-information.md.
+
+Task List / My Task refinement (2026-10-27): use Schedule-density tabs, compact 6px/12px table cell padding and tight secondary text. Keep ten fixed column ratios and a 1100px horizontal-scroll minimum; sticky 40px headings sit inside a viewport-filling scroll surface ending 24px above the viewport bottom. Visible/total count sits beside search. Preserve theme tokens, variable height for long content, keyboard access and Status menu containment.
+
+Task Info unification (2026-10-27): Plan and Test types share the Plan-style information grid, Notes, Edit and History under the global Task function only. Schedule names enter that page; execution routes retain their operational tabs without the Task Info wrapper.
+
+Task table editing (2026-10-27): fixed ten-column table now shows Task, Type, Status, Assignee, Project/SKU, two Plan dates, two Actual dates and Working days. Inline-looking keyboard-focusable controls open field dialogs on double-click or Enter/Space/F2. Keep compact styling, native dialog focus, visible errors and original execution locks. Removed Scope/Execution/Actions columns.
+
+Task references and firmware (2026-10-27): Task table ten-column order is Task, Status, Assignee, iDesign ID, FW Package, four Plan/Actual date fields, Days (Actual/Plan). Request ID is the link text; separate pencil controls edit references and Test-only firmware lists. Task Info includes the same widgets. Component/Version draft rows can be added/removed; native dialog/form focus and errors remain.
+
+Task metadata interaction correction (2026-10-27): remove pencil controls; Task Info uses its full Edit mode, table uses double-click fields. Default FW editor rows are BL/1BMC/BMConf. Table renders two-line 1BMC/BMConf summary with complete native hover text; Task Info shows full details. Empty preset versions are optional placeholders, without data migration.
+
+Task row height (2026-10-27): all Task List/My Task data rows use 61px, matching the pre-change Test Task rows. Header layout is unchanged; firmware keeps two lines, bounded long text uses ellipsis/full tooltips, and Status may wrap within the fixed row.
+
+Task column refinement (2026-10-27): follow Schedule with primary Task Name and secondary Assignee / Status text. Remove separate assignment/status columns and Status filter entirely. Eight fixed columns remain; 61px data rows persist. Secondary assignment/status text retains inline double-click/keyboard editing without visual button chrome.
+
+Report presentation (2026-10-28): Project Report uses the same Plan overview, result counts and expandable Task matrix as the Plan page, replacing the old report tables. Existing Plan navigation remains.
+
+
+## Report tree (2026-10-28)
+
+Report shows compact expandable Plan rows with indented Task rows and overview statistics; the Task matrix remains available. No Create action. Select Report reveals checkboxes, Cancel resets them, Generate Report downloads the selected scope. Selection supports multiple Plans; whole-Plan selection checks/disables children and partial selection uses an indeterminate parent. Export errors preserve selection. Keep existing light/dark tokens and table overflow behavior. Plan editing remains on Plan. See docs/status/2026-10-28-report-tree-export.md.
+
+
+## Report / Reference dialog (2026-10-28)
+
+Generate Report opens a protected native dialog with vertically stacked Report Area and Reference Area lists. Keep the workbench surface/ground, thin separators, compact draggable rows and light/dark tokens. A drag grip, before/after placement cues, empty drop target, up/down buttons and move-to-area controls support ordering and keyboard operation. Show Plan context beneath Task names and All Tasks beneath selected Plans. Report Area cannot be empty. Preserve the arrangement on export failure; show errors only in the dialog. Group same-Plan Tasks per area using Task Matrix rules, independent of drag order. See docs/status/2026-10-28-report-reference.md.
+
+
+## Test Case PDF block (2026-10-28)
+
+Match the user's Worksheet 1: Case Name/Result header; Description; Detail Test Method with three columns Step/Criteria/Result; Task Name, FW Package, DUT Configuration, Tester, Execution Date below. Missing values use —; DUT Configuration has no value. Keep manual/rerun notes and attachment hints below the fields. Long tables repeat headings and can split inside rows without truncation. Report/Reference selection UI unchanged.
+
+
+## Source creation timestamp (2026-10-28)
+
+Keep existing compact secondary timestamps under Test Case names, but render source_created_at rather than the internal import generation. Task scope header is Created at. Unknown time is —. Preserve existing local date/precision treatment and themes; import-source and conflict choices follow the same rule.
+
+
+## Task Info sections (2026-10-28)
+
+Task Info nests Content, Scope, Connection, DUT Config, Note & History tabs below the Task identity. Scope/Connection/DUT Config appear only for Test Tasks; Plan Tasks have Content and Note & History. Preserve the existing understated underline tab system. Content owns setup metadata; Note & History owns notes and the history table. Shared metadata editing keeps its draft when switching those two tabs and reveals the appropriate panel on validation. Scope/Connection are read-only until Edit, use their existing APIs, and retain execution locks. DUT Config is a heading only until future design. Tabs use keyboard arrows/Home/End and labeled panels.

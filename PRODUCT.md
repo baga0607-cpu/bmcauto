@@ -22,7 +22,7 @@ Project → Test Plan → Task → Report. A Project may have multiple SKU Plans
 
 English interface retaining Project, Plan, Task and Test Case terminology. The user explicitly requested complete removal of step / block editing and execution. Existing records are preserved rather than deleted automatically. Plan adaptations do not bump source generations. Plan edits mark prior Task results as needing a rerun; retain their evidence. Running Test Cases cannot be edited.
 
-Flask / SQLAlchemy / SQLite backend, local Windows service, browser UI. Report formats and cross-Task Final Report rules are still undecided. Full automation classification and revised result states remain separate upcoming discussions. Do not invent support or add placeholder modules for these, except for the explicitly approved project section landing pages described below.
+Flask / SQLAlchemy / SQLite backend, local Windows service, browser UI. Report supports current Task PDF, same-Plan Final aggregation using Task Matrix rules, and ordered formal/Reference composition across Plans (2026-10-28). Full automation classification and revised result states remain separate upcoming discussions. Do not invent support or add placeholder modules for these, except for the explicitly approved project section landing pages described below.
 
 ## Brand Commitments
 
@@ -58,3 +58,6 @@ Plan workspace refinement (2026-10-16): breadcrumb/path navigation is deferred a
 Plan source import (2026-10-16): toolbar Import Test Case replaces folder Add Case icons and the previous Plan .py picker. Choose Repository or a source Project/Plan. The target tree is on the left and the read-only source tree on the right; drag a case or a complete folder subtree (including empty descendants) right-to-left only. Reverse drops are rejected. Repository imports inherit defaults; Plan imports inherit saved parameters and Python source. Both lists show source versions. Conflicts are preflighted atomically: matching name/source metadata identity and version offers overwrite or skip; differing identity/version offers overwrite/update, coexist or skip. Cancellation writes nothing. Coexist keeps the original name; overwrite preserves target identity, placement and Task evidence while advancing revision and marking results for retest. Source records remain untouched. See docs/status/2026-10-16-plan-source-import.md.
 
 Automatic import review (2026-10-22): parse SKU specifications before asking which parsed SKUs should be promoted to independent Projects. Show all resulting Project names, require explicit confirmation, and create all or none. Promoted Projects keep their exact specifications and support view/edit without inventing a SKU.
+
+
+2026-10-28 source timestamp update: user-visible .py timestamps represent original file creation time from TEST_CASE.created_at, not Repository import time. Unknown creation is —. Internal immutable generation keys remain distinct. RF-01-001–006 have adopted complete Step/Criteria/Result output without changing test behaviour.

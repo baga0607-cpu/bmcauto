@@ -1,0 +1,7 @@
+# Folder expansion persistence — 2026-10-29
+
+Collapsed folder IDs are saved in browser localStorage under bmc-folder-collapse-v1:<scope>. Plan state is per Plan ID and shared with that Plan's import target. Repository state is separate. Import sources each have their own scope (Repository or source Plan ID), independent of the main Repository/Plan screen and destination Plan.
+
+Reload, reopening BMCAgent in the same browser profile/origin, tab navigation and import source switching restore the saved state. New folders default to expanded; unknown/deleted folder IDs are ignored. Existing automatic target-folder expansion after import/move/create is persisted. Searching still temporarily reveals matching descendants without changing saved collapse preferences. Invalid stored JSON is ignored and storage failures show a message. No backend/schema changes or restart.
+
+Verification: hierarchical_selection.test.cjs passed per-Plan isolation, reload and closed/reopened page, Repository reload, import dialog close/reopen, source switching and import settings across reload, alongside selection/alignment/drag checks. execution_workspace.test.cjs and task_management_list.test.cjs passed. Requests were fixture-only; no formal data mutations or DUT execution.

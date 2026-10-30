@@ -11,7 +11,7 @@ python -m pip install flask flask-cors sqlalchemy pyyaml redfish urllib3 reportl
 python main_program/main.py
 ```
 
-Open http://127.0.0.1:5000. The service binds to localhost with debug and reloader disabled. The current local installation also has a managed launcher at `D:/Codex/bmc_auto_test/bmca-runtime/start.ps1`.
+Open http://127.0.0.1:5000. The service binds to localhost with debug and reloader disabled. The current local installation also has a managed launcher at `<LOCAL_PATH>`.
 
 ## Workflow
 
@@ -75,3 +75,8 @@ BMC is the fixed root in the single Repository directory/Test Case list. Use eac
 In a Plan, select Add from Repository, select a directory, then Add folder to Plan. This copies the selected directory and its full subtree into the Plan with independent Python files/settings. Existing Plan case names are skipped with a count. Later Repository changes do not update existing Plan copies.
 
 The Chinese Repository list supports folder collapse and mixed batch selection. Batch-selected directories/cases can be dragged together or deleted after confirmation. Confirm deletion is left of Cancel.
+
+
+### Per-step report output
+
+Test authors should follow [Step / Criteria / Result output](docs/agents/report-step-output.md) and the [single-file example](test_assets/examples/report_step_case.py). Missing report values display —; DUT Configuration remains a label only.

@@ -637,7 +637,7 @@ def get_projects():
         for project in s.query(Project).order_by(Project.name):
             plans = []
             for plan in project.plans:
-                cases = [dict(tc.to_dict(), automation=sc.automation_for_case(MAIN_PROGRAM_DIR,tc), parameter_count=sc.parameter_count_for_case(MAIN_PROGRAM_DIR,tc)) for tc in ps.co.plan_rows(s,plan.id,plan.testcases)]
+                cases = [dict(tc.to_dict(), automation=sc.automation_for_case(MAIN_PROGRAM_DIR,tc), **sc.parameter_state_for_case(MAIN_PROGRAM_DIR,tc), source_created_at=sc.creation_time_for_case(MAIN_PROGRAM_DIR,tc)) for tc in ps.co.plan_rows(s,plan.id,plan.testcases)]
                 tasks = [ps.summary(s, task.id, MAIN_PROGRAM_DIR) for task in plan.tasks]
                 for task in tasks:
                     for case in task['testcases']:
@@ -943,6 +943,21 @@ def handle_task(task_id, entity_label="Task"):
         return jsonify(error=str(exc)), code if isinstance(code, int) else 500
     finally:
         session.close()
+
+
+@app.route('/api/projects/<project_id>/reports', methods=['POST'])
+def generate_selected_reports(project_id):
+    from flask import send_file
+    from io import BytesIO
+    from report_exports import generate_selection
+    try:
+        with DbSession() as session:
+            db_path = session.get_bind().url.database
+        content, filename = generate_selection(db_path, project_id, request.get_json(silent=True))
+        return send_file(BytesIO(content), mimetype='application/pdf', as_attachment=True, download_name=filename)
+    except Exception as exc:
+        code = getattr(exc, 'code', 500)
+        return jsonify(error=str(exc)), code if isinstance(code, int) and 400 <= code < 600 else 500
 
 
 @app.route("/api/tasks/<task_id>/report", methods=["GET"])
@@ -1391,7 +1406,8 @@ def run_testcase():
                         saved = result_session.query(TaskTestCase).filter_by(task_id=task_id, testcase_id=testcase_id).one()
                         result_data = json.loads(saved.result_json)
                         result_data.update(source_version=case_source_version, plan_settings_revision=case_revision,
-                                           settings=case_settings, log_files=log_files)
+                                           settings=case_settings, log_files=log_files,
+                                           report_definition={key:definition['metadata'].get(key) for key in ('description', 'test_method')})
                         saved.result_json = json.dumps(result_data, ensure_ascii=False)
                     result_session.commit()
                 except Exception as persistence_error:

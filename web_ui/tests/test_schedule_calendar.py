@@ -55,7 +55,7 @@ class ScheduleCalendarTest(unittest.TestCase):
         after=rows()
         for tid in ['task1','planning']:
             self.assertEqual(after[tid]['working_days'],2)
-            self.assertEqual(after[tid]['setup'],setup)
+            self.assertEqual(after[tid]['setup'],{**setup,'task_status':'New'})
             self.assertEqual(after[tid]['name'],before[tid]['name'])
         self.assertIsNone(after['task2']['working_days'])
         with self.Session() as s:self.assertEqual(s.get(Task,'task1').environment_config,original_environment)

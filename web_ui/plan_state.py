@@ -183,14 +183,16 @@ def set_manual_status(session,task_id,tc_id,data):
 
 
 def summary(session,task_id,root=None):
+    from task_management import display_setup
     task=require(session,Task,task_id)
     cases=[]; counts={'Passed':0,'Failed':0,'Block':0,'TBD':0}
     for row,tc in session.query(TaskTestCase,TestCase).join(TestCase,TaskTestCase.testcase_id==TestCase.system_id).filter(TaskTestCase.task_id==task_id,TestCase.plan_id==task.plan_id).order_by(TaskTestCase.position):
         case=task_case_dict(row,tc)
         import single_case
         case['automation']=single_case.automation_for_case(root,tc)
+        case['source_created_at']=single_case.creation_time_for_case(root,tc)
         cases.append(case); counts[row.status if row.status in ('Passed','Failed','Block') else 'TBD']+=1
-    return dict(id=task.id,task_id=task.id,name=task.name,plan_id=task.plan_id,execution_active=bool(task.execution_active),setup=json.loads(task.task_metadata or '{}'),connection_configured=bool(te.normalize(task.environment_config)["host"]),testcases=co.arrange(session,'plan:'+task.plan_id,cases),counts=counts)
+    return dict(id=task.id,task_id=task.id,name=task.name,plan_id=task.plan_id,execution_active=bool(task.execution_active),setup=display_setup(task.task_metadata),connection_configured=bool(te.normalize(task.environment_config)["host"]),testcases=co.arrange(session,'plan:'+task.plan_id,cases),counts=counts)
 
 def start_execution(session,task_id,ids):
     task=require(session,Task,task_id); unlocked(session,task.plan_id)
@@ -252,13 +254,28 @@ def impact(session,folder=None,testcases=None):
     plan=require(session,ProjectPlan,folder.plan_id if folder else testcases[0].plan_id)
     return dict(name=folder.name if folder else testcases[0].display_name,names=[t.display_name for t in testcases],descendant_folder_count=len(descendants),testcase_count=len(testcases),affected_task_count=len({r.task_id for r in rows}),task_testcase_count=len(rows),requires_acknowledgement=bool(folder and (testcases or descendants)))
 
-def delete_content(session,main_program_dir,data,folder=None,testcases=None):
-    preview=impact(session,folder,testcases)
-    if data.get('confirm') is not True: raise StateError('Impact confirmation is required')
-    if preview['requires_acknowledgement'] and data.get('acknowledgement') is not True: raise StateError('I understand acknowledgement is required')
-    descendants=folder_descendants(session,folder) if folder else []
-    if folder: testcases=session.query(TestCase).filter(TestCase.folder_id.in_([folder.id]+[f.id for f in descendants])).all()
-    unlocked(session,folder.plan_id if folder else testcases[0].plan_id)
+def delete_content(session,main_program_dir,data,folder=None,testcases=None,folders=None):
+    if folders is not None:
+        deleting={}
+        for item in folders:
+            deleting[item.id]=item
+            for child in folder_descendants(session,item):deleting[child.id]=child
+        folder_ids=set(deleting)
+        combined={tc.system_id:tc for tc in (testcases or [])}
+        for tc in session.query(TestCase).filter(TestCase.folder_id.in_(folder_ids)).all():combined[tc.system_id]=tc
+        testcases=list(combined.values())
+        plan_id=folders[0].plan_id if folders else testcases[0].plan_id
+        memberships=session.query(TaskTestCase).filter(TaskTestCase.testcase_id.in_(combined)).all() if combined else []
+        preview=dict(name='Selected items',names=[tc.display_name for tc in testcases],descendant_folder_count=len(deleting),testcase_count=len(testcases),affected_task_count=len({r.task_id for r in memberships}),task_testcase_count=len(memberships),requires_acknowledgement=bool(folders))
+    else:
+        preview=impact(session,folder,testcases)
+        descendants=folder_descendants(session,folder) if folder else []
+        deleting={f.id:f for f in ([folder]+descendants if folder else [])}
+        if folder:testcases=session.query(TestCase).filter(TestCase.folder_id.in_(deleting)).all()
+        plan_id=folder.plan_id if folder else testcases[0].plan_id
+    if data.get('confirm') is not True:raise StateError('Impact confirmation is required')
+    if preview['requires_acknowledgement'] and data.get('acknowledgement') is not True:raise StateError('I understand acknowledgement is required')
+    unlocked(session,plan_id)
     root=(Path(main_program_dir)/'testcase_database'/'scripts').resolve()
     recovery=root/'.delete-recovery'/str(uuid.uuid4()); staged=[]
     try:
@@ -269,17 +286,21 @@ def delete_content(session,main_program_dir,data,folder=None,testcases=None):
                 recovery.mkdir(parents=True,exist_ok=True)
                 target=recovery/source.name; shutil.move(str(source),str(target)); staged.append((source,target))
         ids=[tc.system_id for tc in testcases]
-        deleted_folder_ids={folder.id, *(child.id for child in descendants)} if folder else set()
+        deleted_folder_ids=set(deleting)
         surviving_folder_ids={tc.folder_id for tc in testcases if tc.folder_id} - deleted_folder_ids
         session.query(TaskTestCase).filter(TaskTestCase.testcase_id.in_(ids)).delete(synchronize_session=False)
         for tc in testcases: session.delete(tc)
         session.flush()
         for folder_id in sorted(surviving_folder_ids):
             normalize(session.query(TestCase).filter_by(folder_id=folder_id).order_by(TestCase.position,TestCase.system_id).all())
-        for child in reversed(descendants): session.delete(child)
-        session.flush()
-        if folder:
-            old_parent=folder.parent_id; plan_id=folder.plan_id; session.delete(folder); session.flush(); normalize(siblings(session,plan_id,old_parent))
+        parents={item.parent_id for item in deleting.values()}-set(deleting)
+        def delete_depth(item):
+            depth=0;parent=item.parent_id
+            while parent in deleting:depth+=1;parent=deleting[parent].parent_id
+            return depth
+        for item in sorted(deleting.values(),key=delete_depth,reverse=True):
+            session.delete(item);session.flush()
+        for parent in parents:normalize(siblings(session,plan_id,parent))
         session.commit()
     except Exception as error:
         session.rollback(); restore_errors=[]
@@ -553,6 +574,46 @@ def install_routes(app, runtime):
         if 'selected' in data: tc.selected=bool(data['selected'])
         s.flush(); result=tc.to_dict(); s.commit(); return jsonify(result)
 
+    @route('/api/plans/<plan_id>/items/delete',['POST'])
+    def current_delete_selection(s,data,plan_id):
+        unlocked(s,plan_id)
+        folder_ids=data.get('folder_ids',[]);case_ids=data.get('case_ids',[])
+        if not isinstance(folder_ids,list) or not isinstance(case_ids,list) or not(folder_ids or case_ids) or any(not isinstance(i,str) or not i for i in folder_ids+case_ids):raise StateError('Select folders or Test Cases')
+        folders=[require(s,PlanFolder,i) for i in dict.fromkeys(folder_ids)]
+        cases=[require(s,TestCase,i) for i in dict.fromkeys(case_ids)]
+        if any(f.plan_id!=plan_id for f in folders) or any(c.plan_id!=plan_id for c in cases):raise StateError('Selection belongs to another Plan')
+        return jsonify(status='ok',impact=delete_content(s,runtime['MAIN_PROGRAM_DIR'],data,folders=folders,testcases=cases))
+
+    @route('/api/plans/<plan_id>/items/move',['POST'])
+    def current_move_selection(s,data,plan_id):
+        unlocked(s,plan_id)
+        folder_ids=data.get('folder_ids',[]);case_ids=data.get('case_ids',[])
+        if not isinstance(folder_ids,list) or not isinstance(case_ids,list) or not(folder_ids or case_ids) or any(not isinstance(i,str) or not i for i in folder_ids+case_ids):
+            raise StateError('Select folders or Test Cases')
+        folders=[require(s,PlanFolder,i) for i in dict.fromkeys(folder_ids)]
+        cases=[require(s,TestCase,i) for i in dict.fromkeys(case_ids)]
+        if any(f.plan_id!=plan_id for f in folders) or any(c.plan_id!=plan_id for c in cases):raise StateError('Selection belongs to another Plan')
+        covered=set()
+        for f in folders:covered.update([f.id]+[child.id for child in folder_descendants(s,f)])
+        roots=[f for f in folders if f.parent_id not in covered]
+        direct=[c for c in cases if c.folder_id not in covered]
+        target=require(s,PlanFolder,data['folder_id']) if data.get('folder_id') else None
+        if target and target.plan_id!=plan_id:raise StateError('Destination belongs to another Plan')
+        if target and target.id in covered:raise StateError('Cannot move selection into its own folder tree',409)
+        anchor=None
+        if 'relative_to' in data or 'insertion' in data:
+            anchor=require(s,TestCase,data.get('relative_to'))
+            if roots or data.get('insertion') not in ('before','after') or anchor.plan_id!=plan_id or anchor.folder_id!=(target.id if target else None) or anchor.system_id in case_ids:raise StateError('Choose another Test Case in the destination folder')
+        for folder in roots:change_folder(s,folder.id,{'parent_id':target.id if target else None})
+        ids=[c.system_id for c in direct]
+        ordered=co.plan_rows(s,plan_id,s.query(TestCase).filter(TestCase.plan_id==plan_id,TestCase.folder_id==(target.id if target else None),TestCase.system_id.notin_(ids)).all())
+        for case in direct:
+            co.forget(s,'plan:'+plan_id,case.folder_id,ids);assign_folder(s,case,target)
+        if direct:
+            index=next(i for i,c in enumerate(ordered) if c.system_id==anchor.system_id)+(data['insertion']=='after') if anchor else len(ordered)
+            ordered[index:index]=direct;normalize(ordered);co.save(s,'plan:'+plan_id,target.id if target else None,[c.system_id for c in ordered])
+        s.commit();return jsonify(status='ok',moved_folders=len(roots),moved_cases=len(direct))
+
     @route('/api/plans/<plan_id>/testcases/move',['POST'],endpoint='move_plan_testcases')
     def current_move(s,data,plan_id):
         unlocked(s,plan_id); ids=data.get('testcase_ids',data.get('ids',[]))
@@ -732,6 +793,10 @@ def install_routes(app, runtime):
                     if 'testcases' in item: replace_scope(s,task.id,item['testcases'])
                     import task_management
                     if 'name' in item: task_management.immutable_name(task,item['name'])
-                    if 'setup' in item: task.task_metadata=json.dumps(task_management.merge_setup(task.task_metadata,item['setup']))
+                    if 'setup' in item:
+                        if isinstance(item['setup'],dict) and {'actual_start_date','actual_end_date','idesign','fw_package'} & item['setup'].keys():
+                            task_management.manage(s,task.id,{k:v for k,v in item.items() if k != 'environment_config'})
+                        else:
+                            task.task_metadata=json.dumps(task_management.merge_setup(task.task_metadata,item['setup']))
                     if 'environment_config' in item: te.save(task,item['environment_config'],s)
         s.commit(); return jsonify(status='ok')

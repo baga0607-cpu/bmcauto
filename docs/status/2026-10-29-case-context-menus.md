@@ -1,0 +1,9 @@
+# Case and folder text context menus — 2026-10-29
+
+Removed Actions columns and action icon buttons from Plan Case and Repository Case tables. The Parameters column remains. Right-click a Case/folder for text actions; keyboard Context Menu or Shift+F10 also opens the menu. Case actions include source viewing, parameters when present and deletion. Plan folder actions include New folder, sorting and non-root deletion. Repository folders additionally support Add Test Case. Root folders cannot be deleted. Existing lock disabling and confirmation/API behavior remain.
+
+Menus are appended to the active dialog when relevant so modal controls remain operable. Positions are clamped to viewport bounds. Arrow/Home/End navigation, Escape dismissal/focus return, outside click, scroll and resize dismissal are supported. Rows have focusability and right-click hints. No backend changes or service restart.
+
+Verification: Node syntax and task_management_list.test.cjs passed. execution_workspace.test.cjs passed with absent Actions/icons, Plan right-click delete confirmation and cancel without DELETE, Shift+F10 parameter editing, locked delete, Repository root protection/New folder correct parent, Case source preview, menu bounds and Escape dismissal, plus existing import/Plan/Execution workflows. Dark-theme screenshot inspected. API mutations were intercepted fixtures; no formal data mutation or DUT execution.
+
+Folder Rename refinement: non-root Plan and Repository folder menus include Rename. It opens the existing inline name field (Enter saves, Escape cancels). Repeated folder-name clicks now only select the folder and never start rename. Removed the previous name-click tracking mechanism. Root rename stays unavailable and locked Plan rename is disabled. Node syntax and browser regression passed, including repeated clicks without inputs, explicit Rename, and correct Plan/Repository PATCH IDs and names.

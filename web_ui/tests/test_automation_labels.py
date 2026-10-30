@@ -13,17 +13,17 @@ class AutomationLabelsTest(unittest.TestCase):
 
  def test_declared_types_and_legacy_are_read_without_execution(self):
   self.assertEqual(api.sc.metadata(fixtures.SOURCE)['automation'],'unclassified')
-  for mode in ['automatic','semi_automatic']:
+  for mode in ['automatic','semi_automatic','manual']:
    result=self.client.post('/api/repository/testcases',json={'source':self.source(mode)})
    self.assertEqual(result.status_code,201)
    data=self.client.get('/api/repository/testcases/'+result.get_json()['id']).get_json()
    self.assertEqual(data['metadata']['automation'],mode)
-  for value in ['manual','unclassified',None,True]:
+  for value in ['invalid','unclassified',None,True]:
    source="TEST_CASE="+repr({'name':'Invalid','automation':value,'parameters':{}})+"\ndef execute(client,context=None,preset=None): pass\n"
    self.assertEqual(self.client.post('/api/repository/testcases',json={'source':source}).status_code,400)
 
  def test_plan_and_task_preserve_declaration_after_repository_removal(self):
-  for mode in ['automatic','semi_automatic']:
+  for mode in ['automatic','semi_automatic','manual']:
    repo=self.client.post('/api/repository/testcases',json={'source':self.source(mode)}).get_json()
    tc=self.client.post('/api/plans/a/repository/testcases',json={'repository_id':repo['id']}).get_json()
    self.client.post('/api/tasks/task1/testcases/import',json={'testcases':[tc['id']]})

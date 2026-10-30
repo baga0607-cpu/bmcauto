@@ -141,6 +141,22 @@ class CaseLog:
         self._write('check', 'Validation result', lines, label=label, passed=bool(passed),
                     expected=expected, actual=actual)
 
+    def step(self, step, criteria=None, result=None):
+        """One report row: action, acceptance criteria, observed result (JSON values).
+
+        This records evidence only. Use assertions / case_result for case outcome.
+        Record each completed or failed action immediately; unperformed steps have
+        no invented result. None / empty values render as an em dash in reports.
+        """
+        for value in (step, criteria, result):
+            json.dumps(value, ensure_ascii=False, allow_nan=False)
+        self.section_checks += 1
+        self._write('step', 'Report step', [
+            'Step: '+('—' if step is None or step == '' else json.dumps(step, ensure_ascii=False)),
+            'Criteria: '+('—' if criteria is None or criteria == '' else json.dumps(criteria, ensure_ascii=False)),
+            'Result: '+('—' if result is None or result == '' else json.dumps(result, ensure_ascii=False)),
+        ], step=step, criteria=criteria, result=result)
+
     def finish(self, status, reason):
         if self.finished:
             return

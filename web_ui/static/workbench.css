@@ -454,8 +454,8 @@ body #navigator.sidebar-open{width:280px;box-shadow:var(--shadow)}
 :root[data-theme=dark] .gantt-day.is-off,:root[data-theme=dark] .schedule-date.is-off{background:#344252!important}
 
 /* Compact Schedule controls and mouse panning. */
-.schedule-tabs{margin-bottom:6px}
-.schedule-tabs button{padding:3px 2px;min-height:0}
+.schedule-tabs,.task-list-tabs{margin-bottom:6px}
+.schedule-tabs button,.task-list-tabs button{padding:3px 2px;min-height:0}
 .gantt-heading>strong,.gantt-label{background:#e5e7eb}
 :root[data-theme=dark] .gantt-heading>strong,:root[data-theme=dark] .gantt-label{background:#344252}
 .gantt-scroll.is-dragging,.gantt-scroll.is-dragging *{cursor:grabbing!important;user-select:none}
@@ -535,8 +535,6 @@ body #workspace:has(.gantt-scroll){padding-bottom:24px}
 body #workspace:has(.info-specifications){padding-bottom:24px}
 .info-specifications{max-height:none;min-height:120px}
 
-.task-status-filter{position:relative;margin:0;padding:0;border:0}.task-status-filter summary{margin:0;padding:8px 12px;border:1px solid var(--line);border-radius:var(--radius);font-weight:600}.task-status-filter>div{position:absolute;top:100%;left:0;z-index:10;min-width:160px;background:var(--surface);border:1px solid var(--line);padding:12px;display:grid;gap:10px}
-.task-status-heading{display:flex;align-items:center;gap:6px}.task-status-filter summary{display:flex;align-items:center;justify-content:center;list-style:none;padding:4px;cursor:pointer;min-width:26px;min-height:26px}.task-status-filter summary::-webkit-details-marker{display:none}.task-status-filter>div{font-size:1rem;font-weight:400;color:var(--ink)}
 
 /* Keep the complete Status menu accessible when the table has no matches. */
 .managed-tasks-wrap{min-height:260px}
@@ -546,3 +544,251 @@ html:has(.managed-tasks){scrollbar-gutter:stable}
 .managed-tasks{table-layout:fixed;min-width:1100px}
 .managed-tasks th:last-child,.managed-tasks td:first-child{min-width:0}
 .managed-tasks td{overflow-wrap:anywhere}
+
+/* Task lists share the Schedule density and viewport scroll surface. */
+.managed-tasks-wrap{height:var(--task-list-height,calc(100dvh - 140px));min-height:120px;border:1px solid var(--line);border-radius:var(--radius);overscroll-behavior:contain;scrollbar-gutter:stable}
+.managed-tasks{border-collapse:separate;border-spacing:0}
+.managed-tasks thead th{position:sticky;top:0;z-index:3;height:40px;padding:6px 12px;border-bottom:1px solid var(--line);background:var(--ground)}
+.managed-tasks td{padding:6px 12px;line-height:1.4;vertical-align:middle}
+.managed-tasks td .help{margin:0;line-height:1.35;font-size:.8rem}
+.managed-tasks .actions{gap:6px}
+#manager-task-count{margin:0;white-space:nowrap}
+body #workspace:has(.managed-tasks-wrap){padding-bottom:24px}
+
+/* Direct Task-cell editing keeps the compact table text treatment. */
+.managed-tasks th{white-space:normal;line-height:1.3}
+.managed-tasks .task-cell-edit{display:block;width:100%;min-height:30px;padding:3px 0;border:0;background:transparent;border-radius:2px;text-align:left;font:inherit;line-height:inherit;overflow-wrap:anywhere}
+.managed-tasks .task-cell-edit:hover{background:var(--layer)}
+.managed-tasks .task-cell-edit:disabled{cursor:not-allowed}
+#task-cell-dialog{max-width:520px}
+.task-cell-history{margin-top:18px}
+
+/* Task references and editable firmware component/version lists. */
+.task-meta-value{display:flex;align-items:flex-start;gap:6px;min-width:0}.task-meta-value>a,.task-meta-value>ul{min-width:0;overflow-wrap:anywhere}.fw-package-values{list-style:none;margin:0;padding:0;line-height:1.5}.fw-package-values strong{font-weight:600}.task-reference-fields,.task-fw-editor{margin:0;padding:0;border:0;min-width:0}.task-reference-fields legend,.task-fw-editor legend{padding:0;margin-bottom:8px;font-weight:600}.fw-package-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:10px;align-items:end;margin-bottom:10px}.fw-package-row input{width:100%}#task-meta-dialog{max-width:680px;max-height:calc(100dvh - 48px);overflow:auto}.task-fw-editor:disabled{opacity:.65}
+
+.fw-package-line{display:block;line-height:1.5;overflow-wrap:anywhere}.fw-package-line strong{font-weight:600}.task-reference-cell{cursor:pointer}.task-reference-cell:hover{background:var(--layer)}
+
+/* Task data rows have a uniform height; column headings keep their own layout. */
+.managed-tasks tbody tr[data-task-id]{height:61px}
+.managed-tasks tbody tr[data-task-id]>td{height:61px;max-height:61px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.managed-tasks tbody tr[data-task-id]>td>a{display:block;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.managed-tasks tbody tr[data-task-id] .task-cell-edit{height:48px;min-height:0;max-height:48px;padding:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.managed-tasks tbody tr[data-task-id] .fw-package-line{line-height:21px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.managed-tasks tbody tr[data-task-id] [data-task-edit="task_status"]{white-space:normal}
+
+/* Task identity follows the Schedule name and assignment/status hierarchy. */
+.managed-tasks .task-list-assignment{display:flex;align-items:center;gap:4px;min-width:0;overflow:hidden;white-space:nowrap}
+.task-list-assignee{display:flex;align-items:center;gap:3px;min-width:0;overflow:hidden;white-space:nowrap}
+.task-list-status{display:flex;align-items:center;gap:3px;flex:none;white-space:nowrap}
+.managed-tasks .task-assignment-edit{padding:0;min-height:0;min-width:0;border:0;border-radius:0;background:transparent;font:inherit;font-weight:400;color:inherit;line-height:inherit;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.managed-tasks .task-assignment-edit:hover{color:var(--accent);text-decoration:underline}
+
+/* Read-only report hierarchy and same-Plan report selection. */
+.report-plan-label,.report-task-label{display:flex;align-items:center;gap:10px;min-width:0}.report-plan-toggle{display:flex;align-items:center;gap:8px;min-width:0;padding:4px 0;min-height:30px;border:0;background:transparent;text-align:left}.report-plan-toggle>span:last-child{overflow-wrap:anywhere}.report-chevron{display:inline-flex;flex:none;width:16px;height:16px}.report-chevron svg{width:16px;height:16px}.report-chevron.is-open{transform:rotate(90deg)}.report-task-label{padding-left:24px}.report-plan-row td{background:var(--ground);vertical-align:middle}.report-task-row td{vertical-align:middle}.report-overview tbody[hidden]{display:none}.report-matrix-row>td{padding:12px 0 20px 24px}.report-overview input[type=checkbox]{margin:0;flex:none}.report-workspace>.toolbar .help{margin:0}.report-task-label a{overflow-wrap:anywhere}
+
+/* Report/reference composition inherits the compact workbench dialog. */
+#report-compose-dialog{max-width:820px;max-height:calc(100dvh - 48px);overflow:auto}
+#report-compose-dialog>h2{margin-bottom:8px}
+#report-compose-help{margin:0 0 20px;max-width:76ch}
+.report-compose-area{border-top:1px solid var(--line);padding-top:14px;margin-top:16px}
+.report-compose-area h3{margin:0 0 8px}
+.report-compose-area ul{list-style:none;margin:0;padding:6px;min-height:92px;max-height:240px;overflow:auto;border:1px dashed var(--line);border-radius:var(--radius);background:var(--ground);scrollbar-gutter:stable;overscroll-behavior:contain}
+.report-compose-item{display:flex;align-items:center;gap:10px;min-height:58px;padding:8px;border-bottom:1px solid var(--line);background:var(--surface);cursor:grab}
+.report-compose-item:last-child{border-bottom:0}
+.report-compose-item.is-dragging{opacity:.55}
+.report-drag-handle{display:flex;width:16px;flex:none;color:var(--muted)}.report-drag-handle svg{width:16px;height:22px}
+.report-compose-name{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0;overflow-wrap:anywhere}
+.report-compose-name .help{margin:0;font-size:.82rem}
+.report-item-controls{display:flex;align-items:center;gap:4px;flex:none}
+#report-compose-dialog .icon-button{min-width:30px;padding:4px;border-color:var(--line)}
+.report-order-up svg{transform:rotate(-90deg)}.report-order-down svg{transform:rotate(90deg)}
+.report-area-empty{display:flex;align-items:center;justify-content:center;min-height:76px;color:var(--muted)}
+.report-compose-item[data-drop=before]{box-shadow:0 -2px 0 var(--accent)}.report-compose-item[data-drop=after]{box-shadow:0 2px 0 var(--accent)}
+.report-compose-area ul[data-drop=inside]{outline:2px solid var(--accent);outline-offset:-2px;background:var(--selected)}
+#report-compose-status:empty,#report-compose-error:empty{display:none}
+#report-compose-error{margin:12px 0 0}
+
+/* Task Info keeps each information group in its own desktop tab. */
+.task-info-workspace [hidden]{display:none!important}.task-info-tabs{margin-bottom:20px}.task-info-tabs button{white-space:nowrap}.task-info-workspace .page-heading{margin-bottom:14px}.task-info-workspace #task-manager-form{margin-top:0}.task-info-workspace .task-history{margin-top:24px}.task-info-workspace .settings-form>.connection-fields{min-width:0;border:0;padding:0}.task-info-workspace .planning-task-info{margin-top:0}
+
+/* Existing Test Tasks opened in the Execution workspace. */
+.execution-tabs{overflow-x:auto;flex-wrap:nowrap;white-space:nowrap}
+.execution-tabs [role="tab"]{flex-shrink:0;max-width:320px;overflow:hidden;text-overflow:ellipsis}
+#execution-panel{padding-top:16px}
+#execution-panel .toolbar h2{margin:0}
+
+.execution-tab-item{display:inline-flex;align-items:center;flex-shrink:0}
+.execution-tab-close{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;padding:5px!important;border:0!important;margin-right:12px}
+.execution-tab-close svg{width:16px;height:16px}
+#execution-picker-dialog{width:min(900px,85vw);max-height:80vh;overflow:auto}
+#execution-tab-add{flex-shrink:0}
+
+/* Test Case rows: retain one third of the original 9px vertical padding. */
+body:is(.repository-page,.plan-workspace) #repository-table.repository-hierarchy tr:is([data-plan-case],[data-repository-id])>td{padding-top:3px;padding-bottom:3px}
+
+/* Plans expand directly into the existing Case editor. */
+body.plan-list-workspace #workspace{display:block;overflow:auto}
+.plan-list-item{border-bottom:1px solid var(--line)}
+.plan-list-heading{margin:0;font-size:1rem}
+.plan-list-toggle{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:12px;border:0;background:transparent}
+.plan-list-toggle[aria-expanded="true"]{color:var(--accent);background:var(--selected)}
+.plan-inline-editor{display:flex;flex-direction:column;height:70vh;min-height:360px;padding:16px 12px;overflow:auto}
+.plan-inline-actions{justify-content:flex-end;margin-bottom:12px}
+.plan-inline-editor>.inline-form{flex:none}
+
+.plan-list-header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.plan-list-header .plan-list-heading{flex:1;min-width:0}
+.plan-list-header>.actions{flex-shrink:0;padding-right:12px}
+.plan-list-header .plan-list-toggle{overflow-wrap:anywhere}
+
+.plan-tabs-heading{display:flex;align-items:center;gap:24px;margin-bottom:12px}
+.plan-tabs-heading>.page-heading{flex:none;margin:0}
+.plan-tabs{flex:1;min-width:0;margin:0;flex-wrap:nowrap;white-space:nowrap;gap:18px}
+.plan-tabs button{flex-shrink:0}
+.plan-tabs-heading>.actions{flex:none}
+.plan-tabs [data-tab-drop="before"]{box-shadow:inset 2px 0 var(--accent)}
+.plan-tabs [data-tab-drop="after"]{box-shadow:inset -2px 0 var(--accent)}
+
+.execution-tabs [data-tab-drop="before"]{box-shadow:inset 2px 0 var(--accent)}
+.execution-tabs [data-tab-drop="after"]{box-shadow:inset -2px 0 var(--accent)}
+
+/* Match both gaps around the Plan search controls. */
+body.plan-list-workspace .plan-tabs-heading{align-items:flex-end;margin-bottom:10px}
+body.plan-list-workspace .plan-inline-editor{padding-top:0}
+
+/* Import source and target stay inside a modal workspace. */
+#plan-import-workspace-dialog{width:94vw;max-width:1600px;height:86vh;max-height:90vh;padding:24px;overflow:hidden}
+#plan-import-workspace-dialog .plan-import-layout{height:100%}
+#plan-import-workspace-dialog .import-pane-heading h1,#plan-import-workspace-dialog .import-pane-heading h2{font-size:1.2rem}
+
+/* Compact modal import headers and single-column Case lists. */
+#plan-import-workspace-dialog .import-pane-heading{align-items:center;min-height:36px;gap:8px;margin-bottom:3px}
+#plan-import-workspace-dialog .import-pane-heading h1{font-size:1rem;flex:1;min-width:0}
+#plan-import-workspace-dialog .import-pane-heading label{flex:0 0 auto;min-width:0}
+#plan-import-workspace-dialog .import-pane-heading input[type=search]{width:23ch;max-width:23ch;margin:0;padding:5px 8px;min-height:32px}
+#plan-import-workspace-dialog .import-pane-heading select{flex:1;width:0;min-width:100px;padding:5px 8px;min-height:32px}
+body.plan-workspace #plan-import-workspace-dialog #repository-table th:first-child{width:100%}
+
+/* Leave room for focus outlines inside the import dialog edges. */
+#plan-import-workspace-dialog{max-width:min(1600px,calc(100vw - 32px));max-height:calc(100dvh - 32px)}
+#plan-import-workspace-dialog .import-pane-heading{padding:6px;min-height:44px}
+/* The Plan row baseline: 22px name + 3px gap + date + 3px padding each side. */
+:root{--case-list-row-height:calc(31px + 1.08rem)}
+body:is(.repository-page,.plan-workspace) :is(#repository-table,.import-source-table).repository-hierarchy tr:is([data-plan-case],[data-repository-id],[data-import-kind="case"]){height:var(--case-list-row-height)}
+body:is(.repository-page,.plan-workspace) :is(#repository-table,.import-source-table).repository-hierarchy tr:is([data-plan-case],[data-repository-id],[data-import-kind="case"])>td{padding-top:3px;padding-bottom:3px}
+.test-case-scope-list tbody tr,.plan-matrix tbody tr{height:var(--case-list-row-height)}
+.test-case-scope-list tbody td,.plan-matrix tbody :is(td,th){padding-top:3px;padding-bottom:3px;vertical-align:middle}
+.task-case{display:grid;grid-template-columns:32px minmax(0,1fr);align-items:center;min-height:var(--case-list-row-height);border-bottom:1px solid var(--line)}
+.task-case>.checkbox-field{padding:0 0 0 10px!important;margin:0}
+.task-case>.checkbox-field .help{display:none}
+.task-case .case-row{min-height:var(--case-list-row-height);padding:3px 12px 3px 4px;border-bottom:0}
+.task-case .case-row strong{line-height:22px;margin-bottom:0}
+.task-case .case-row .status{padding:1px 5px;line-height:16px}
+.case-list>.case-row{min-height:var(--case-list-row-height);padding-top:3px;padding-bottom:3px}
+
+.task-case .case-row{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;min-height:calc(var(--case-list-row-height) - 1px);padding-top:2px;padding-bottom:2px}
+.task-case .case-result-labels{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+
+#plan-import-workspace-dialog .import-pane-heading{min-height:48px}
+
+.import-case-choice{display:flex;align-items:center;gap:6px;min-height:22px}
+.import-case-choice input[type=checkbox]{margin:0;flex:none}
+.import-case-choice strong{min-width:0;overflow-wrap:anywhere}
+.import-source-table .import-case-choice+.case-source-version{margin-left:23px}
+
+/* Text actions are available from Case/folder right-click menus. */
+.case-context-menu{position:fixed;z-index:1000;min-width:190px;max-width:calc(100vw - 16px);max-height:calc(100dvh - 16px);overflow:auto;padding:4px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+.case-context-menu button{display:block;width:100%;text-align:left;border:0;background:transparent;padding:7px 12px;font-weight:400;min-height:32px;white-space:nowrap}
+.case-context-menu button:hover,.case-context-menu button:focus{background:var(--selected)}
+body.plan-workspace #repository-table th:first-child{width:calc(100% - 110px)}
+body.plan-workspace #repository-table th:nth-child(2){width:110px}
+body.plan-workspace #plan-import-workspace-dialog #repository-table th:first-child{width:100%}
+
+.case-selection-label{display:flex;align-items:center;gap:6px;min-height:22px}
+.plan-selection-check,.repository-batch-check{margin:0 6px 0 0;vertical-align:middle;flex:none}
+.case-selection-label .plan-selection-check{margin:0}
+.import-source-table [data-import-folder-select]{margin:0;flex:none}
+
+.case-select-all{margin:0 8px 0 0;vertical-align:middle}
+
+/* Folder rows use the same surface as Cases; keep drag-target feedback. */
+body:is(.repository-page,.plan-workspace) :is(#repository-table,.import-source-table).repository-hierarchy .repository-folder-row:not([data-drop]),body:is(.repository-page,.plan-workspace) :is(#repository-table,.import-source-table).repository-hierarchy .repository-folder-row:not([data-drop]) td{background:transparent}
+
+/* Shared hierarchy origin and checkbox slot across all Case lists. */
+:root{--case-tree-indent:18px}
+body:is(.repository-page,.plan-workspace) :is(#repository-table,.import-source-table).repository-hierarchy tbody tr>td:first-child{padding-left:calc(12px + var(--depth,0)*var(--case-tree-indent))}
+body:is(.repository-page,.plan-workspace) .repository-hierarchy input[type=checkbox]{margin:0!important;flex-shrink:0;width:17px;height:17px}
+body:is(.repository-page,.plan-workspace) .repository-hierarchy :is(.case-selection-label,.import-case-choice){gap:6px}
+
+body:is(.repository-page,.plan-workspace) .repository-hierarchy input.case-select-all{margin-right:6px!important}
+
+/* One shared checkbox / disclosure / icon / name grid for each hierarchy row. */
+body:is(.repository-page,.plan-workspace) .repository-hierarchy :is(.repository-folder-line,.case-selection-label,.import-case-choice){display:grid;grid-template-columns:17px 16px minmax(0,1fr);column-gap:6px;align-items:center}
+body:is(.repository-page,.plan-workspace) .repository-hierarchy :is(.repository-folder-line,.case-selection-label,.import-case-choice)>input[type=checkbox]{grid-column:1;grid-row:1}
+body:is(.repository-page,.plan-workspace) .repository-hierarchy :is(.folder-collapse,.folder-collapse-spacer){grid-column:2;grid-row:1;width:16px;min-width:16px}
+body:is(.repository-page,.plan-workspace) .repository-hierarchy :is(.case-selection-label,.import-case-choice)::before{content:"";grid-column:2;grid-row:1;width:16px}
+body:is(.repository-page,.plan-workspace) .repository-hierarchy :is(.repository-folder-name,.case-selection-label>strong,.import-case-choice>strong){grid-column:3;grid-row:1;display:flex;align-items:center;gap:6px;min-width:0;padding:0}
+body:is(.repository-page,.plan-workspace) .repository-hierarchy .repository-folder-name svg{width:20px;height:20px;flex:0 0 20px}
+body:is(.repository-page,.plan-workspace) .repository-hierarchy .automation-tag{width:20px;height:20px;flex:0 0 20px;margin:0}
+body:is(.repository-page,.plan-workspace) .repository-hierarchy .automation-tag svg{width:20px;height:20px}
+body:is(.repository-page,.plan-workspace) .repository-hierarchy .repository-folder-line>.repository-rename{grid-column:3;grid-row:2}
+
+/* Creation time starts under the name after the shared checkbox/disclosure/icon slots. */
+body:is(.repository-page,.plan-workspace) :is(#repository-table,.import-source-table).repository-hierarchy :is(.case-selection-label,.import-case-choice)+p.help{margin-left:71px}
+
+/* Folder names use the same typography as Test Case names. */
+body:is(.repository-page,.plan-workspace) :is(#repository-table,.import-source-table).repository-hierarchy .repository-folder-name,body:is(.repository-page,.plan-workspace) :is(#repository-table,.import-source-table).repository-hierarchy .repository-folder-name strong{font-size:1rem;font-weight:700}
+
+/* Disclosure precedes selection; checkbox-to-icon gap stays at 6px. */
+body:is(.repository-page,.plan-workspace) .repository-hierarchy :is(.repository-folder-line,.case-selection-label,.import-case-choice){grid-template-columns:16px 17px minmax(0,1fr)}
+body:is(.repository-page,.plan-workspace) .repository-hierarchy :is(.repository-folder-line,.case-selection-label,.import-case-choice)>input[type=checkbox]{grid-column:2}
+body:is(.repository-page,.plan-workspace) .repository-hierarchy :is(.folder-collapse,.folder-collapse-spacer){grid-column:1}
+body:is(.repository-page,.plan-workspace) .repository-hierarchy :is(.case-selection-label,.import-case-choice)::before{grid-column:1}
+body:is(.repository-page,.plan-workspace) .repository-hierarchy input.case-select-all{margin-left:22px!important}
+
+/* Folder rows share the current Test Case row-height baseline. */
+body:is(.repository-page,.plan-workspace) :is(#repository-table,.import-source-table).repository-hierarchy tbody .repository-folder-row{height:var(--case-list-row-height)}
+body:is(.repository-page,.plan-workspace) :is(#repository-table,.import-source-table).repository-hierarchy tbody .repository-folder-row>td{vertical-align:middle}
+
+/* Compact folders share the first-line baseline of two-line Case rows. */
+body:is(.repository-page,.plan-workspace) :is(#repository-table,.import-source-table).repository-hierarchy tbody .repository-folder-row{height:28px}
+body:is(.repository-page,.plan-workspace) :is(#repository-table,.import-source-table).repository-hierarchy tbody .repository-folder-row>td{padding-top:3px;padding-bottom:3px;vertical-align:top}
+body:is(.repository-page,.plan-workspace) .repository-hierarchy .repository-folder-line{min-height:22px}
+
+/* Movable, independently resizable Case tools. */
+.case-floating-window{position:fixed;display:flex;flex-direction:column;min-width:0;min-height:0;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+.case-window-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 12px;border-bottom:1px solid var(--line);background:var(--ground);cursor:move;touch-action:none;flex:none;user-select:none}
+.case-window-bar h2{font-size:1rem;margin:0}
+.case-window-bar button{min-height:28px;padding:3px 8px}
+.case-window-body{padding:14px 16px 24px;flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:12px}
+.case-window-caption{flex:none}.case-window-caption>strong{overflow-wrap:anywhere}.case-window-caption .help{margin-top:3px}
+.case-source-code{flex:1;min-height:80px;overflow:auto;white-space:pre;font-family:Consolas,"Courier New",monospace;font-size:.86rem;line-height:1.5;margin:0;background:var(--ground);padding:12px;user-select:text;tab-size:4}
+.case-window-resize{position:absolute;right:2px;bottom:2px;width:22px;height:22px;min-height:22px;padding:2px;border:0;background:var(--surface);cursor:nwse-resize;touch-action:none}
+.case-window-resize svg{width:18px;height:18px}
+#floating-parameter-form{flex:none}#floating-parameter-form fieldset{border:0;padding:0;margin:0;min-width:0}#floating-parameter-form .fields{gap:12px}#floating-parameter-form .form-actions{margin-top:14px}
+.case-window-error{color:var(--bad);margin:8px 0 0;overflow-wrap:anywhere}
+body:is(.repository-page,.plan-workspace) #repository-table .case-parameters-complete{background:#fff;color:#162537}
+body:is(.repository-page,.plan-workspace) #repository-table tr[data-window-selected]>td{background:var(--selected)}
+
+.case-window-body .field input[type=checkbox]{width:17px;align-self:flex-start}
+
+/* Case tools default to the right-side workspace; detach only on request. */
+#case-tools-dock{position:fixed;right:12px;top:12px;bottom:12px;width:min(560px,42vw);display:grid;gap:10px;z-index:110}
+#case-tools-dock[hidden]{display:none}
+#case-tools-dock .case-docked-window{position:relative;inset:auto;width:100%;height:100%;box-shadow:none;min-height:0}
+.has-case-tools-dock #workspace{margin-right:calc(min(560px,42vw) + 24px);min-width:0}
+.case-window-bar{cursor:default;touch-action:auto}
+.case-window-actions{display:flex;gap:6px;flex:none}
+
+/* Normal Plan list ends 24px above the viewport, matching Task List. */
+body.plan-workspace #workspace .repository-layout:not(.plan-import-layout){height:var(--plan-list-height);flex:none;min-height:120px}
+body.plan-workspace #workspace .repository-layout>.repository-list{height:100%;min-height:0}
+body.plan-workspace #workspace .repository-layout>.repository-list>.repository-scroll{height:100%;min-height:0;overflow:auto;overscroll-behavior:contain;scrollbar-gutter:stable}
+
+/* Plan workspace: title/project, tabs, toolbar, then Case list. */
+body.plan-list-workspace .plan-tabs-heading{display:flex;flex-direction:column;align-items:stretch;gap:10px;margin-bottom:8px}
+body.plan-list-workspace .plan-tabs-heading>.page-heading{margin:0}
+body.plan-list-workspace .plan-tabs{flex:none;width:100%;margin:0}
+body.plan-list-workspace .plan-inline-editor{height:auto;min-height:0;padding:0;overflow:visible}
+body.plan-list-workspace .plan-inline-editor>.repository-page-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 8px}

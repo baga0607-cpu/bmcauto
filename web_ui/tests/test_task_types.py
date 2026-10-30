@@ -36,7 +36,7 @@ class TaskTypesTest(unittest.TestCase):
             self.assertIsNone(session.get(Task,tid))
             self.assertEqual(session.get(PlanningTask,tid).project_id,'empty')
         self.assertEqual(self.client.patch('/api/tasks/'+tid,json={'name':'Changed'}).status_code,400)
-        self.assertEqual(self.client.patch('/api/tasks/'+tid,json={'setup':{'start_date':'2026-10-21','end_date':'2026-10-22'},'history':'Assign dates','expected_start_date':'','expected_end_date':''}).status_code,200)
+        self.assertEqual(self.client.patch('/api/tasks/'+tid,json={'setup':{'start_date':'2026-10-21','end_date':'2026-10-22'},'history':'Assign dates','expected_task_status':'Not Scheduled','expected_start_date':'','expected_end_date':''}).status_code,200)
         self.assertEqual(self.client.post('/api/tasks/'+tid+'/execution/start',json={'testcase_ids':[]}).status_code,404)
         self.assertEqual(self.client.delete('/api/tasks/'+tid).status_code,200)
         self.assertEqual(self.post(**payload).get_json()['name'],'Plan-FWA3051-002')

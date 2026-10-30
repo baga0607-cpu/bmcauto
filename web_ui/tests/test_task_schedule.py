@@ -40,7 +40,7 @@ class TaskScheduleTest(unittest.TestCase):
             with self.Session() as s:self.assertEqual(json.loads(s.get(Task,'task1').task_metadata),original)
     def test_invalid_dates_and_noop_roll_back(self):
         original=self.prepare()
-        for start,end in [('2026-02-30','2026-03-01'),('2026-10-28','2026-10-20'),('',''),('2026-10-19','2026-10-23')]:
+        for start,end in [('2026-02-30','2026-03-01'),('2026-10-28','2026-10-20'),('2026-10-19','2026-10-23')]:
             self.assertEqual(self.change(start_date=start,end_date=end).status_code,400)
             with self.Session() as s:self.assertEqual(json.loads(s.get(Task,'task1').task_metadata),original)
     def test_stale_dates_cannot_overwrite_new_schedule_or_notes(self):
@@ -147,11 +147,12 @@ class TaskScheduleTest(unittest.TestCase):
 
     def test_edit_task_add_and_clear_dates_record_history(self):
         self.prepare()
-        self.assertEqual(self.edit_change(setup={'start_date':'','end_date':''},history='Clear dates').status_code,200)
-        self.assertEqual(self.edit_change(expected_start_date='',expected_end_date='',history='Set dates again').status_code,200)
+        self.assertEqual(self.edit_change(setup={'start_date':'','end_date':''},history='Clear dates',expected_task_status='New').status_code,200)
+        self.assertEqual(self.edit_change(expected_start_date='',expected_end_date='',history='Set dates again',expected_task_status='Not Scheduled').status_code,200)
         entries=self.client.get('/api/tasks/task1/history').get_json()['history']
-        self.assertEqual(len(entries),2)
-        self.assertEqual(entries[1]['start_date'],'');self.assertEqual(entries[0]['previous_start_date'],'')
+        self.assertEqual(len(entries),4)
+        self.assertTrue(any(e['start_date']=='' for e in entries))
+        self.assertTrue(any(e['previous_start_date']=='' for e in entries))
 
     def test_edit_task_stale_date_rejected_and_history_not_added(self):
         self.prepare();self.assertEqual(self.change().status_code,200)

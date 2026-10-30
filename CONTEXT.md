@@ -109,3 +109,83 @@ Edit Task History (2026-10-22): Edit Task date changes, including setting/cleari
 2026-10-22 launch authorization: user says 啟動BMCAgent means loopback-only local service using bmca-runtime/server.py. Only explicit 啟動內網服務 authorizes LAN binding using separate server-lan.py and same-subnet firewall. Never automatically reuse LAN mode for ordinary launch. Current LAN setup was explicitly approved in this conversation.
 
 2026-10-22 Task planning Status lives in task_metadata.task_status and is independent of execution results. Allowed New/On-Going/Complete/Cancel/Pending; new Tasks start New and legacy absent values display New. Status changes through Edit Task or Schedule require manual History and expected_task_status; immutable rows record old/new values with the reason transactionally. Task List Status header opens multi-select filters combined with keyword search.
+
+
+2026-10-27 Not Scheduled supersedes paired dates and the undated New default: missing either start/end date forces Not Scheduled for both Task types. Single dates are accepted and validated. Completing dates defaults to New or an explicitly chosen valid status; Not Scheduled is unavailable with complete dates. Read-time effective status never backfills legacy metadata. Date/status changes retain immutable transactional History and expected-value checks. See docs/status/2026-10-27-not-scheduled.md.
+
+2026-10-27 Task Info is a global Task-function page for both Plan and Test Tasks, using the former Plan Task layout. Schedule name links use #/tasks/info/<stable-id>. Legacy Test Task /info deep links redirect there. Test execution pages expose only connection settings, scope and execution/results, without an embedded Task Info or outer Task-function tab strip. Metadata and evidence are preserved. See docs/status/2026-10-27-task-info-unified.md.
+
+2026-10-27 Actual Task dates and table editing: optional actual_start_date/actual_end_date live in task_metadata independently of start_date/end_date (Plan dates) and execution evidence. Actual-date changes require expected_actual_start_date/end_date plus History and append immutable text transactionally; no schema migration. Task List/My Task expose Status, Assignee and all four date cells through double-click/keyboard dialogs; removed Scope/Execution/Actions columns. Task Info/New/Edit include Actual dates. See docs/status/2026-10-27-task-cell-edit.md.
+
+2026-10-27 paired date editing: Task table Plan/Actual date dialogs each edit their corresponding start/end pair atomically, focusing the clicked date. Browser validity plus existing backend validation enforce end >= start when both supplied; same-day and partial pairs remain allowed. See docs/status/2026-10-27-task-date-pairs.md.
+
+2026-10-27 Days (Actual/Plan): overview actual_working_days and existing working_days derive inclusive Actual/Plan workday counts independently, using the shared official calendar and manual overrides. Incomplete pairs display — per side, with real zero preserved. No stored count or metadata backfill. See docs/status/2026-10-27-task-day-counts.md.
+
+2026-10-27 iDesign/FW setup metadata: optional idesign={request_id,hyperlink} supports paired HTTP/HTTPS reference values and displays a Request ID hyperlink. Optional fw_package=[{component,version}] is editable only for Test Tasks, enforced by backend and UI. Both fields are independent of dates/results; expected_idesign/expected_fw_package protect stale changes, without date/status History. Task List/My Task replace Type and Project/SKU columns with iDesign ID/FW Package; Task Info adds both. See docs/status/2026-10-27-task-reference-package.md.
+
+2026-10-27 metadata interaction correction: no pencil controls. Task Info iDesign/FW data is read-only until Edit mode; Task table metadata opens on double-click, while single-click Request ID opens its hyperlink. FW editors default BL/1BMC/BMConf, treating blank preset versions as optional placeholders, retaining custom components. Table shows 1BMC and BMConf only, complete firmware in hover text; Plan FW remains read-only. See docs/status/2026-10-27-task-meta-interaction.md.
+
+2026-10-27 Task list Status filter retired by user decision. Task List/My Task combine Task Name, Assignee and Status within the Task column; separate Status/Assignee columns are removed. Status values/History and editing remain unchanged. See docs/status/2026-10-27-task-label-column.md.
+
+2026-10-28 Report page presentation now reuses the current Plan overview/Task matrix renderer, replacing the former per-Task report tables. Plan remains available; existing report generation and data are unchanged. See docs/status/2026-10-28-report-plan-view.md.
+
+2026-10-28 Report refinement: omit Create on Report and retain only Plan overview/Task matrix viewing. Plan page creation remains.
+
+
+## Report selection (2026-10-28)
+
+A Task Report represents one current Task. A Final Report merges eligible current results from selected Tasks within one Plan, following the Task matrix timestamp/tie rules across the complete Plan case scope. Selecting a Plan includes all its Tasks. Different-Plan combinations are arranged into Report and Reference areas and concatenated in area order (2026-10-28 amendment). Export works on a disposable database backup and creates no live Task or execution history.
+
+
+**Reference Report** (2026-10-28): supporting current Task/Final reports placed in Reference Area during export. Group same-Plan Task selections independently within each area using Task Matrix rules; references never contribute to formal Final results. A selected Plan includes all current Tasks. Different Plans render independently; all formal report groups precede a Reference separator and all reference groups. Group order follows first appearance in each draggable list; matrix tie precedence stays in canonical Task column order. This is an export arrangement, not stored execution history or a Task type.
+
+
+**Report Step Evidence** (2026-10-28): one structured Step / Criteria / Result row emitted by context['log'].step. It describes a performed action and observation; it is not an executable step definition or execution-history entity. Missing fields display —. A latest result may retain its literal description/test_method declaration for reporting. Same-Plan Final Report copies the winning membership evidence and uses that source Task's current FW Package and Assignee. DUT Configuration is a label only. See docs/agents/report-step-output.md.
+
+
+**Source File Creation Time** (2026-10-28): the original .py file birth time, carried as literal TEST_CASE.created_at with a timezone and serialized as source_created_at. Display this in Repository, Plan/source import and Task scope. Preserve it when copying/adapting the same source. Unknown time is —; never infer it from import time or modification time. Source Generation remains the separate internal immutable import key used for lineage/conflicts; it is no longer the file timestamp shown to the user.
+
+
+**Task Info Sections** (2026-10-28): Content owns assignment/setup/dates/references/firmware; Note & History owns notes and existing change history. Test Tasks additionally expose Scope, Connection and the reserved DUT Config section, in that order. Plan Tasks expose neither test scope nor connection/DUT sections. DUT Configuration remains a label without fill rules. This changes information presentation, not Task ownership, scope or execution semantics.
+
+2026-10-28 workspace navigation: Plan manages Plan Tasks in the current Project; Execution opens existing Test Tasks as independent tabs through Add Task (view selection only). Test Plan definition authoring remains accessible via Test Plans in Execution. See docs/status/2026-10-28-execution-task-workspaces.md.
+
+2026-10-29 Execution tabs: Add Task is a modal-selection button after all Task tabs; X closes only the in-memory view and preserves Task data and execution.
+
+2026-10-29 superseding Execution scope: #/execution is global across all Projects, sharing one tab set. Add Task selects a Project to browse Test Tasks and retains pending choices across Project switches until batch addition. Active Task actions resolve its actual owning Project/Plan.
+
+2026-10-29 Execution persistence: browser localStorage retains tab order and active Task across reload/reopen. X removes a saved view; missing/deleted Tasks are pruned. Supersedes in-memory-only notes.
+
+2026-10-29 Plan navigation correction: the Plan entry opens the Project Plan overview list at #/project/<id>/plans. Supersedes earlier Plan Task management routing for this entry.
+
+2026-10-29 Plan authoring: Project Plan list has expandable Plan names opening the Case editor inline, one active Plan at a time. Authoring list no longer displays statistics or Task matrices; reports retain their existing matrices.
+
+2026-10-29 Plan tabs supersede expandable list: Project Plans are tabs beside the Plan heading. Add Plan stays last and invokes existing creation. Drag order is a browser preference per Project, without changing Report order. New Plans auto-select their tab.
+
+2026-10-29 Execution tab ordering: Task tabs drag before/after peers or to the end before Add Task. Ordered IDs persist in the existing browser tab preference; active Task and editor drafts remain unchanged during reorder.
+
+2026-10-29 Plan import UI: source selection and the two-pane import operation occur in dialogs. The Plan page stays behind the modal; Close/Escape returns to the same Plan tab, with closing blocked during active imports.
+
+2026-10-29 Import batch selection: checked source Cases drag as one group, using case_ids in the existing import-cases API. Batch validation, conflicts and commit/rollback are atomic. Single Case and folder drag remain compatible.
+
+2026-10-29 Case actions: Plan and Repository tables omit Actions columns; right-click Case/folder rows for text menu operations. Context Menu key/Shift+F10 works, roots cannot be deleted, and existing locks/confirmations remain. Parameters column is retained.
+
+2026-10-29 Selection/Schedule update: Case and folder checkboxes are always visible in Plan/Repository/import sources, roots excluded. Mixed selected items support transactional drag move/import with subtree deduplication. Repository batch-mode entry removed. Schedule calendar ends on month-end three calendar months after the latest Task Plan End Date.
+
+2026-10-29 Selection headers: Plan, Repository and import target/source lists offer select-all/unselect with mixed state, including collapsed/filtered items except BMC roots. Multi-selection context menus provide confirmed Delete selected items. Plan mixed deletion is atomic across files, records and current Task evidence.
+
+2026-10-29 Folder selection: Plan, Repository and Import folders cascade checks through the subtree; ancestors are checked/mixed/clear from descendants. Only full folders enter whole-folder selection payloads. Folder row backgrounds are transparent; drag feedback remains.
+
+2026-10-29 Hierarchy layout: Plan/Repository/Import Case and folder checkboxes share a fixed checkbox origin at each depth, with 18px indent per level.
+
+2026-10-29 Folder expansion: collapsed IDs persist in browser localStorage separately per Plan, Repository and import source. Main Plan and its import target share the Plan preference; source preferences are independent.
+
+2026-10-29 Plan selection: active Plan tab is a per-Project browser preference restored on reload/reopen. Newly created Plans become active; missing/deleted saved Plans fall back to an existing ordered tab.
+
+2026-10-29 Case tools: declared automation types are automatic (gear), semi_automatic (wrench) and manual (person; workflow reserved). Plan Parameters buttons indicate saved completeness; 0/False are filled, blank strings are missing. Source Viewer and Parameter Editor are independent modeless draggable/resizable windows; each stores explicit Case/Plan identity and protects unsaved drafts. Repository defaults remain read-only. See docs/status/2026-10-29-case-floating-tools.md.
+
+2026-10-29: Viewer/Parameter Editor use native browser popup windows for cross-monitor movement; see docs/status/2026-10-29-case-floating-tools.md (latest amendment).
+2026-10-29 latest: Viewer/Editor default to right-side dock; Open in Window explicitly detaches while retaining drafts. See latest amendment in docs/status/2026-10-29-case-floating-tools.md.
+2026-10-29 latest user decision: cancel independent Viewer/Editor windows entirely; right-side main-page panels only. No detach button.
+2026-10-29 latest: normal Plan Case list uses Task List bottom gap (24px); Case clicks only update already-open Viewer/Editor, never open them implicitly.
+2026-10-29 latest Plan layout: title/Project subtitle, Plan tabs, toolbar (search/Import/Rename/Delete), Case list.

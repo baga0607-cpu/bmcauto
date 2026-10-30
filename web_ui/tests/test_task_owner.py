@@ -23,7 +23,7 @@ class TaskOwnerTest(unittest.TestCase):
         for data in [{'task_type':'Plan','project_id':'project'},{'task_type':'Test','plan_id':'a'}]:
             response=self.client.post('/api/tasks',json={**data,'setup':{'owner':'David','notes':'keep'}})
             self.assertEqual(response.status_code,200,response.get_json());tid=response.get_json()['id']
-            self.assertEqual(self.client.patch('/api/tasks/'+tid,json={'setup':{'start_date':'2026-10-22','end_date':'2026-10-23'},'history':'Assign dates','expected_start_date':'','expected_end_date':''}).status_code,200)
+            self.assertEqual(self.client.patch('/api/tasks/'+tid,json={'setup':{'start_date':'2026-10-22','end_date':'2026-10-23'},'history':'Assign dates','expected_task_status':'Not Scheduled','expected_start_date':'','expected_end_date':''}).status_code,200)
             row=next(t for t in self.client.get('/api/tasks').get_json()['tasks'] if t['id']==tid)
             self.assertEqual(row['setup']['owner'],'David');self.assertEqual(row['setup']['notes'],'keep')
             self.assertEqual(self.client.patch('/api/tasks/'+tid,json={'setup':{'owner':'Alice'}}).status_code,200)

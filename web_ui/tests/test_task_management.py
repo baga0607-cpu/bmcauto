@@ -18,7 +18,7 @@ class TaskManagementTest(unittest.TestCase):
         self.assertEqual(rows['task1']['project_name'],'Project')
         self.assertEqual(rows['task1']['plan_name'],'Plan A')
         self.assertEqual(rows['task1']['scope_count'],0)
-        self.assertEqual(rows['task1']['setup'],{})
+        self.assertEqual(rows['task1']['setup'],{'task_status':'Not Scheduled'})
         self.assertNotIn('environment_config',rows['task1'])
         self.assertNotIn('password',rows['task1'])
 
@@ -33,7 +33,7 @@ class TaskManagementTest(unittest.TestCase):
         self.assertEqual(setup['tester'],'Alice');self.assertEqual(setup['firmware'],'v1')
         self.assertEqual(setup['notes'],'One-day run')
         self.assertEqual(self.client.get('/api/tasks/'+tid+'/settings').get_json()['host'],'https://task.invalid')
-        self.assertEqual(self.client.patch('/api/tasks/'+tid,json={'setup':{'start_date':'','end_date':''},'history':'Clear planned dates','expected_start_date':'2026-10-15','expected_end_date':'2026-10-15'}).status_code,200)
+        self.assertEqual(self.client.patch('/api/tasks/'+tid,json={'setup':{'start_date':'','end_date':''},'history':'Clear planned dates','expected_task_status':'New','expected_start_date':'2026-10-15','expected_end_date':'2026-10-15'}).status_code,200)
         self.assertEqual(self.rows()[tid]['setup']['start_date'],'')
 
     def test_invalid_dates_and_names_are_rejected_atomically(self):

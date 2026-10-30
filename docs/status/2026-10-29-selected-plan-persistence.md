@@ -1,0 +1,5 @@
+# Selected Plan tab persistence — 2026-10-29
+
+The selected Plan tab is stored per Project in browser localStorage (bmc-plan-active-v1:<project id>). Tab selection, Rename/Delete targeting and newly created Plans update the saved choice. Reload/reopen restores a valid saved Plan independently of visual tab order. A deleted/missing Plan falls back to the first surviving ordered tab; an empty Project has no selected Plan. Folder collapse preferences remain independent and unchanged.
+
+Verification: hierarchical_selection.test.cjs passed reload and closed/reopened-page restoration of the non-first Plan, folder-state retention, and fallback after removing the selected Plan fixture. execution_workspace.test.cjs verifies that sorting another tab to the front does not change the saved active Plan after reload, plus existing creation/lock/selection/import/Execution workflows. Node syntax and task-management/Schedule checks passed. No backend changes, formal mutations or restart.

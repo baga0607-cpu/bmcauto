@@ -23,6 +23,8 @@ import glob
 import io
 import re
 import unicodedata
+from report_case import method_rows, description, display, firmware
+from xml.sax.saxutils import escape as _xml_escape
 
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
@@ -30,7 +32,7 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import mm
 from reportlab.platypus import (
     SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak,
-    KeepTogether, HRFlowable
+    KeepTogether, HRFlowable, CondPageBreak
 )
 from reportlab.pdfgen import canvas as rl_canvas
 from reportlab.pdfbase import pdfmetrics
@@ -111,10 +113,13 @@ class NumberedCanvas(rl_canvas.Canvas):
             return
 
         # ─ 頁首 ─
-        self.setFont('Helvetica-Bold', 8)
+        self.setFont(_CJK_FONT_BOLD, 8)
         self.setFillColor(C_NAVY)
         task_name = self._report_meta.get('task_name', '')
-        self.drawString(MARGIN, PAGE_H - 22, f'BMC Automated Test Report  |  {task_name}')
+        heading = f'BMC Automated Test Report  |  {task_name}'
+        while pdfmetrics.stringWidth(heading, _CJK_FONT_BOLD, 8) > COL_W - 120:
+            heading = heading[:-4] + '...'
+        self.drawString(MARGIN, PAGE_H - 22, heading)
         self.setFillColor(C_MUTED)
         self.setFont('Helvetica', 8)
         self.drawRightString(PAGE_W - MARGIN, PAGE_H - 22,
@@ -219,8 +224,8 @@ def _cfg_table(rows, styles):
              Paragraph('<b>Value</b>', styles['tbl_hdr'])]]
     for k, v in rows:
         data.append([
-            Paragraph(str(k), styles['tbl_cell_bold']),
-            Paragraph(str(v) if v else '<i style="color:#888">N/A — Reserved for future configuration</i>', styles['tbl_cell']),
+            Paragraph(_xml_escape(str(k)), styles['tbl_cell_bold']),
+            Paragraph(_xml_escape(str(v)) if v else '<i style="color:#888">—</i>', styles['tbl_cell']),
         ])
     t = Table(data, colWidths=[COL_W * 0.35, COL_W * 0.65])
     t.setStyle(TableStyle([
@@ -291,7 +296,7 @@ def _determine_test_type(script_path):
 
 
 # ── 主函數 ───────────────────────────────────────────────────────────────────
-def generate_task_pdf_report(task_id, output_path, db_path=None, log_dir=None):
+def generate_task_pdf_report(task_id, output_path, db_path=None, log_dir=None, report_title="BMC Test Report", source_tasks=None, report_scope=None, source_details=None):
     """
     Generate the official PDF report for a Task and embed API / Console Logs.
     """
@@ -323,7 +328,7 @@ def generate_task_pdf_report(task_id, output_path, db_path=None, log_dir=None):
     # ─ 查詢關聯 Test Cases ─
     rows = cur.execute(f"""
         SELECT btc.testcase_id, btc.position, btc.status, btc.bug_id, btc.executed_at, btc.result_json, btc.log_text, btc.api_log_text, btc.manual_override_json, btc.needs_retest,
-               tc.display_name, tc.script_path,
+               tc.display_name, tc.script_path, tc.script_kind,
                CASE WHEN parent.id IS NULL THEN folder.name ELSE parent.name || '/' || folder.name END AS category_name
         FROM {task_tc_table} btc
         JOIN testcases tc ON btc.testcase_id = tc.system_id
@@ -361,11 +366,11 @@ def generate_task_pdf_report(task_id, output_path, db_path=None, log_dir=None):
     # 1. COVER PAGE
     # ════════════════════════════════════════════════════════════════════════
     story.append(Spacer(1, 60))
-    story.append(Paragraph('BMC Test Report', styles['cover_title']))
+    story.append(Paragraph(_xml_escape(report_title), styles['cover_title']))
     story.append(Spacer(1, 6))
-    story.append(Paragraph(f'Project : {proj_name}', styles['cover_sub']))
-    story.append(Paragraph(f'Plan : {plan_name}', styles['cover_sub']))
-    story.append(Paragraph(f'Task : {task_name}', styles['cover_sub']))
+    story.append(Paragraph(f'Project : {_xml_escape(proj_name)}', styles['cover_sub']))
+    story.append(Paragraph(f'Plan : {_xml_escape(plan_name)}', styles['cover_sub']))
+    story.append(Paragraph(f'Task : {_xml_escape(task_name)}', styles['cover_sub']))
     story.append(Spacer(1, 30))
     story.append(HRFlowable(width=COL_W, thickness=2, color=C_NAVY))
     story.append(Spacer(1, 20))
@@ -408,8 +413,8 @@ def generate_task_pdf_report(task_id, output_path, db_path=None, log_dir=None):
          Paragraph('<b>Approved By (DQA)</b>', styles['tbl_hdr']),
          Paragraph('<b>Issue Date</b>', styles['tbl_hdr'])],
         [Paragraph('Automated Agent', styles['tbl_cell']),
-         Paragraph('— Reserved —', styles['tbl_cell']),
-         Paragraph('— Reserved —', styles['tbl_cell']),
+         Paragraph('—', styles['tbl_cell']),
+         Paragraph('—', styles['tbl_cell']),
          Paragraph(date_str, styles['tbl_cell'])],
         [Paragraph('Version : 1.0', styles['note']), '', '', ''],
     ]
@@ -432,10 +437,10 @@ def generate_task_pdf_report(task_id, output_path, db_path=None, log_dir=None):
     story.append(HRFlowable(width=COL_W, thickness=1, color=C_BORDER))
     story.append(Spacer(1, 10))
 
-    story.append(Paragraph('00.00.00 &nbsp; DUT Environment & Configuration', styles['toc_cat']))
+    story.append(Paragraph('00.00.00 &nbsp; Report Information', styles['toc_cat']))
     for idx, (cat_name, cat_rows) in enumerate(categories_map.items(), 1):
         story.append(Paragraph(
-            f'0{idx}.00.00 &nbsp; {cat_name} &nbsp;&nbsp;'
+            f'0{idx}.00.00 &nbsp; {_xml_escape(str(cat_name))} &nbsp;&nbsp;'
             f'<font color="#888888">({len(cat_rows)} test cases)</font>',
             styles['toc_cat']))
         for r in cat_rows:
@@ -443,7 +448,7 @@ def generate_task_pdf_report(task_id, output_path, db_path=None, log_dir=None):
             status = (r['status'] or 'tbd').upper()
             color  = '#1E7E34' if status == 'PASSED' else ('#B71C1C' if status == 'FAILED' else '#856404')
             story.append(Paragraph(
-                f'• {tc_nm} &nbsp;'
+                f'• {_xml_escape(str(tc_nm))} &nbsp;'
                 f'<font color="{color}"><b>[{status}]</b></font>',
                 styles['toc_tc']))
 
@@ -452,39 +457,19 @@ def generate_task_pdf_report(task_id, output_path, db_path=None, log_dir=None):
     # ════════════════════════════════════════════════════════════════════════
     # 3. DUT ENVIRONMENT & CONFIGURATION (00.00.00)
     # ════════════════════════════════════════════════════════════════════════
-    story.append(Paragraph('Test Suite : 00.00.00 DUT Environment & Configuration',
+    story.append(Paragraph('Report Information',
                            styles['section_title']))
     story.append(HRFlowable(width=COL_W, thickness=1, color=C_BORDER))
     story.append(Spacer(1, 8))
 
     # 基本欄位 (完整對照官方 PDF Test Configuration Table)
-    cfg_rows = [
-        ('Project Name',            proj_name),
-        ('Test Plan',               plan_name),
-        ('Task Name',         task_name),
-        ('Report Version',          '1.0'),
-        ('Test Date',               now_str),
-        ('Environment / DUT Note',  env_config or None),
-        # ── DUT Hardware (預留) ──────────────────────────────
-        ('DUT Model / Platform',    None),   # 預留：將來從 config.yaml 或 env_config 填入
-        ('DUT Serial Number',       None),
-        ('BMC Firmware Version',    None),
-        ('BIOS Version',            None),
-        ('Firmware / Task Label',   None),
-        # ── Test Environment (預留) ─────────────────────────
-        ('OS Version (Host)',       None),
-        ('IPMITool Version',        None),
-        ('Test Site',               None),
-        ('Tester / Engineer',       None),
-        ('Test Environment Photo',  None),   # 預留：圖檔名或連結
-        # ── 已知資訊 ────────────────────────────────────────
-        ('Test Engine',             'BMC Automation Suite v3.0'),
-        ('Supported Test Types',    'Redfish REST API  |  BMC Web UI  |  IPMITool CLI'),
-        ('Requirements / Keywords', None),
-        ('Issue ID',                None),
-    ]
-    cfg_rows.extend((str(key).replace('_', ' ').title(), str(value)) for key, value in task_metadata.items())
+    cfg_rows = [('Project Name', proj_name), ('Test Plan', plan_name),
+                ('Report', task_name), ('Generated At', now_str)]
     story.append(_cfg_table(cfg_rows, styles))
+    if report_scope:
+        story.append(Paragraph('Included Tasks', styles['section_title']))
+        for name in report_scope:
+            story.append(Paragraph(_xml_escape(str(name)), styles['body']))
     story.append(PageBreak())
 
     # ════════════════════════════════════════════════════════════════════════
@@ -494,7 +479,7 @@ def generate_task_pdf_report(task_id, output_path, db_path=None, log_dir=None):
 
     for cat_idx, (cat_name, cat_rows) in enumerate(categories_map.items(), 1):
         story.append(Paragraph(
-            f'Test Suite : 0{cat_idx}.00.00 {cat_name}',
+            f'Test Suite : 0{cat_idx}.00.00 {_xml_escape(cat_name)}',
             styles['section_title']))
         story.append(HRFlowable(width=COL_W, thickness=1, color=C_BORDER))
         story.append(Spacer(1, 6))
@@ -503,12 +488,6 @@ def generate_task_pdf_report(task_id, output_path, db_path=None, log_dir=None):
             tc_id    = r['testcase_id']
             tc_name  = r['display_name'] or tc_id
             status   = r['status'] or 'tbd'
-            exec_at  = r['executed_at'] or 'N/A'
-            bug_id   = r['bug_id'] or 'None'
-            tc_type  = _determine_test_type(r['script_path'])
-            safe_nm  = _safe_name(tc_name)
-
-            from xml.sax.saxutils import escape
             result_details = r['result_json'] or ''
             try:
                 result_data = json.loads(result_details) if result_details else {}
@@ -516,25 +495,29 @@ def generate_task_pdf_report(task_id, output_path, db_path=None, log_dir=None):
                 result_data = {}
             if not isinstance(result_data, dict):
                 result_data = {}
-            log_excerpt = r['log_text'] or 'No latest execution log.'
-            if isinstance(result_data.get('log_records'), list):
-                # Table rows cannot split arbitrarily long evidence across pages.
-                records = [entry for entry in result_data['log_records'] if isinstance(entry, dict)]
-                final = next((entry for entry in reversed(records) if entry.get('kind') == 'finish'), {})
-                checks = [entry for entry in records if entry.get('kind') == 'check']
-                reason = str(final.get('reason', ''))
-                reason = reason[:300] + ('…' if len(reason) > 300 else '')
-                result_details = (f"Result: {final.get('status', status)}\nReason: {reason}\n"
-                                  f"Checks: {sum(bool(entry.get('passed')) for entry in checks)}/{len(checks)} passed")
-                log_excerpt = 'Full execution and HTTP evidence are included in the log attachments.'
-            exec_notes = escape(result_details + ('\n' if result_details else '') + log_excerpt).replace('\n', '<br/>')
+            # Read literal metadata only; importing a test file must never execute it.
+            metadata = {}
+            if r['script_kind'] == 'single':
+                try:
+                    from single_case import metadata as read_metadata, script_file
+                    from types import SimpleNamespace
+                    main_root = os.environ.get('BMC_MAIN_PROGRAM_DIR', os.path.join(BASE_DIR, '..', 'main_program'))
+                    metadata = read_metadata(script_file(main_root, SimpleNamespace(script_path=r['script_path'])).read_text(encoding='utf-8'))
+                except Exception:
+                    metadata = {}
+            detail = source_details.get(tc_id, {}) if source_details is not None else {'name':task_name, 'setup':task_metadata}
+            setup = detail.get('setup') or {}
+            if not isinstance(setup, dict):
+                setup = {}
+            notes = []
             if r['needs_retest']:
-                exec_notes = '<b>Plan definition or Task connection settings changed. Rerun needed; retained evidence predates the current settings.</b><br/><br/>' + exec_notes
-            manual = json.loads(r['manual_override_json']) if r['manual_override_json'] else None
-            if manual:
-                manual_note = ('Manual status: ' + manual['status'] + '\nModified at: ' + manual['modified_at']
-                               + '\nReason: ' + (manual['reason'] or 'Not provided'))
-                exec_notes = escape(manual_note).replace('\n', '<br/>') + '<br/><br/>' + exec_notes
+                notes.append('Plan definition or Task connection settings changed. Rerun needed; retained evidence predates the current settings.')
+            try:
+                manual = json.loads(r['manual_override_json'] or 'null')
+            except (ValueError, TypeError):
+                manual = None
+            if isinstance(manual, dict):
+                notes.append('Manual status: '+display(manual.get('status'))+'; Modified at: '+display(manual.get('modified_at'))+'; Reason: '+display(manual.get('reason')))
             attach_names = []
             for content in [test_log_text(r['log_text'], r['api_log_text'])]:
                 if content:
@@ -552,137 +535,52 @@ def generate_task_pdf_report(task_id, output_path, db_path=None, log_dir=None):
                     attachments_to_add.append((name, content.encode('utf-8')))
                     attach_names.append(name)
 
-            # ── Test Case 標題 ──
-            tc_header_text = (
-                f'<b>Test Case {cat_idx}.{tc_idx:02d} : {tc_name}</b>'
-                f' &nbsp;[Version : 1]'
-                f' &nbsp;[Type : {tc_type}]'
-            )
-            story.append(Paragraph(tc_header_text, styles['tc_title']))
-
-            # ── Step 明細表 ──
-            # 欄位嚴格對照官方 PDF: #, Step actions, Expected Results,
-            #                        Execution notes, Exec Status
-            step_hdr = [
-                Paragraph('#', styles['tbl_hdr']),
-                Paragraph('Step actions', styles['tbl_hdr']),
-                Paragraph('Expected Results', styles['tbl_hdr']),
-                Paragraph('Execution notes', styles['tbl_hdr']),
-                Paragraph('Execution<br/>Status', styles['tbl_hdr']),
-            ]
-
-            # Step actions 文字 (從 script_path 推導)
-            step_action = (
-                f'Execute the Plan Test Case:<br/>'
-                f'<b>{tc_name}</b><br/><br/>'
-                f'<font color="#6C757D">Module path:<br/>'
-                f'{r["script_path"] or "Automated sequence"}</font>'
-            )
-
-            # Expected Results (依測試類型給出通用期待)
-            if tc_type == 'Redfish REST API':
-                expected = (
-                    'HTTP response code shall be 200 OK (or appropriate 2xx).<br/>'
-                    'Response JSON schema must match Redfish specification.<br/>'
-                    'No timeout or connection error shall occur.'
-                )
-            elif tc_type == 'IPMITool CLI':
-                expected = (
-                    'IPMI command shall return exit code 0.<br/>'
-                    'Output data shall match expected format.<br/>'
-                    'No error or warning message in stdout.'
-                )
-            else:
-                expected = (
-                    'Web UI page shall load within acceptable time.<br/>'
-                    'UI elements shall respond correctly to interaction.<br/>'
-                    'No JavaScript console error or page crash.'
-                )
-
-            # 附件提示行 (讓使用者知道可以打開附件)
+            # Worksheet 1: identity/result, description, method rows, Task context.
+            def cell(value, style='tbl_cell'):
+                return Paragraph(_xml_escape(display(value)).replace('\n', '<br/>'), styles[style])
+            case_header = Table([[
+                cell('Case Name: '+str(tc_name), 'tbl_cell_bold'),
+                cell('Result: '+({'Passed':'PASS','Failed':'FAIL','TBD':'NR','Block':'Block'}.get(status, display(status))), 'tbl_cell_bold'),
+            ]], colWidths=[COL_W*.76, COL_W*.24])
+            case_header.setStyle(TableStyle([
+                ('BACKGROUND',(0,0),(-1,-1),C_LIGHT_BLUE),
+                ('GRID',(0,0),(-1,-1),.5,C_BORDER),
+                ('VALIGN',(0,0),(-1,-1),'TOP'),
+                ('TOPPADDING',(0,0),(-1,-1),7),('BOTTOMPADDING',(0,0),(-1,-1),7),
+            ]))
+            story.append(CondPageBreak(160))
+            case_header.keepWithNext = False
+            story.append(case_header)
+            desc = cell('Description: '+description(result_data, metadata), 'body')
+            desc.keepWithNext = False
+            story.append(desc)
+            method_title = Paragraph('Detail Test Method', styles['tc_title'])
+            method_title.keepWithNext = False
+            story.append(method_title)
+            table_rows = [[cell(label,'tbl_hdr') for label in ('Step','Criteria','Result')]]
+            table_rows.extend([cell(value) for value in row] for row in method_rows(result_data, metadata))
+            methods = Table(table_rows, colWidths=[COL_W*.34,COL_W*.33,COL_W*.33], repeatRows=1, splitByRow=0, splitInRow=1)
+            methods.setStyle(TableStyle([
+                ('BACKGROUND',(0,0),(-1,0),C_BLUE_HEADER),
+                ('GRID',(0,0),(-1,-1),.4,C_BORDER),('VALIGN',(0,0),(-1,-1),'TOP'),
+                ('LEFTPADDING',(0,0),(-1,-1),6),('RIGHTPADDING',(0,0),(-1,-1),6),
+                ('TOPPADDING',(0,0),(-1,-1),6),('BOTTOMPADDING',(0,0),(-1,-1),6),
+            ]))
+            story.append(methods)
+            story.append(Spacer(1,6))
+            for value in [
+                'Task Name: '+display(detail.get('name')),
+                'FW Package: '+firmware(setup),
+                'DUT Configuration:',
+                'Tester: '+display(setup.get('owner')),
+                'Execution Date: '+display(r['executed_at']),
+            ]:
+                story.append(cell(value,'body'))
+            for note in notes:
+                story.append(cell(note,'note'))
             if attach_names:
-                attach_hint = (
-                    '<br/><br/><font color="#2E5D9E"><b>'
-                    '[ATTACH] Full logs are embedded in this PDF as file attachments.<br/>'
-                    'Open the "Attachments" panel in Adobe Acrobat / Reader to view:<br/>'
-                    '</b></font>' +
-                    ''.join([f'<font color="#2E5D9E">  - {escape(n)}</font><br/>' for n in attach_names])
-                )
-            else:
-                attach_hint = '<br/><font color="#856404"><i>No log files found for this test case.</i></font>'
-
-            exec_notes_cell = exec_notes + attach_hint
-
-
-            step_row = [
-                Paragraph('1', styles['tbl_cell']),
-                Paragraph(step_action, styles['tbl_cell']),
-                Paragraph(expected, styles['tbl_cell']),
-                Paragraph(exec_notes_cell, styles['tbl_cell']),
-                _status_para(status, styles),
-            ]
-
-            step_table_data = [step_hdr, step_row]
-            t_steps = Table(
-                step_table_data,
-                colWidths=[COL_W * w for w in [0.04, 0.20, 0.22, 0.38, 0.10, 0.06]])
-            # 重新算一下比例 (5 欄)
-            t_steps = Table(
-                step_table_data,
-                colWidths=[
-                    COL_W * 0.04,   # #
-                    COL_W * 0.21,   # Step actions
-                    COL_W * 0.22,   # Expected Results
-                    COL_W * 0.40,   # Execution notes
-                    COL_W * 0.13,   # Status
-                ])
-            t_steps.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, 0), C_BLUE_HEADER),
-                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [C_WHITE]),
-                ('GRID', (0, 0), (-1, -1), 0.4, C_BORDER),
-                ('TOPPADDING', (0, 0), (-1, -1), 5),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
-                ('LEFTPADDING', (0, 0), (-1, -1), 5),
-                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-            ]))
-
-            # ── Execution Details 小表格 ──
-            detail_data = [
-                [Paragraph('<b>Test Case ID</b>', styles['tbl_cell_bold']),
-                 Paragraph(tc_id, styles['tbl_cell']),
-                 Paragraph('<b>Test Type</b>', styles['tbl_cell_bold']),
-                 Paragraph(tc_type, styles['tbl_cell'])],
-                [Paragraph('<b>Executed At</b>', styles['tbl_cell_bold']),
-                 Paragraph(exec_at, styles['tbl_cell']),
-                 Paragraph('<b>Execution Mode</b>', styles['tbl_cell_bold']),
-                 Paragraph('Automated', styles['tbl_cell'])],
-                [Paragraph('<b>Bug / Issue ID</b>', styles['tbl_cell_bold']),
-                 Paragraph(bug_id, styles['tbl_cell']),
-                 Paragraph('<b>Result Status</b>', styles['tbl_cell_bold']),
-                 _status_para(status, styles)],
-                [Paragraph('<b>Tester</b>', styles['tbl_cell_bold']),
-                 Paragraph('N/A — Reserved for future configuration', styles['note']),
-                 Paragraph('<b>Test Duration</b>', styles['tbl_cell_bold']),
-                 Paragraph('N/A — Reserved for future configuration', styles['note'])],
-            ]
-            t_detail = Table(detail_data, colWidths=[
-                COL_W * 0.18, COL_W * 0.32, COL_W * 0.18, COL_W * 0.32])
-            t_detail.setStyle(TableStyle([
-                ('ROWBACKGROUNDS', (0, 0), (-1, -1), [C_ROW_ALT, C_WHITE]),
-                ('GRID', (0, 0), (-1, -1), 0.4, C_BORDER),
-                ('TOPPADDING', (0, 0), (-1, -1), 4),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
-                ('LEFTPADDING', (0, 0), (-1, -1), 6),
-                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-            ]))
-
-            block = KeepTogether([
-                t_steps,
-                Spacer(1, 4),
-                t_detail,
-                Spacer(1, 16),
-            ])
-            story.append(block)
+                story.append(cell('Full Test log attachments: '+', '.join(attach_names),'note'))
+            story.append(Spacer(1,20))
 
         story.append(PageBreak())
 
@@ -717,6 +615,7 @@ def generate_task_pdf_report(task_id, output_path, db_path=None, log_dir=None):
     reader = pypdf.PdfReader(buf)
     writer = pypdf.PdfWriter()
     writer.append_pages_from_reader(reader)
+    writer.add_metadata({'/Title': f'{report_title} - {task_name}', '/Author': 'BMCAgent'})
 
     seen = set()
     embedded_count = 0

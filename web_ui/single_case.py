@@ -33,9 +33,11 @@ def metadata(source):
         raise ps.StateError('Test Case name is too long')
     if not isinstance(meta.get('description', ''), str):
         raise ps.StateError('TEST_CASE.description must be text')
-    if 'automation' in meta and meta['automation'] not in ('automatic','semi_automatic'):
-        raise ps.StateError('TEST_CASE.automation must be automatic or semi_automatic.')
+    if 'automation' in meta and meta['automation'] not in ('automatic','semi_automatic','manual'):
+        raise ps.StateError('TEST_CASE.automation must be automatic, semi_automatic or manual.')
     meta.setdefault('automation','unclassified')
+    if 'created_at' in meta:
+        meta['created_at'] = normalize_created_at(meta['created_at'])
     parameters = meta.get('parameters', {})
     if not isinstance(parameters, dict):
         raise ps.StateError('TEST_CASE.parameters must be a dictionary')
@@ -57,6 +59,36 @@ def metadata(source):
     if any(name not in ('client', 'context', 'preset') for name in required) or any(default is None for default in args.kw_defaults):
         raise ps.StateError('execute has unsupported required arguments')
     return meta
+
+
+def normalize_created_at(value):
+    """Original source file birth time, carried in the .py; never import/mtime."""
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise ps.StateError('TEST_CASE.created_at must be an ISO timestamp with a timezone.')
+    try:
+        stamp = datetime.fromisoformat(value.replace('Z', '+00:00'))
+        if stamp.utcoffset() is None:
+            raise ValueError('Missing timezone')
+        return stamp.astimezone(timezone.utc).isoformat(timespec='microseconds')
+    except ValueError as error:
+        raise ps.StateError('TEST_CASE.created_at must be an ISO timestamp with a timezone.') from error
+
+
+def creation_time_for_case(root, tc):
+    if not root or tc.script_kind != 'single':
+        return None
+    try:
+        return metadata(script_file(root,tc).read_text(encoding='utf-8')).get('created_at')
+    except (OSError, UnicodeError, SyntaxError, ps.StateError):
+        return None
+
+
+def repository_info(row):
+    meta = metadata(row.source_text)
+    return dict(id=row.id, name=row.name, source_version=row.source_version,
+                source_created_at=meta.get('created_at'), metadata=meta)
 
 
 def validate_settings(meta, settings):
@@ -92,10 +124,21 @@ def parameter_count_for_case(root, tc):
     try: return len(metadata(script_file(root,tc).read_text(encoding='utf-8')).get('parameters',{}))
     except (OSError, UnicodeError, SyntaxError, ps.StateError): return 0
 
+def parameter_state_for_case(root, tc):
+    if not root or tc.script_kind != 'single':return dict(parameter_count=0,parameters_complete=True,missing_parameters=[])
+    try:
+        specs=metadata(script_file(root,tc).read_text(encoding='utf-8')).get('parameters',{})
+        settings=json.loads(tc.settings_json or '{}')
+        missing=[key for key in specs if key not in settings or settings[key] is None or isinstance(settings[key],str) and not settings[key].strip()]
+        return dict(parameter_count=len(specs),parameters_complete=not missing,missing_parameters=missing)
+    except (OSError,UnicodeError,SyntaxError,ps.StateError,ValueError,TypeError):
+        return dict(parameter_count=0,parameters_complete=False,missing_parameters=[])
+
+
 def definition(root, tc):
     source = script_file(root, tc).read_text(encoding='utf-8')
     meta = metadata(source)
-    return dict(**tc.to_dict(), source=source, metadata=meta, settings=json.loads(tc.settings_json or '{}'))
+    return dict(**tc.to_dict(), source=source, metadata=meta, source_created_at=meta.get('created_at'), settings=json.loads(tc.settings_json or '{}'))
 
 
 def execute_script(root, module_path, client, context, preset):
@@ -144,8 +187,8 @@ def register(app, runtime):
 
     @route('/api/repository/testcases', ['GET'])
     def repository_list(s, data):
-        return jsonify(co.arrange(s,'repository',[dict(id=row.id, name=row.name, source_version=row.source_version,
-                             folder_id=(s.get(RepositoryFolderCase,row.id).folder_id if s.get(RepositoryFolderCase,row.id) else None), metadata=metadata(row.source_text))
+        return jsonify(co.arrange(s,'repository',[dict(**repository_info(row),
+                             folder_id=(s.get(RepositoryFolderCase,row.id).folder_id if s.get(RepositoryFolderCase,row.id) else None))
                         for row in s.query(RepositoryCase).order_by(RepositoryCase.source_version.desc())]))
 
     @route('/api/repository/testcases', ['POST'])
@@ -164,12 +207,12 @@ def register(app, runtime):
         folder=ps.require(s,RepositoryFolder,data.get('folder_id') or rt.ROOT)
         s.add(RepositoryFolderCase(repository_id=row.id,folder_id=folder.id))
         s.commit()
-        return jsonify(id=row.id, name=row.name, source_version=row.source_version), 201
+        return jsonify(id=row.id, name=row.name, source_version=row.source_version, source_created_at=meta.get('created_at')), 201
 
     @route('/api/repository/testcases/<repository_id>', ['GET'])
     def repository_read(s, data, repository_id):
         row=ps.require(s,RepositoryCase,repository_id)
-        return jsonify(id=row.id,name=row.name,source_version=row.source_version,source=row.source_text,metadata=metadata(row.source_text))
+        return jsonify(**repository_info(row),source=row.source_text)
 
     @route('/api/repository/testcases/<repository_id>', ['DELETE'])
     def repository_remove(s, data, repository_id):
@@ -288,12 +331,22 @@ def register(app, runtime):
         target=ps.require(s,ps.PlanFolder,data['target_folder_id']) if data.get('target_folder_id') else None
         if target and target.plan_id!=plan_id: raise ps.StateError('Destination belongs to another Plan')
         kind=data.get('kind'); source_type=data.get('source_type'); identity=data.get('id')
-        if kind not in ('case','folder') or source_type not in ('repository','plan'):
+        if kind not in ('case','folder','selection') or source_type not in ('repository','plan'):
             raise ps.StateError('Choose a case or folder source')
+        folder_ids=data.get('folder_ids',[])
+        if kind=='selection' and (not isinstance(folder_ids,list) or any(not isinstance(value,str) or not value for value in folder_ids)):
+            raise ps.StateError('Choose valid folder IDs')
+        case_ids=data.get('case_ids')
+        if case_ids is not None:
+            if kind not in ('case','selection') or not isinstance(case_ids,list) or (not case_ids and not (kind=='selection' and folder_ids)) or any(not isinstance(value,str) or not value for value in case_ids) or len(case_ids)!=len(set(case_ids)):
+                raise ps.StateError('Choose unique Test Case IDs for batch import')
+        else:
+            case_ids=[identity] if kind=='case' else []
+        if kind=='selection' and not(case_ids or folder_ids):raise ps.StateError('Select folders or Test Cases')
         anchor=None
         if 'relative_to' in data or 'insertion' in data:
             anchor=ps.require(s,TestCase,data.get('relative_to'))
-            if kind!='case' or data.get('insertion') not in ('before','after') or anchor.plan_id!=plan_id or anchor.folder_id!=(target.id if target else None):
+            if (kind not in ('case','selection') or kind=='selection' and folder_ids) or data.get('insertion') not in ('before','after') or anchor.plan_id!=plan_id or anchor.folder_id!=(target.id if target else None):
                 raise ps.StateError('Choose a Test Case in the destination folder and before/after insertion.')
         source_plan=data.get('source_plan_id')
         if source_type=='plan':
@@ -326,14 +379,33 @@ def register(app, runtime):
                 rows=s.query(TestCase).filter_by(plan_id=source_plan,folder_id=identity).order_by(TestCase.position,TestCase.system_id).all()
             return dict(name=folder.name,items=[read_item(row) for row in rows],children=[read_folder(child) for child in children])
         tree=read_folder(identity) if kind=='folder' else None
-        if kind=='case':read_item(ps.require(s,RepositoryCase if source_type=='repository' else TestCase,identity))
+        trees=[];direct=[]
+        if kind=='selection':
+            source_folders=[ps.require(s,RepositoryFolder if source_type=='repository' else ps.PlanFolder,value) for value in dict.fromkeys(folder_ids)]
+            if source_type=='plan' and any(folder.plan_id!=source_plan for folder in source_folders):
+                raise ps.StateError('Folder belongs to another source Plan')
+            if source_type=='repository' and any(folder.id==rt.ROOT for folder in source_folders):
+                raise ps.StateError('The BMC root cannot be selected for batch import')
+            covered=set()
+            for folder in source_folders:
+                covered.update(rt.subtree(s,folder.id) if source_type=='repository' else [folder.id]+[child.id for child in ps.folder_descendants(s,folder)])
+            roots=[folder for folder in source_folders if (ps.require(s,rt.Node,folder.id).parent_id if source_type=='repository' else folder.parent_id) not in covered]
+            trees=[read_folder(folder.id) for folder in roots]
+            for case_id in case_ids:
+                row=ps.require(s,RepositoryCase if source_type=='repository' else TestCase,case_id)
+                if source_type=='plan' and row.plan_id!=source_plan:raise ps.StateError('Case belongs to another source Plan')
+                member=s.get(RepositoryFolderCase,case_id) if source_type=='repository' else row
+                if not member or member.folder_id not in covered:direct.append(read_item(row))
+        elif kind=='case':
+            for case_id in case_ids:
+                direct.append(read_item(ps.require(s,RepositoryCase if source_type=='repository' else TestCase,case_id)))
         def fingerprint(source,settings,version):
             return hashlib.sha256(json.dumps([source,settings,version],sort_keys=True).encode()).hexdigest()
         existing=[];actual={}
         for tc in s.query(TestCase).filter_by(plan_id=plan_id).order_by(TestCase.system_id):
             try: source=script_file(runtime['MAIN_PROGRAM_DIR'],tc).read_text(encoding='utf-8');canonical=metadata(source)['name'].strip().casefold()
             except (OSError,UnicodeError,SyntaxError,ps.StateError): source='';canonical=tc.normalized_name
-            existing.append(dict(id=tc.system_id,name=tc.display_name,canonical=canonical,source_version=tc.source_version,
+            existing.append(dict(id=tc.system_id,name=tc.display_name,canonical=canonical,source_version=tc.source_version,source_created_at=creation_time_for_case(runtime['MAIN_PROGRAM_DIR'],tc),
                                  token=fingerprint(source,json.loads(tc.settings_json or '{}'),tc.source_version)))
             actual[tc.system_id]=tc
         conflicts=[];used_names={x['name'].casefold() for x in existing}
@@ -381,7 +453,9 @@ def register(app, runtime):
         try:
             destination.folders_migrated=True
             if tree:apply_folder(tree,target)
-            else:apply_item(incoming[0],target)
+            else:
+                for node in trees:apply_folder(node,target)
+                for item in direct:apply_item(item,target)
             if anchor and added:
                 added_ids=[tc.system_id for tc in added]
                 ordered=co.plan_rows(s,plan_id,s.query(TestCase).filter(TestCase.plan_id==plan_id,TestCase.folder_id==anchor.folder_id,TestCase.system_id.notin_(added_ids)).all())

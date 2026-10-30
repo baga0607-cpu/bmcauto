@@ -1,3 +1,31 @@
+# 最新本機更新 — 2026-10-28 Task Info 頁籤
+
+[Task Info 分頁](2026-10-28-task-info-tabs.md) 已套用。Test：Content／Scope／Connection／DUT Config／Note & History；Plan：Content／Note & History。DUT Config 僅名稱，編輯草稿／History／執行鎖定已驗證。僅前端變更，正式資料未異動，尚未發布 GitHub。
+
+# 最新本機更新 — 2026-10-28 既有測項與建立時間
+
+[RF-01-001～006 逐步輸出與建立時間](2026-10-28-existing-source-step-output.md) 已套用工作檔與 6 個 Repository 新版本。使用者在工作期間清空 Plan 測項，未還原任何刪除內容。時戳改為來源 .py 建立時間，未知為 —。456 組行為比對、61 項平台測試及 32 組 RF 測試通過；尚未發布 GitHub。
+
+# 最新本機更新 — 2026-10-28 測項報告格式
+
+[依工作表1調整報告](2026-10-28-report-case-layout.md) 已套用；[Step／Criteria／Result 輸出規範](../agents/report-step-output.md) 與可執行範例已建立。DUT Configuration 僅名稱；同 Plan 矩陣與 Reference 規則維持。38 項相關測試通過，正式資料未異動，尚未發布 GitHub。
+
+# 最新本機更新 — 2026-10-28 Reference
+
+[Report／Reference 分類與合併](2026-10-28-report-reference.md) 已套用。可跨 Plan 選取、兩區拖曳排序；同 Plan Task 仍依矩陣規則整合。取代以下「跨 Plan 留待討論」描述。尚未發布 GitHub。
+
+# 最新本機更新 — 2026-10-28 Report 匯出
+
+先讀 [最新交接](2026-10-28-handoff.md)。[Report 樹狀選取與 PDF 匯出](2026-10-28-report-tree-export.md) 已套用本機；跨 Plan 的 Reference 留待討論，尚未發布 GitHub。
+
+# 最新本機更新 — 2026-10-28
+
+[Report 使用 Plan 頁面](2026-10-28-report-plan-view.md) 已套用，尚未發布 GitHub。先前 Task 決定仍見 2026-10-27 handoff 與後續補充。
+
+# 最新本機更新 — 2026-10-27
+
+Task 新增日期推導的 Not Scheduled，詳見 [功能紀錄](2026-10-27-not-scheduled.md)。已套用本機，尚未發布 GitHub。
+
 # 最新交接 — 2026-10-27
 
 新對話先讀 [2026-10-27 handoff](2026-10-27-handoff.md)。包含Status、Assignee、多關鍵字搜尋、固定欄寬與目前本機啟動模式。
@@ -87,3 +115,15 @@ Latest UI delivery: [Schedule Task Info and reschedule dialog](2026-10-22-schedu
 Latest delivery: [Immutable Task History](2026-10-22-task-history.md). New Schedule reasons go to the append-only table; never put them in Notes or mutate/delete History.
 
 Latest delivery: [Edit Task mandatory History](2026-10-22-edit-task-history.md). PATCH /api/tasks date changes now require History and original-date expectations.
+
+2026-10-27 local refinement: [Task List compact layout](2026-10-27-task-list-compact.md) applied; source not yet published.
+
+2026-10-27 local refinement: [Unified Task Info](2026-10-27-task-info-unified.md) applied for both Task types under global Task only; Schedule names link there. Not yet published.
+
+2026-10-27 local update: [Task cell editing and Actual dates](2026-10-27-task-cell-edit.md) deployed to loopback service, 74 Python tests and isolated browser mutation checks passed; not published.
+
+2026-10-27 local refinement: [paired Task date dialogs and range validation](2026-10-27-task-date-pairs.md), not yet published.
+
+2026-10-27 local update: [Task iDesign ID and FW Package](2026-10-27-task-reference-package.md) deployed; 67 tests and preview browser edits passed. Not published.
+
+2026-10-27 local refinement: [metadata double-click and firmware summary](2026-10-27-task-meta-interaction.md), not published.

@@ -1,0 +1,9 @@
+# Select-all headers and context batch deletion — 2026-10-29
+
+Plan, Repository and both target/source import tables have a select-all checkbox in the name header. It selects/clears every selectable Case and folder in the current list, including collapsed/filtered items; BMC roots remain excluded. Manual changes update checked/indeterminate states. Searches, folder expansion and redraws restore the header state from selection models.
+
+Multi-selections expose Delete selected items in Plan/Repository right-click menus. On a selected row, the group choice replaces the single-row delete choice. Existing single-row actions remain when no multi-selection is active. Confirmation explicitly includes selected folder descendants and (for Plan deletion) affected Task evidence. Repository uses its existing batch delete. Plan uses POST /api/plans/<id>/items/delete with validated ownership, execution locks and acknowledgement. Plan delete_content now supports multiple folders plus Cases in a single file-staging/database transaction, deduplicating overlap and restoring files/rows/evidence on commit failure. Source-side import lists remain selection-only.
+
+Verification: 43 backend tests passed (7 mixed-selection including new batch-delete cases, 20 single-Case, 7 Repository tree, 4 ordering, 5 batch import). Browser test passed select-all/unselect/indeterminate for all three contexts, both import panes, confirmed/cancelled Plan group deletion payload, Repository context batch confirmation, and existing drag/Plan/Execution workflows. Screenshot inspected; Node syntax and task-management/Schedule tests passed. Test mutations used isolated databases or intercepted APIs.
+
+Formal service restarted after checking no active Task and verifying server ownership; HTTP 200 and Projects API data identical before/after. No formal data deleted during verification.

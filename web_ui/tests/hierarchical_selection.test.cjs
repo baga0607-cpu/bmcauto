@@ -1,0 +1,79 @@
+const fs=require('fs'),path=require('path'),assert=require('assert/strict');
+const {chromium}=require('C:/Users/david.huang/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
+(async()=>{
+const browser=await chromium.launch({executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true});
+const browserContext=await browser.newContext({viewport:{width:1440,height:1000}});let page=await browserContext.newPage();const errors=[],writes=[];page.on('pageerror',e=>errors.push(e.message));
+const folders=[{id:'parent',parent_id:null,name:'Parent',position:0},{id:'child',parent_id:'parent',name:'Child',position:0},{id:'grand',parent_id:'child',name:'Grandchild',position:0},{id:'empty',parent_id:'parent',name:'Empty',position:1}];
+const cases=[['a','parent'],['b','child'],['c','grand']].map(([id,folder_id])=>({id,folder_id,tc_name:'Case '+id,name:'Case '+id,script_kind:'single',parameter_count:0,metadata:{automation:'automatic',parameters:{}}}));
+const project={id:'p',name:'Project',plans:[{id:'plan',name:'Plan',folders,testcases:cases,tasks:[]}]};
+await browserContext.route('http://tree.test/**',async route=>{const u=new URL(route.request().url());if(route.request().method()!=='GET'){writes.push({path:u.pathname,body:route.request().postDataJSON()});return route.fulfill({json:{status:'ok',added:[],updated:[],skipped:[]}});}let data;
+if(u.pathname==='/api/projects')data={projects:[project]};
+else if(u.pathname==='/api/repository/testcases')data=cases;
+else if(u.pathname==='/api/repository/folders')data=[{id:'root',name:'BMC',parent_id:null,is_root:true,position:0},...folders.map(f=>({...f,parent_id:f.parent_id||'root'}))];
+else if(u.pathname.startsWith('/api/'))throw Error('Unexpected API '+u.pathname);
+else{const file=path.join(__dirname,'../static',u.pathname==='/'?'index.html':u.pathname.slice(1));return route.fulfill({body:fs.readFileSync(file),contentType:u.pathname.endsWith('.js')?'application/javascript':u.pathname.endsWith('.css')?'text/css':'text/html'});}
+return route.fulfill({json:data});});
+async function verify(type){
+ const container=type==='import'?page.locator('#plan-import-workspace-dialog .import-source-pane'):page.locator('#workspace');
+ const folder=id=>container.locator(type==='plan'?'.plan-selection-check[data-kind=folder][data-id="'+id+'"]':type==='repository'?'.repository-batch-check[data-kind=folder][data-id="'+id+'"]':'[data-import-folder-select="'+id+'"]');
+ const item=id=>container.locator(type==='plan'?'.plan-selection-check[data-kind=case][data-id="'+id+'"]':type==='repository'?'.repository-batch-check[data-kind=case][data-id="'+id+'"]':'[data-import-select="'+id+'"]');
+ const header=container.locator('[data-list-select-all='+type+']');
+ const alignment=await container.locator('tbody input[type=checkbox]').evaluateAll(inputs=>inputs.map(input=>({depth:Number(getComputedStyle(input.closest('tr')).getPropertyValue('--depth'))||0,x:input.getBoundingClientRect().x})));
+ const depthPositions=new Map();for(const item of alignment){if(depthPositions.has(item.depth))assert.ok(Math.abs(depthPositions.get(item.depth)-item.x)<1,JSON.stringify({type,alignment}));else depthPositions.set(item.depth,item.x);}
+ const details=await container.locator('tbody tr').evaluateAll(rows=>rows.map(row=>{
+const icon=row.querySelector('.repository-folder-name svg,.automation-tag svg'),name=row.querySelector('.repository-folder-name strong,.case-selection-label>strong,.import-case-choice>strong');if(!icon||!name)return null;
+const text=[...name.childNodes].find(n=>n.nodeType===3&&n.textContent.trim());if(!text)return null;const range=document.createRange();range.selectNodeContents(text);
+return {depth:Number(getComputedStyle(row).getPropertyValue('--depth'))||0,icon:icon.getBoundingClientRect().x,name:range.getBoundingClientRect().x};}).filter(Boolean));
+const timestamps=await container.locator('tbody tr').evaluateAll(rows=>rows.map(row=>{
+const name=row.querySelector('.case-selection-label>strong,.import-case-choice>strong'),date=row.querySelector('.case-selection-label+p.help,.import-case-choice+p.help');if(!name||!date)return null;
+const text=[...name.childNodes].find(n=>n.nodeType===3&&n.textContent.trim());if(!text)return null;const range=document.createRange();range.selectNodeContents(text);return {name:range.getBoundingClientRect().x,date:date.getBoundingClientRect().x};}).filter(Boolean));
+assert.ok(timestamps.length>0);for(const row of timestamps)assert.ok(Math.abs(row.name-row.date)<1,JSON.stringify({type,timestamps}));
+const typography=await container.locator('.repository-folder-name strong,.case-selection-label>strong,.import-case-choice>strong').evaluateAll(names=>names.map(name=>({size:getComputedStyle(name).fontSize,weight:getComputedStyle(name).fontWeight})));
+assert.ok(typography.length>0);for(const name of typography)assert.deepEqual(name,{size:'14px',weight:'700'});
+const compactSlots=await container.locator('tbody tr').evaluateAll(rows=>rows.map(row=>{
+const checkbox=row.querySelector('input[type=checkbox]'),icon=row.querySelector('.repository-folder-name svg,.automation-tag svg'),disclosure=row.querySelector('.folder-collapse,.folder-collapse-spacer');if(!checkbox||!icon)return null;
+return {gap:icon.getBoundingClientRect().left-checkbox.getBoundingClientRect().right,disclosureBefore:!disclosure||disclosure.getBoundingClientRect().right<=checkbox.getBoundingClientRect().left};}).filter(Boolean));
+for(const slots of compactSlots){assert.ok(Math.abs(slots.gap-6)<1,JSON.stringify({type,compactSlots}));assert.equal(slots.disclosureBefore,true);}
+const rowHeights=await container.locator('tbody tr').evaluateAll(rows=>rows.map(row=>({folder:row.classList.contains('repository-folder-row'),height:row.getBoundingClientRect().height})));
+const folderHeights=rowHeights.filter(row=>row.folder),caseHeights=rowHeights.filter(row=>!row.folder);assert.ok(folderHeights.length&&caseHeights.length);for(const row of folderHeights)assert.ok(Math.abs(row.height-28)<1,JSON.stringify({type,rowHeights}));for(const row of caseHeights)assert.ok(row.height>folderHeights[0].height,JSON.stringify({type,rowHeights}));
+const vertical=await container.locator('tbody tr').evaluateAll(rows=>rows.map(row=>{
+const checkbox=row.querySelector('input[type=checkbox]'),icon=row.querySelector('.repository-folder-name svg,.automation-tag svg'),name=row.querySelector('.repository-folder-name strong,.case-selection-label>strong,.import-case-choice>strong');if(!checkbox||!icon||!name)return null;
+const text=[...name.childNodes].find(n=>n.nodeType===3&&n.textContent.trim());if(!text)return null;const range=document.createRange();range.selectNodeContents(text);const top=row.getBoundingClientRect().top;return {checkbox:checkbox.getBoundingClientRect().top-top,icon:icon.getBoundingClientRect().top-top,name:range.getBoundingClientRect().top-top};}).filter(Boolean));
+for(const row of vertical)for(const field of ['checkbox','icon','name'])assert.ok(Math.abs(row[field]-vertical[0][field])<1,JSON.stringify({type,vertical}));
+const fieldPositions=new Map();for(const row of details){if(fieldPositions.has(row.depth)){const first=fieldPositions.get(row.depth);assert.ok(Math.abs(first.icon-row.icon)<1&&Math.abs(first.name-row.name)<1,JSON.stringify({type,details}));}else fieldPositions.set(row.depth,row);}
+const levels=[...depthPositions.keys()].sort((a,b)=>a-b);for(let i=1;i<levels.length;i++)assert.ok(Math.abs((depthPositions.get(levels[i])-depthPositions.get(levels[i-1]))-18*(levels[i]-levels[i-1]))<1,JSON.stringify({type,alignment}));
+
+ const state=async(id)=>folder(id).evaluate(el=>({checked:el.checked,mixed:el.indeterminate}));
+ await folder('parent').check();for(const id of ['parent','child','grand','empty'])assert.deepEqual(await state(id),{checked:true,mixed:false});for(const id of ['a','b','c'])assert.equal(await item(id).isChecked(),true);assert.equal(await header.isChecked(),true);
+ await item('b').uncheck();assert.deepEqual(await state('parent'),{checked:false,mixed:true});assert.deepEqual(await state('child'),{checked:false,mixed:true});assert.deepEqual(await state('grand'),{checked:true,mixed:false});assert.equal(await header.evaluate(el=>el.indeterminate),true);
+ await item('b').check();assert.deepEqual(await state('parent'),{checked:true,mixed:false});
+ const collapseAction=type==='plan'?'toggle-plan-folder':type==='repository'?'toggle-repository-folder':'toggle-import-folder';
+ await container.locator('[data-action='+collapseAction+'][data-id=child]').click();await folder('parent').uncheck();await container.locator('[data-action='+collapseAction+'][data-id=child]').click();for(const id of ['a','b','c'])assert.equal(await item(id).isChecked(),false);for(const id of ['parent','child','grand','empty'])assert.deepEqual(await state(id),{checked:false,mixed:false});
+ await item('c').check();assert.deepEqual(await state('grand'),{checked:true,mixed:false});assert.deepEqual(await state('child'),{checked:false,mixed:true});assert.deepEqual(await state('parent'),{checked:false,mixed:true});
+ await folder('parent').check();assert.equal(await header.isChecked(),true);await folder('parent').uncheck();assert.equal(await header.isChecked(),false);
+ await folder('empty').check();assert.deepEqual(await state('parent'),{checked:false,mixed:true});await folder('empty').uncheck();assert.deepEqual(await state('parent'),{checked:false,mixed:false});
+ await item('a').check();assert.deepEqual(await state('parent'),{checked:false,mixed:true});
+const dragRow=type==='plan'?container.locator('[data-plan-folder=parent]'):type==='repository'?container.locator('[data-folder-node=parent]'):container.locator('[data-import-kind=folder][data-import-id=parent]');
+const target=type==='plan'?container.locator('[data-plan-folder=""]'):type==='repository'?container.locator('[data-folder-node=root]'):page.locator('#plan-import-workspace-dialog [data-plan-folder=""]');
+await dragRow.dragTo(target,{targetPosition:{x:100,y:14}});await page.waitForTimeout(100);
+assert.deepEqual(writes.at(-1).body.case_ids,['a']);assert.deepEqual(writes.at(-1).body.folder_ids,[]);
+for(const theme of ['light','dark']){await page.evaluate(theme=>document.documentElement.dataset.theme=theme,theme);const backgrounds=await container.locator('tr.repository-folder-row').evaluateAll(rows=>rows.map(row=>[getComputedStyle(row).backgroundColor,getComputedStyle(row.cells[0]).backgroundColor]));assert.ok(backgrounds.every(pair=>pair.every(c=>c==='rgba(0, 0, 0, 0)')),JSON.stringify(backgrounds));}
+}
+project.plans.push({id:'plan2',name:'Plan Two',folders:[{id:'other',name:'Other',parent_id:null,position:0}],testcases:[],tasks:[]});
+await page.goto('http://tree.test/#/project/p/plans');await page.locator('.plan-selection-check').first().waitFor();await verify('plan');
+await page.locator('[data-action=toggle-plan-folder][data-id=child]').click();assert.equal(await page.locator('[data-action=toggle-plan-folder][data-id=child]').getAttribute('aria-expanded'),'false');
+await page.locator('#plan-tab-plan2').click();await page.locator('[data-action=toggle-plan-folder][data-id=other]').waitFor();assert.equal(await page.locator('[data-action=toggle-plan-folder][data-id=other]').getAttribute('aria-expanded'),'true');await page.locator('[data-action=toggle-plan-folder][data-id=other]').click();await page.reload();await page.locator('#plan-tab-plan2[aria-selected=true]').waitFor();assert.equal(await page.locator('[data-action=toggle-plan-folder][data-id=other]').getAttribute('aria-expanded'),'false');
+await page.locator('#plan-tab-plan').click();await page.locator('[data-action=toggle-plan-folder][data-id=child]').waitFor();assert.equal(await page.locator('[data-action=toggle-plan-folder][data-id=child]').getAttribute('aria-expanded'),'false');
+await page.reload();await page.locator('[data-action=toggle-plan-folder][data-id=child]').waitFor();assert.equal(await page.locator('[data-action=toggle-plan-folder][data-id=child]').getAttribute('aria-expanded'),'false');
+await page.locator('#plan-tab-plan2').click();await page.close();page=await browserContext.newPage();page.on('pageerror',e=>errors.push(e.message));await page.goto('http://tree.test/#/project/p/plans');await page.locator('#plan-tab-plan2[aria-selected=true]').waitFor();await page.locator('#plan-tab-plan').click();await page.locator('[data-action=toggle-plan-folder][data-id=child]').waitFor();assert.equal(await page.locator('[data-action=toggle-plan-folder][data-id=child]').getAttribute('aria-expanded'),'false');await page.locator('[data-action=toggle-plan-folder][data-id=child]').click();
+await page.goto('http://tree.test/#/repository');await page.locator('.repository-batch-check').first().waitFor();await verify('repository');await page.locator('[data-action=toggle-repository-folder][data-id=child]').click();await page.reload();await page.locator('[data-action=toggle-repository-folder][data-id=child]').waitFor();assert.equal(await page.locator('[data-action=toggle-repository-folder][data-id=child]').getAttribute('aria-expanded'),'false');
+await page.goto('http://tree.test/#/project/p/plans');await page.locator('[data-action=choose-import-source]').click();await page.locator('#plan-import-workspace-dialog').waitFor();await verify('import');
+await page.locator('[data-action=toggle-import-folder][data-id=child]').click();await page.locator('[data-action=close-import-source]').click();await page.locator('[data-action=choose-import-source]').click();await page.locator('#plan-import-workspace-dialog').waitFor();assert.equal(await page.locator('[data-action=toggle-import-folder][data-id=child]').getAttribute('aria-expanded'),'false');
+await page.locator('#import-workspace-source').selectOption('plan:plan2');await page.locator('[data-action=toggle-import-folder][data-id=other]').waitFor();assert.equal(await page.locator('[data-action=toggle-import-folder][data-id=other]').getAttribute('aria-expanded'),'true');await page.locator('[data-action=toggle-import-folder][data-id=other]').click();
+await page.locator('#import-workspace-source').selectOption('repository');await page.locator('[data-action=toggle-import-folder][data-id=child]').waitFor();assert.equal(await page.locator('[data-action=toggle-import-folder][data-id=child]').getAttribute('aria-expanded'),'false');
+await page.locator('[data-action=close-import-source]').click();await page.reload();await page.locator('[data-action=choose-import-source]').click();await page.locator('#plan-import-workspace-dialog').waitFor();assert.equal(await page.locator('[data-action=toggle-import-folder][data-id=child]').getAttribute('aria-expanded'),'false');
+await page.locator('#import-workspace-source').selectOption('plan:plan2');await page.locator('[data-action=toggle-import-folder][data-id=other]').waitFor();assert.equal(await page.locator('[data-action=toggle-import-folder][data-id=other]').getAttribute('aria-expanded'),'false');
+await page.locator('[data-action=close-import-source]').click();await page.locator('#plan-tab-plan2').click();await page.locator('#plan-tab-plan2[aria-selected=true]').waitFor();project.plans=project.plans.filter(p=>p.id!=='plan2');await page.reload();await page.locator('#plan-tab-plan[aria-selected=true]').waitFor();assert.equal(await page.locator('#plan-tab-plan2').count(),0);
+const output=fs.mkdtempSync(path.join(require('os').tmpdir(),'bmca-folder-selection-'));await page.screenshot({path:output+'/folder-selection.png',fullPage:true});
+assert.deepEqual(errors,[]);assert.equal(writes.length,3);await browser.close();console.log('PASS: Plan/Repository/Import cascade, partial ancestors, auto-full parents, collapsed descendants, empty folders and transparent folder rows in both themes. '+output);
+})().catch(e=>{console.error(e);process.exit(1)});

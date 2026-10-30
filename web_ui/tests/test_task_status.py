@@ -53,5 +53,62 @@ class TaskStatusTest(unittest.TestCase):
    tid=response.get_json()['task_id']
    with self.Session() as s:
     row=s.get(PlanningTask if kind=='Plan' else Task,tid)
-    self.assertEqual(json.loads(row.task_metadata)['task_status'],'New')
+    self.assertEqual(json.loads(row.task_metadata)['task_status'],'Not Scheduled')
    self.assertEqual(self.client.post('/api/tasks',json={'task_type':kind,**fields,'setup':{'task_status':'Complete'}}).status_code,400)
+
+ def test_incomplete_dates_override_status_and_legacy_reads_do_not_write(self):
+  self.prepare()
+  for tid,model in [('task1',Task),('planning',PlanningTask)]:
+   with self.Session() as s:
+    row=s.get(model,tid)
+    row.task_metadata=json.dumps({'start_date':'2026-10-19','task_status':'Complete','notes':'keep'})
+    s.commit();before=row.task_metadata
+   row=next(r for r in self.client.get('/api/tasks').get_json()['tasks'] if r['id']==tid)
+   self.assertEqual(row['setup']['task_status'],'Not Scheduled')
+   with self.Session() as s:self.assertEqual(s.get(model,tid).task_metadata,before)
+   if tid=='task1':
+    self.assertEqual(self.client.get('/api/tasks/task1/summary').get_json()['setup']['task_status'],'Not Scheduled')
+
+ def test_partial_dates_creation_both_task_types(self):
+  for kind,fields in [('Plan',{'project_id':'project'}),('Test',{'plan_id':'a'})]:
+   for dates in [{},{'start_date':'2026-10-19'},{'end_date':'2026-10-23'},{'start_date':'2026-10-19','end_date':'2026-10-23'}]:
+    response=self.client.post('/api/tasks',json={'task_type':kind,**fields,'setup':dates})
+    self.assertEqual(response.status_code,200,response.get_json())
+    with self.Session() as s:
+     row=s.get(PlanningTask if kind=='Plan' else Task,response.get_json()['task_id'])
+     self.assertEqual(json.loads(row.task_metadata)['task_status'],'New' if len(dates)==2 else 'Not Scheduled')
+
+ def test_clear_and_complete_dates_with_history_and_stale_guard(self):
+  self.prepare()
+  for tid in ['task1','planning']:
+   data={'setup':{'end_date':'','task_status':'Complete'},'expected_task_status':'New','expected_start_date':'2026-10-19','expected_end_date':'2026-10-23','history':'Date to be confirmed'}
+   response=self.client.patch('/api/tasks/'+tid,json=data)
+   self.assertEqual(response.status_code,200,response.get_json())
+   rows=self.client.get('/api/tasks/'+tid+'/history').get_json()['history']
+   self.assertTrue(any('Status: New → Not Scheduled' in r['history'] for r in rows))
+   data={'start_date':'2026-10-19','end_date':'2026-10-23','expected_start_date':'2026-10-19','expected_end_date':'','expected_task_status':'New','history':'Dates confirmed'}
+   self.assertEqual(self.client.patch('/api/tasks/'+tid+'/schedule',json=data).status_code,409)
+   data['expected_task_status']='Not Scheduled'
+   response=self.client.patch('/api/tasks/'+tid+'/schedule',json=data)
+   self.assertEqual(response.status_code,200,response.get_json())
+   self.assertEqual(response.get_json()['setup']['task_status'],'New')
+
+ def test_invalid_partial_date_is_rejected(self):
+  for dates in [{'start_date':'2026-02-30'},{'end_date':'wrong'},{'start_date':123}]:
+   self.assertEqual(self.client.post('/api/tasks',json={'task_type':'Plan','project_id':'project','setup':dates}).status_code,400)
+
+ def test_schedule_can_clear_either_or_both_dates_and_requires_reason(self):
+  self.prepare()
+  for tid in ['task1','planning']:
+   for start,end in [('', '2026-10-23'),('2026-10-19',''),('','')]:
+    model=Task if tid=='task1' else PlanningTask
+    with self.Session() as db:
+     row=db.get(model,tid)
+     row.task_metadata=json.dumps({'start_date':'2026-10-19','end_date':'2026-10-23','task_status':'New'})
+     db.commit()
+    data={'start_date':start,'end_date':end,'expected_start_date':'2026-10-19','expected_end_date':'2026-10-23','expected_task_status':'New','history':''}
+    self.assertEqual(self.client.patch('/api/tasks/'+tid+'/schedule',json=data).status_code,400)
+    data['history']='Awaiting schedule'
+    response=self.client.patch('/api/tasks/'+tid+'/schedule',json=data)
+    self.assertEqual(response.status_code,200,response.get_json())
+    self.assertEqual(response.get_json()['setup']['task_status'],'Not Scheduled')
