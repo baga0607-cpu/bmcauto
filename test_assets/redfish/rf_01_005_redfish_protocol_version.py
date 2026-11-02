@@ -3,6 +3,12 @@ import re
 from urllib.parse import urljoin, urlsplit
 
 TEST_CASE = {
+    "modified_at": "2026-11-02T06:11:19.396101+00:00",
+    "test_type": "compliance",
+    "spec_ref": [
+        "DSP0266 v1.25.0 section 6.6 (RedfishVersion format).",
+        "BMCAgent RF-01-005 acceptance policy: exact equality to the tester-supplied version; not a DMTF-mandated version value."
+    ],
     "created_at": '2026-10-19T03:32:23.623177+00:00',
     "name": "RF-01-005 Redfish Protocol Version",
     "description": "Verify that ServiceRoot RedfishVersion exactly matches the tester-provided protocol version.",
@@ -43,7 +49,8 @@ def _report_emit(context, number, result):
     logger = context.get("log")
     write = getattr(logger, "step", None) if logger is not None else None
     if callable(write):
-        write(step, criteria, result)
+        note = result.get('note') if isinstance(result, dict) else None
+        write(step, criteria, result, **({'note': note} if note else {}))
     else:
         print("\n--- REPORT STEP ---")
         print(json.dumps({"step": step, "criteria": criteria, "result": result}, ensure_ascii=False, indent=2))
@@ -63,6 +70,9 @@ def _report_flush(context, status=None, reason=None):
     result = {"status": outcome, "checks": checks} if outcome is not None else None
     if reason and result is not None:
         result["reason"] = reason
+    notes = [check['note'] for check in checks if check.get('note')]
+    if notes and result is not None:
+        result['note'] = '\n'.join(dict.fromkeys(notes))
     _report_emit(context, number, result)
     state["seen"].append(number)
     state["number"], state["checks"] = None, []
@@ -91,10 +101,12 @@ def _log(context, method, *args, **kwargs):
         if number is not None:
             _report_begin(context, number)
     elif method == "check":
+        if kwargs.get("note"):
+            context.setdefault("_result_notes", []).append(kwargs["note"])
         state = context.get("_report_steps")
         if state and state["number"] is not None:
             state["checks"].append({"label": args[0], "passed": bool(args[1]),
-                                    "expected": kwargs.get("expected"), "actual": kwargs.get("actual")})
+                                    "expected": kwargs.get("expected"), "actual": kwargs.get("actual"), "note": kwargs.get("note")})
     logger = context.get("log")
     if logger is not None:
         return getattr(logger, method)(*args, **kwargs)
@@ -105,14 +117,15 @@ def _log(context, method, *args, **kwargs):
 
 def _finish(context, status, reason, evidence, observations):
     _report_finish(context, status, reason)
+    note = "\n".join(dict.fromkeys(context.get("_result_notes", [])))
     context["case_result"] = {
-        "status": status, "reason": reason, "evidence": evidence,
+        "status": status, "reason": reason, "note": note, "evidence": evidence,
         "observations": observations,
     }
     # Compatibility with the current runner; it still stores Error as Failed.
     context["_tc_status"] = "PASS" if status == "Pass" else "FAIL"
     if context.get("log") is not None:
-        _log(context, "finish", status, reason)
+        _log(context, "finish", status, reason, **({"note": note} if note else {}))
     else:
         print(json.dumps(context["case_result"], ensure_ascii=False))
     if status == "Fail":
@@ -223,7 +236,7 @@ def execute(client, context=None, preset=None):
                 _log(context, "check", "Final HTTP status", response.status_code == 200,
                      expected=200, actual=response.status_code)
                 if response.status_code != 200:
-                    reason = f"Expected HTTP 200, received {response.status_code}"
+                    reason = f"Expected HTTP status = 200; Received HTTP status = {response.status_code}"
                     break
                 _log(context, "section", "JSON document validation", report_step=3)
                 try:
