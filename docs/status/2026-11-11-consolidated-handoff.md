@@ -1,3 +1,5 @@
+**同日後續：Connection UI** 已改為 BMC／Console Server／DUT OS 三個可收折區塊與九欄；Console Port 儲存使用 telnet 0，cpc 僅記錄為待實作連線規格，未修改 case.py。見 [Connection 更新](2026-11-11-connection-groups.md)。
+
 # 三個開發對話統合交接 — 2026-11-11
 
 本文件是封存前的最新入口；時間以 Asia/Taipei 為準。涵蓋「Test Case工作區」、「操作流暢度改動」、「調整Execution工作區」。同一主題以使用者後續定案及本次程式查核為準；歷史文件、對話內的「已完成／已上線」只代表當時本機狀態，不代表已發布的遠端程式具備相同功能。
