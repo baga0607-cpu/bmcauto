@@ -107,6 +107,8 @@ class CaseLog:
         self.emit({'type': 'log', 'text': text[:-1], 'log_record': record})
 
     def section(self, title):
+        match = re.match(r'^(S[1-9][0-9]*) \| Step \| ', str(title))
+        self.method_step_id = match[1] if match else None
         self._close_section()
         self.section_number += 1
         self.section_checks = 0
@@ -128,7 +130,8 @@ class CaseLog:
                  json.dumps(headers, indent=2, ensure_ascii=False), body_label, display_body]
         self._write('http', f'HTTP evidence #{self.http_number}', lines,
                     method=method, uri=uri, status=status, headers=headers,
-                    request_headers=request_headers, body=raw_body)
+                    request_headers=request_headers, body=raw_body,
+                    **({"step_id": self.method_step_id} if getattr(self, "method_step_id", None) else {}))
 
     def check(self, label, passed, expected=None, actual=None):
         status = 'PASS' if passed else 'FAIL'
@@ -156,6 +159,43 @@ class CaseLog:
             'Criteria: '+('—' if criteria is None or criteria == '' else json.dumps(criteria, ensure_ascii=False)),
             'Result: '+('—' if result is None or result == '' else json.dumps(result, ensure_ascii=False)),
         ], step=step, criteria=criteria, result=result)
+
+    def method_item(self, item, result):
+        """Write an independently identified Step, Checkpoint or Record.
+
+        kind=step remains the persistence/report adapter; criteria is unused.
+        Record is informational and never receives a PASS/FAIL verdict.
+        """
+        item_id, item_type, step_id = item["id"], item["type"], item["step_id"]
+        prefixes = {"Step": "S", "Checkpoint": "C", "Record": "R"}
+        prefix = prefixes.get(item_type)
+        match = re.fullmatch(r"([SCR])([1-9][0-9]*)([a-z]?)", item_id)
+        if not match or match[1] != prefix or step_id != "S" + match[2]:
+            raise ValueError("Invalid method item ID or Step association")
+        if item_type == "Step" and match[3]:
+            raise ValueError("Step IDs cannot have suffixes")
+        allowed = {
+            "Step": {"COMPLETED", "FAILED", "ERROR", "NOT_RUN"},
+            "Checkpoint": {"PASS", "FAIL", "NOT_EVALUATED"},
+            "Record": {"RECORDED", "NOT_RECORDED"},
+        }
+        if result.get("status") not in allowed[item_type]:
+            raise ValueError("Invalid status for method item type")
+        if any(result.get(key) != item[key] for key in ("id", "type", "step_id")):
+            raise ValueError("Method result association does not match its definition")
+        json.dumps([item, result], ensure_ascii=False, allow_nan=False)
+        self.section_checks += 1
+        description = item["step"].removeprefix(item_id + " | " + item_type + " | ")
+        lines = [description, "Source Step: " + step_id, "Status: " + result["status"]]
+        if "expected" in result:
+            lines.append("Expected: " + json.dumps(result["expected"], ensure_ascii=False))
+        if "actual" in result:
+            lines.append("Actual: " + json.dumps(result["actual"], ensure_ascii=False))
+        if result.get("reason"):
+            lines.append("Reason: " + result["reason"])
+        self._write("step", item_id + " | " + item_type, lines,
+                    step=item["step"], criteria=None, result=result,
+                    method_id=item_id, method_type=item_type, step_id=step_id)
 
     def finish(self, status, reason):
         if self.finished:

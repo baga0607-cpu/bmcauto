@@ -1,152 +1,180 @@
 import json
+import math
 import re
 from urllib.parse import urljoin, urlsplit
 
 TEST_CASE = {
-    "modified_at": "2026-11-02T06:11:19.396101+00:00",
+    "modified_at": "2026-11-11T09:47:47.861Z",
     "test_type": "compliance",
     "spec_ref": [
         "DSP0266 v1.25.0 sections 6.6, 6.7 Table 4 and 7.2.3 (ServiceRoot); sections 9.6.2 and 9.6.3 (resource identity/type)."
     ],
-    "created_at": '2026-10-19T01:23:29.401576+00:00',
+    "created_at": "2026-10-19T01:23:29.401576+00:00",
     "name": "RF-01-002 Service Root Endpoint",
-    "description": (
-        "GET /redfish/v1/ and verify the ServiceRoot type and resource URI. "
-        "Record RedfishVersion without checking its expected value."
-    ),
+    "description": "Verify that /redfish/v1/ returns a ServiceRoot JSON object with the expected resource URI. Record RedfishVersion if present, without evaluating its value.",
     "test_method": [
         {
-            "step_1": (
-                "Using Task BMC connection settings, send GET /redfish/v1/ with "
-                "Accept: application/json and a fixed 15-second request timeout. "
-                "Record each response URI, status, headers and body. Follow supported "
-                "same-origin redirects, detecting loops, up to five redirects."
-            ),
-            "criteria": (
-                "The final HTTP status is 200. Invalid Task settings, request "
-                "failure, missing redirect Location, loops, exceeding five redirects "
-                "or leaving the Task origin result in Fail with a reason. Redirect "
-                "safeguards are provisional pending RF-02; a boundary failure alone "
-                "does not establish a DMTF violation."
-            ),
+            "id": "S1",
+            "type": "Step",
+            "step_id": "S1",
+            "step": "S1 | Step | Send a GET request to `/redfish/v1/`."
         },
         {
-            "step_2": "Parse the final response body as JSON.",
-            "criteria": (
-                "The body is valid JSON and its top-level value is an object. "
-                "Invalid JSON or another top-level type results in Fail with a reason."
-            ),
+            "id": "C1",
+            "type": "Checkpoint",
+            "step_id": "S1",
+            "step": "C1 | Checkpoint | Verify that the final response status is HTTP 200."
         },
         {
-            "step_3": "Inspect @odata.type and @odata.id; record RedfishVersion if present.",
-            "criteria": (
-                "@odata.type is a ServiceRoot type identifier: "
-                "#ServiceRoot.v<major>_<minor>_<errata>.ServiceRoot or "
-                "#ServiceRoot.ServiceRoot. No particular Schema version is required. "
-                "@odata.id equals /redfish/v1/ exactly. Additional properties are "
-                "allowed. RedfishVersion is evidence only; its presence, format and "
-                "expected value are evaluated by RF-01-005. All criteria met results "
-                "in Pass; a content mismatch results in Fail with a reason. An "
-                "unexpected program problem or missing dependency results in Error."
-            ),
+            "id": "S2",
+            "type": "Step",
+            "step_id": "S2",
+            "step": "S2 | Step | Parse the final response body as JSON."
         },
+        {
+            "id": "C2a",
+            "type": "Checkpoint",
+            "step_id": "S2",
+            "step": "C2a | Checkpoint | Verify that the response body can be parsed as JSON."
+        },
+        {
+            "id": "C2b",
+            "type": "Checkpoint",
+            "step_id": "S2",
+            "step": "C2b | Checkpoint | Verify that the top-level JSON value is an object."
+        },
+        {
+            "id": "S3",
+            "type": "Step",
+            "step_id": "S3",
+            "step": "S3 | Step | Read the `@odata.type` property from the JSON object."
+        },
+        {
+            "id": "C3a",
+            "type": "Checkpoint",
+            "step_id": "S3",
+            "step": "C3a | Checkpoint | Verify that the `@odata.type` property exists and its value is a string."
+        },
+        {
+            "id": "C3b",
+            "type": "Checkpoint",
+            "step_id": "S3",
+            "step": "C3b | Checkpoint | Verify that the value matches `#ServiceRoot.v<major>_<minor>_<errata>.ServiceRoot`, with digits in each version component, or equals `#ServiceRoot.ServiceRoot`."
+        },
+        {
+            "id": "S4",
+            "type": "Step",
+            "step_id": "S4",
+            "step": "S4 | Step | Read the `@odata.id` property from the JSON object."
+        },
+        {
+            "id": "C4a",
+            "type": "Checkpoint",
+            "step_id": "S4",
+            "step": "C4a | Checkpoint | Verify that the `@odata.id` property exists and its value is a string."
+        },
+        {
+            "id": "C4b",
+            "type": "Checkpoint",
+            "step_id": "S4",
+            "step": "C4b | Checkpoint | Verify that the value equals `/redfish/v1/` exactly, including the trailing slash."
+        },
+        {
+            "id": "S5",
+            "type": "Step",
+            "step_id": "S5",
+            "step": "S5 | Step | Read the `RedfishVersion` property if present."
+        },
+        {
+            "id": "R5",
+            "type": "Record",
+            "step_id": "S5",
+            "step": "R5 | Record | Record the `RedfishVersion` value, or record \"Not present\" if the property is absent."
+        }
     ],
     "automation": "automatic",
-    "parameters": {},
+    "parameters": {}
 }
 
+ENDPOINT = "/redfish/v1/"
 
 class CaseFailure(AssertionError):
     """Non-program failure with an actionable reason."""
 
 
-def _report_emit(context, number, result):
-    """Record the authored method and criteria without changing case judgement."""
-    method = TEST_CASE["test_method"][number - 1]
-    step = method.get("step_" + str(number), method.get("step"))
-    criteria = method.get("criteria")
-    logger = context.get("log")
-    write = getattr(logger, "step", None) if logger is not None else None
-    if callable(write):
-        note = result.get('note') if isinstance(result, dict) else None
-        write(step, criteria, result, **({'note': note} if note else {}))
-    else:
-        print("\n--- REPORT STEP ---")
-        print(json.dumps({"step": step, "criteria": criteria, "result": result}, ensure_ascii=False, indent=2))
+def _safe(value):
+    """Keep observations JSON-compatible without changing their judgement."""
+    if isinstance(value, float) and not math.isfinite(value):
+        return repr(value)
+    if isinstance(value, dict):
+        return {key: _safe(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_safe(item) for item in value]
+    return value
 
 
-def _report_flush(context, status=None, reason=None):
-    state = context.get("_report_steps")
-    if not state or state["number"] is None:
-        return
-    number, checks = state["number"], state["checks"]
-    if status is not None:
-        outcome = status.upper()
-    elif checks:
-        outcome = "PASS" if all(check["passed"] for check in checks) else "FAIL"
-    else:
-        outcome = None
-    result = {"status": outcome, "checks": checks} if outcome is not None else None
-    if reason and result is not None:
+def _emit(context, item_id, status, actual=None, expected=None, reason=None):
+    item = next(item for item in TEST_CASE["test_method"] if item["id"] == item_id)
+    result = {"id": item_id, "type": item["type"], "step_id": item["step_id"],
+              "status": status, "actual": _safe(actual)}
+    if expected is not None:
+        result["expected"] = expected
+    if reason:
         result["reason"] = reason
-    notes = [check['note'] for check in checks if check.get('note')]
-    if notes and result is not None:
-        result['note'] = '\n'.join(dict.fromkeys(notes))
-    _report_emit(context, number, result)
-    state["seen"].append(number)
-    state["number"], state["checks"] = None, []
-
-
-def _report_begin(context, number):
-    state = context.setdefault("_report_steps", {"number": None, "checks": [], "seen": []})
-    if state["number"] != number:
-        _report_flush(context)
-        state["number"] = number
-
-
-def _report_finish(context, status, reason):
-    _report_flush(context, status, reason)
-    state = context.get("_report_steps", {"seen": []})
-    for number in range(1, len(TEST_CASE["test_method"]) + 1):
-        if number not in state["seen"]:
-            _report_emit(context, number, None)
-    context.pop("_report_steps", None)
-
-
-def _log(context, method, *args, **kwargs):
-    # Report evidence is separate from assertions and the final case outcome.
-    if method == "section":
-        number = kwargs.pop("report_step", None)
-        if number is not None:
-            _report_begin(context, number)
-    elif method == "check":
-        if kwargs.get("note"):
-            context.setdefault("_result_notes", []).append(kwargs["note"])
-        state = context.get("_report_steps")
-        if state and state["number"] is not None:
-            state["checks"].append({"label": args[0], "passed": bool(args[1]),
-                                    "expected": kwargs.get("expected"), "actual": kwargs.get("actual"), "note": kwargs.get("note")})
+    context["_method_results"][item_id] = result
     logger = context.get("log")
+    if callable(getattr(logger, "method_item", None)):
+        logger.method_item(item, result)
+    elif callable(getattr(logger, "step", None)):
+        # Older platforms still persist the IDs and typed result in log_records.
+        logger.step(item["step"], None, result)
+    else:
+        print(json.dumps({"method": item, "result": result}, ensure_ascii=False, allow_nan=False))
+
+
+def _begin(context, step_id):
+    context["_active_step"] = step_id
+    logger = context.get("log")
+    item = next(item for item in TEST_CASE["test_method"] if item["id"] == step_id)
     if logger is not None:
-        return getattr(logger, method)(*args, **kwargs)
-    # Standalone/offline execution remains possible without a platform import.
-    print("\n--- " + method.upper() + " ---")
-    print(json.dumps({"details": args, **kwargs}, ensure_ascii=False, indent=2))
+        logger.section(item["step"])
+
+
+def _done(context, step_id, actual=None):
+    _emit(context, step_id, "COMPLETED", actual)
+    context["_active_step"] = None
+
+
+def _check(context, item_id, passed, expected, actual):
+    _emit(context, item_id, "PASS" if passed else "FAIL", actual, expected)
+    if not passed:
+        context["_failures"].append(
+            f"{item_id}: Expected {expected!r}; received {_safe(actual)!r}")
+
+
+def _skip(context, item_id, reason):
+    _emit(context, item_id, "NOT_EVALUATED", reason=reason)
 
 
 def _finish(context, status, reason, evidence, observations):
-    _report_finish(context, status, reason)
-    note = "\n".join(dict.fromkeys(context.get("_result_notes", [])))
+    active = context.get("_active_step")
+    if active and active not in context["_method_results"]:
+        _emit(context, active, "ERROR" if status == "Error" else "FAILED", reason=reason)
+    for item in TEST_CASE["test_method"]:
+        if item["id"] not in context["_method_results"]:
+            pending = {"Step": "NOT_RUN", "Checkpoint": "NOT_EVALUATED", "Record": "NOT_RECORDED"}
+            _emit(context, item["id"], pending[item["type"]], reason=reason)
     context["case_result"] = {
-        "status": status, "reason": reason, "note": note, "evidence": evidence,
-        "observations": observations,
+        "status": status, "reason": reason, "evidence": evidence,
+        "observations": _safe(observations),
+        "method_results": list(context["_method_results"].values()),
     }
-    # Compatibility with the current runner; it still stores Error as Failed.
     context["_tc_status"] = "PASS" if status == "Pass" else "FAIL"
-    if context.get("log") is not None:
-        _log(context, "finish", status, reason, **({"note": note} if note else {}))
+    logger = context.get("log")
+    if logger is not None:
+        logger.finish(status, reason)
     else:
-        print(json.dumps(context["case_result"], ensure_ascii=False))
+        print(json.dumps(context["case_result"], ensure_ascii=False, allow_nan=False))
     if status == "Fail":
         raise CaseFailure(reason)
     if status == "Error":
@@ -160,33 +188,30 @@ def _origin(url):
 
 
 def execute(client, context=None, preset=None):
-    """Use Task connection settings, not global YAML or client private APIs."""
+    """Use Task connection settings and keep typed method evidence in the Log."""
     if not isinstance(context, dict):
         raise RuntimeError("BMCAgent did not supply a dictionary execution context")
-    _log(context, "section", "Task connection settings", report_step=1)
-    evidence = []
-    observations = {}
+    context["_method_results"], context["_failures"] = {}, []
+    evidence, observations = [], {}
+    _begin(context, "S1")
     conf = context.get("redfish", {})
-    if not isinstance(conf, dict):
-        return _finish(context, "Fail", "Task BMC settings are invalid", evidence, observations)
-    host = conf.get("host", "")
     try:
+        host = conf.get("host", "") if isinstance(conf, dict) else ""
         parsed = urlsplit(host) if isinstance(host, str) else None
         valid = parsed is not None and parsed.scheme in ("http", "https") and bool(parsed.hostname)
         valid = valid and not parsed.username and not parsed.password
         origin = _origin(host) if valid else None
-    except ValueError:
+    except (ValueError, TypeError):
         valid = False
     if not valid:
-        return _finish(context, "Fail", "Task BMC URL is missing or invalid", evidence, observations)
+        return _finish(context, "Fail", "S1: Task BMC URL is missing or invalid", evidence, observations)
     try:
         import requests
     except ImportError:
-        return _finish(context, "Error", "Required requests package is unavailable", evidence, observations)
+        return _finish(context, "Error", "S1: Required requests package is unavailable", evidence, observations)
 
-    url = urljoin(host, "/redfish/v1/")
+    url = urljoin(host, ENDPOINT)
     reason = None
-    _log(context, "section", "HTTP request and redirect evidence", report_step=1)
     try:
         with requests.Session() as session:
             session.trust_env = False
@@ -194,84 +219,104 @@ def execute(client, context=None, preset=None):
             seen = set()
             for hop in range(6):
                 if url in seen:
-                    reason = "Redirect loop detected"
+                    reason = "S1: Redirect loop detected"
                     break
                 seen.add(url)
                 response = session.get(
                     url, headers={"Accept": "application/json"},
-                    verify=conf.get("verify_ssl", False), timeout=15,
-                    allow_redirects=False,
-                )
-                item = {
-                    "uri": url, "status": response.status_code,
-                    "headers": {k: v for k, v in response.headers.items()
-                                if k.lower() not in ("set-cookie", "authorization", "x-auth-token")},
-                    "body": response.text,
-                }
+                    verify=conf.get("verify_ssl", False), timeout=15, allow_redirects=False)
+                item = {"source_step": "S1", "uri": url, "status": response.status_code,
+                        "headers": {k: v for k, v in response.headers.items()
+                                    if k.lower() not in ("set-cookie", "authorization", "x-auth-token")},
+                        "body": response.text}
                 evidence.append(item)
-                _log(context, "http", "GET", url, response.status_code,
-                     item["headers"], response.text, request_headers={"Accept": "application/json"})
+                logger = context.get("log")
+                if logger is not None:
+                    logger.http("GET", url, response.status_code, item["headers"], response.text,
+                                request_headers={"Accept": "application/json"})
+                else:
+                    print(json.dumps({"source_step": "S1", "http": item}, ensure_ascii=False))
                 if response.status_code in (301, 302, 307, 308):
                     location = response.headers.get("Location")
                     if not location:
-                        reason = "Redirect response has no Location"
+                        reason = "S1: Redirect response has no Location"
                         break
                     try:
                         target = urljoin(url, location)
-                        target_parts = urlsplit(target)
-                        leaves_origin = (target_parts.username or target_parts.password
-                                         or _origin(target) != origin)
+                        parts = urlsplit(target)
+                        leaves_origin = parts.username or parts.password or _origin(target) != origin
                     except ValueError:
-                        reason = "Redirect URL is invalid"
+                        reason = "S1: Redirect URL is invalid"
                         break
                     if leaves_origin:
-                        reason = "Redirect leaves Task origin; credentials were not forwarded"
+                        reason = "S1: Redirect leaves Task origin; credentials were not forwarded"
                         break
                     if hop == 5:
-                        reason = "Redirect limit exceeded (5 redirects)"
+                        reason = "S1: Redirect limit exceeded (5 redirects)"
                         break
                     url = target
                     continue
-                _log(context, "check", "Final HTTP status", response.status_code == 200,
-                     expected=200, actual=response.status_code)
+                _done(context, "S1", {"final_uri": url, "status": response.status_code})
+                _check(context, "C1", response.status_code == 200, 200, response.status_code)
                 if response.status_code != 200:
-                    reason = f"Expected HTTP status = 200; Received HTTP status = {response.status_code}"
+                    reason = context["_failures"][-1]
                     break
-                _log(context, "section", "JSON document validation", report_step=2)
+                _begin(context, "S2")
                 try:
                     body = json.loads(response.text)
                 except ValueError:
-                    _log(context, "check", "Valid JSON", False)
-                    reason = "Response body is not valid JSON"
+                    reason = "S2 / C2a: Response body cannot be parsed as JSON"
+                    _emit(context, "S2", "FAILED", reason=reason)
+                    context["_active_step"] = None
+                    _check(context, "C2a", False, "Response body can be parsed as JSON", "Parse failed")
                     break
-                _log(context, "check", "Valid JSON", True)
-                _log(context, "check", "Top-level JSON object", isinstance(body, dict),
-                     expected="object", actual=type(body).__name__)
-                _log(context, "section", "Document content validation")
+                _done(context, "S2", {"top_level_type": type(body).__name__})
+                _check(context, "C2a", True, "Response body can be parsed as JSON", "Parsed")
+                _check(context, "C2b", isinstance(body, dict), "object", type(body).__name__)
                 if not isinstance(body, dict):
-                    reason = "Response body is not a JSON object"
+                    reason = "C2b: Top-level JSON value is not an object"
                     break
-                _report_begin(context, 3)
-                if "RedfishVersion" in body:
-                    observations["RedfishVersion"] = body["RedfishVersion"]
-                resource_type = body.get("@odata.type")
-                type_ok = isinstance(resource_type, str) and bool(re.fullmatch(
-                    r"#ServiceRoot(?:\.v[0-9]+_[0-9]+_[0-9]+)?\.ServiceRoot", resource_type))
-                id_ok = body.get("@odata.id") == "/redfish/v1/"
-                _log(context, "check", "ServiceRoot type", type_ok,
-                     expected="ServiceRoot (any Schema version)", actual=resource_type)
-                _log(context, "check", "ServiceRoot URI", id_ok,
-                     expected="/redfish/v1/", actual=body.get("@odata.id"))
-                if not type_ok:
-                    reason = f"Expected @odata.type = a type identifying ServiceRoot; Received @odata.type = {resource_type!r}"
-                elif not id_ok:
-                    reason = f"Expected @odata.id = '/redfish/v1/'; Received @odata.id = {body.get('@odata.id')!r}"
+                _inspect(context, body, observations)
+                if context["_failures"]:
+                    reason = "; ".join(context["_failures"])
                 break
     except requests.RequestException as error:
-        reason = f"HTTP request could not complete ({type(error).__name__})"
+        reason = f"{context.get('_active_step') or 'S1'}: HTTP request could not complete ({type(error).__name__})"
     except Exception as error:
-        return _finish(context, "Error", f"Unexpected program error ({type(error).__name__})",
+        return _finish(context, "Error",
+                       f"{context.get('_active_step') or 'Execution'}: Unexpected program error ({type(error).__name__})",
                        evidence, observations)
     return _finish(context, "Fail" if reason else "Pass",
-                   reason or "HTTP 200 with ServiceRoot type and @odata.id='/redfish/v1/'",
-                   evidence, observations)
+                   reason or "All Checkpoints passed", evidence, observations)
+
+def _inspect(context, body, observations):
+    _begin(context, "S3")
+    value = body.get("@odata.type")
+    _done(context, "S3", {"present": "@odata.type" in body, "value": _safe(value)})
+    type_ready = "@odata.type" in body and isinstance(value, str)
+    _check(context, "C3a", type_ready, "@odata.type exists and is a string",
+           value if "@odata.type" in body else "<missing>")
+    if type_ready:
+        type_ok = bool(re.fullmatch(r"#ServiceRoot(?:\.v[0-9]+_[0-9]+_[0-9]+)?\.ServiceRoot", value))
+        _check(context, "C3b", type_ok,
+               "#ServiceRoot.v<major>_<minor>_<errata>.ServiceRoot (digits) or #ServiceRoot.ServiceRoot", value)
+    else:
+        _skip(context, "C3b", "C3a failed: @odata.type is missing or not a string")
+
+    _begin(context, "S4")
+    value = body.get("@odata.id")
+    _done(context, "S4", {"present": "@odata.id" in body, "value": _safe(value)})
+    id_ready = "@odata.id" in body and isinstance(value, str)
+    _check(context, "C4a", id_ready, "@odata.id exists and is a string",
+           value if "@odata.id" in body else "<missing>")
+    if id_ready:
+        _check(context, "C4b", value == "/redfish/v1/", "/redfish/v1/", value)
+    else:
+        _skip(context, "C4b", "C4a failed: @odata.id is missing or not a string")
+
+    _begin(context, "S5")
+    present = "RedfishVersion" in body
+    if present:
+        observations["RedfishVersion"] = body["RedfishVersion"]
+    _done(context, "S5", {"present": present})
+    _emit(context, "R5", "RECORDED", body["RedfishVersion"] if present else "Not present")

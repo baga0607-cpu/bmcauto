@@ -1,3 +1,5 @@
+**最新測項更新（2026-11-11）**：RF-01-001／002 已採 Step／Checkpoint／Record 與關聯 ID，Log 同步更新；其他測項及正式 Repository／Plan 副本未改。見 [S/C/R 交接](2026-11-11-rf01-method-items.md)。
+
 **同日後續：Connection UI** 已改為 BMC／Console Server／DUT OS 三個可收折區塊與九欄；Console Port 儲存使用 telnet 0，cpc 僅記錄為待實作連線規格，未修改 case.py。見 [Connection 更新](2026-11-11-connection-groups.md)。
 
 **最新統合交接（2026-11-11）**：[三個開發對話統合交接](2026-11-11-consolidated-handoff.md)。已整合55回合需求與結論、未完成事項、驗證限制與子代理人接手方式；下方為歷史紀錄。此次發布限文件，本機產品程式仍有未提交差異。

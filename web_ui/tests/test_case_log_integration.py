@@ -87,12 +87,23 @@ class CaseLogIntegrationTest(unittest.TestCase):
                 source = next(root.glob(f'rf_01_00{number}_*.py')).read_text(encoding='utf-8')
                 row = self.run_source(source, body,case_settings={'preset':'1.23.0'} if number==5 else None)
                 records = row['result']['log_records']
-                self.assertTrue({'section', 'http', 'check', 'step', 'finish'} <= {r['kind'] for r in records})
+                self.assertTrue({'section', 'http', 'step', 'finish'} <= {r['kind'] for r in records})
+                if number > 2:
+                    self.assertIn('check', {r['kind'] for r in records})
                 from single_case import metadata
                 authored=metadata(source)
                 steps=[r for r in records if r['kind']=='step']
                 self.assertEqual(len(steps),len(authored['test_method']))
-                self.assertTrue(all(r['result']['status']=='PASS' for r in steps))
+                if number <= 2:
+                    self.assertEqual([r['method_id'] for r in steps], [m['id'] for m in authored['test_method']])
+                    for record, definition in zip(steps, authored['test_method']):
+                        self.assertEqual(record['step_id'], definition['step_id'])
+                        self.assertEqual(record['result']['status'], {'Step':'COMPLETED','Checkpoint':'PASS','Record':'RECORDED'}[definition['type']])
+                        self.assertIsNone(record['criteria'])
+                    if number == 2:
+                        self.assertEqual(steps[-1]['result']['actual'], 'Not present')
+                else:
+                    self.assertTrue(all(r['result']['status']=='PASS' for r in steps))
                 self.assertEqual(row['source_created_at'],authored['created_at'])
                 self.assertEqual(records[-1]['status'], 'Pass')
                 self.assertEqual(next(r['body'] for r in records if r['kind'] == 'http'), body if isinstance(body,str) else json.dumps(body))
@@ -108,6 +119,27 @@ class CaseLogIntegrationTest(unittest.TestCase):
                     import os
                     target=os.environ.get('BMC_REPORT_QA_DIR')
                     if target:(Path(target)/'rf-six-steps.pdf').write_bytes(pdf.read_bytes())
+
+    def test_scr_failure_retains_independent_checks_and_record(self):
+        source = next((Path(__file__).resolve().parents[2] / 'test_assets/redfish').glob('rf_01_002_*.py')).read_text(encoding='utf-8')
+        row = self.run_source(source, {'@odata.type': '#Wrong.Type', '@odata.id': '/wrong', 'RedfishVersion': 123}, expected='Failed')
+        items = {r['method_id']: r['result'] for r in row['result']['log_records'] if r['kind'] == 'step'}
+        self.assertEqual(items['C3b']['status'], 'FAIL')
+        self.assertEqual(items['C4b']['status'], 'FAIL')
+        self.assertEqual(items['R5']['status'], 'RECORDED')
+        self.assertEqual(items['R5']['actual'], 123)
+        self.assertEqual(items['R5']['step_id'], 'S5')
+
+    def test_scr_parse_failure_is_not_a_cascade_of_failed_checks(self):
+        source = next((Path(__file__).resolve().parents[2] / 'test_assets/redfish').glob('rf_01_001_*.py')).read_text(encoding='utf-8')
+        row = self.run_source(source, 'not JSON', expected='Failed')
+        records = row['result']['log_records']
+        items = {r['method_id']: r['result'] for r in records if r['kind'] == 'step'}
+        self.assertEqual(items['S2']['status'], 'FAILED')
+        self.assertEqual(items['C2a']['status'], 'FAIL')
+        self.assertEqual(items['C2b']['status'], 'NOT_EVALUATED')
+        self.assertEqual(items['C3a']['status'], 'NOT_EVALUATED')
+        self.assertEqual(next(r for r in records if r['kind'] == 'http')['step_id'], 'S1')
 
     def test_same_task_case_rerun_keeps_previous_disk_evidence(self):
         source = next((Path(__file__).resolve().parents[2] / 'test_assets/redfish').glob('rf_01_001_*.py')).read_text(encoding='utf-8')

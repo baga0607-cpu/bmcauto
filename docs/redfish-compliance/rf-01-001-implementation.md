@@ -1,3 +1,5 @@
+**2026-11-11 更新**：RF-01-001／002 已採獨立 Step／Checkpoint／Record 與關聯 ID，取代下方舊 Step／Criteria 綁定描述；詳見 [最新實作交接](../status/2026-11-11-rf01-method-items.md)。
+
 # RF-01-001 first implementation
 
 Current metadata naming: TEST_CASE.test_method is the ordered list; each item contains its numbered method key (step_1, step_2, step_3) and criteria. description is retained. This naming supersedes the earlier steps list / nested test_method convention below. Execution logic is unchanged.
