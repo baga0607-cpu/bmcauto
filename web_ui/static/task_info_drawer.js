@@ -117,14 +117,14 @@ window.TaskInfoDrawer = (() => {
         content.innerHTML = `<p class="help">${page === 'scope' ? 'Scope' : 'Connection'} is available for Test Tasks. This is a Plan Task.</p>`;
       } else if (page === 'connection') {
         settings = await services.api(`/api/tasks/${task.id}/settings`);
-        const port = settings.dut_connect_cmd?.match(/^telnet\s+(?:0|localhost)\s+(\d+)\s*$/)?.[1] || '';
+        const port = settings.dut_connect_cmd?.match(/^telnet\s+(?:0|localhost)\s+(.+)$/)?.[1] || '';
         const group = (label, fields) => '<details class="connection-group" open><summary>' + label + '</summary><div class="fields">' + fields + '</div></details>';
         content.innerHTML = '<form>' +
           group('BMC', input('host','BMC IP',settings.host) +
             input('username','BMC User',settings.username) + input('password','BMC Password',settings.password,'password')) +
           group('Console Server', input('cs_host','Server IP',settings.cs_host) +
             input('cs_username','Server User',settings.cs_username) + input('cs_password','Server Password',settings.cs_password,'password') +
-            input('console_port','Console Port',port,'number')) +
+            input('console_port','Console Port',port)) +
           group('DUT OS', input('dut_os_username','DUT User',settings.dut_os_username) +
             input('dut_os_password','DUT Password',settings.dut_os_password,'password')) +
           '</form>' + (settings.dut_connect_cmd && !port ? '<p class="help">An existing custom console command is configured. Leave Console Port empty to retain it. Entering a port replaces it with telnet 0 &lt;port&gt;.</p>' : '');
@@ -132,8 +132,6 @@ window.TaskInfoDrawer = (() => {
           const group = event.target.closest('details');
           if (group) group.open = true;
         }, true);
-        const portInput = form().elements.console_port;
-        portInput.min = 1; portInput.max = 65535; portInput.step = 1;
       } else {
         summary = await services.api(`/api/tasks/${task.id}/summary`);
         const project = services.projects().find(p => p.plans.some(plan => plan.id === task.plan_id));
@@ -218,7 +216,7 @@ window.TaskInfoDrawer = (() => {
         payload = {...settings, ...Object.fromEntries(new FormData(form()))};
         const port = payload.console_port;
         delete payload.console_port;
-        if (port) payload.dut_connect_cmd = 'telnet 0 ' + Number(port);
+        if (port) payload.dut_connect_cmd = 'telnet 0 ' + port;
         if (payload.host && !/^https?:\/\//i.test(payload.host)) payload.host = 'https://' + payload.host.trim();
         url += '/settings'; method = 'PUT';
       } else return false;

@@ -40,3 +40,7 @@ Local verification artifacts: bmca-runtime/verification/connection-20261111.
 ## Publication boundary
 
 The local Task Info drawer integration predates this change but its JS/CSS assets were still untracked and absent from the publication checkout. This submission preserves those complete current assets together with this narrowly scoped Connection update. Other outstanding platform changes (index/workbench/TaskManagement/backend integration) are not bundled here. A fresh remote checkout therefore still needs the earlier Task Info integration before these assets become a live UI; the currently running local checkout already has that integration. Do not interpret this source publication as a full platform release.
+
+## Manual Console Port entry (latest user decision)
+
+Console Port is a plain text input, without number steppers, numeric inputMode, integer validation or range validation. Its value is appended as entered to telnet 0; no Number conversion is performed. Existing telnet 0/localhost values round-trip as text. Blank retains the existing command. This supersedes the earlier 1–65535 validation described above. No case.py or connection executor is changed.
