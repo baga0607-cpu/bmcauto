@@ -1,0 +1,7 @@
+# Case source creation and modification dates — 2026-11-02
+
+Standalone RF-01-001 through RF-01-013 retain their original TEST_CASE.created_at and carry modified_at for this revision. Both declarations use ISO 8601 timestamps with timezone. Platforms expose source_created_at and source_modified_at separately. Lists and conflict selectors display modification when known, otherwise creation; both unknown displays an em dash. Plan, Repository and import pickers can match both dates. Hover over the displayed date to inspect both.
+
+Imports and copies preserve the declared values. Editing actual Python source in the Plan editor records a fresh modified_at and preserves created_at; changing parameters alone does not advance the source date. Historical Repository and Plan copies are not updated automatically. Source version, report execution time and result evidence remain separate concepts.
+
+Validation: 4 source-date integration tests passed, including import/copy/adapt/settings-only paths, and all 13 original creation timestamps were compared against their source backups. Keyword-search tests and JavaScript syntax passed. Broader tests: two previously documented summary-API tests still expect omitted log_text/result. No DUT was run. Formal service restarted after backup with zero active Tasks; HTTP 200, API date fields verified, all database tables compared equal. Evidence: bmca-runtime/verification/source-dates-20261102.

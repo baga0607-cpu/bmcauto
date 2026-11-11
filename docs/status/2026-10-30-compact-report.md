@@ -1,0 +1,9 @@
+# Compact case report
+
+Removed PDF Detail Test Method tables that attempted to paginate million-character step results. The approved compact format retains identity/status, description, bounded explicit Result Summary, Task/FW/Tester/date context, DUT Configuration label, manual/retest notes and unchanged full log attachments. Missing log attachments are labelled. Summary uses recorded finish reason or legacy reason, with manual override reason taking precedence; maximum 600 characters with visible excerpt notice. No inferred summaries or DUT operations.
+
+Validation: python -m unittest test_report_case test_report_exports test_case_log_integration: 26 passed against isolated fixtures. Covers large step evidence excluded from pages but preserved byte-for-byte in attachments, Unicode/escaping, bounded/missing/manual summaries, Final Report source ownership, Reference merges and legacy logs.
+
+Actual 13-case data replay through generate_selection using a database backup: 0.962 seconds, 10 pages, 18,889,430 bytes, all 13 log attachments byte-for-byte identical to stored unified logs. Poppler rendered all 10 pages; contact sheets and full-size case page reviewed for alignment, wrapping, page breaks, headers and footers. Preview and probes are local under bmca-runtime/verification/compact-report. Existing report size remains dominated by full logs.
+
+Deployment completed: backed up DB, confirmed no active Tasks, restarted original server.py service. Formal report POST returned HTTP 200 in 1.09 seconds (including PDF validation), 10 pages and 13 attachments. All stored statuses/results/logs match the backup; integrity ok, zero foreign-key violations. No source cases or stored execution evidence changed. See report-step-output.md for the superseding contract. Existing browser Log Export is unchanged.

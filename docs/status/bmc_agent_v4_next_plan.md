@@ -1,3 +1,21 @@
+**最新統合交接（2026-11-11）**：[三個開發對話統合交接](2026-11-11-consolidated-handoff.md)。已整合55回合需求與結論、未完成事項、驗證限制與子代理人接手方式；下方為歷史紀錄。此次發布限文件，本機產品程式仍有未提交差異。
+
+# 最新本機更新 — 2026-11-11
+
+同日後續：Task Info 卡片縮至560px，移除Overview底部說明；點選計畫／實際日期或Status直接開啟Task List共用編輯視窗，在同一視窗填寫必填Note並儲存。隔離操作與正式唯讀檢查通過。
+
+[Task Info 緊湊排版與 Scope 樹狀結構](2026-11-11-task-info-compact-scope.md)：Overview 欄位寬度減半、列間距與上下內距縮減25%，iDesign 兩欄提升至主層級。Scope 採 Plan 資料夾樹狀表格，移除 Folder 欄位，支援資料夾勾選及收折。隔離瀏覽器及正式唯讀比例檢查通過。
+
+# 最新本機更新 — 2026-11-10
+
+[New Task 卡片／任務軟刪除與緊湊欄位](2026-11-10-task-create-soft-delete.md) 已套用：刪除必填原因寫入 Note，狀態 Deleted，保留資料並從一般列表隱藏。Overview／Connection 每列標籤與欄位；Note 新到舊不收折；FW Component／Version 改欄內提示。78 項任務測試、13 項報告測試及隔離／正式唯讀瀏覽器通過，正式服務已重啟且資料比對未變。Status 篩選 UI 與 DUT Config 欄位仍待後續需求。
+
+[Task Info 右側卡片與英文介面](2026-11-10-task-info-drawer.md) 已套用。Test Task 五頁籤、Plan Task Overview／Note 兩頁籤，直接編輯及未儲存提示；Task Info History 文字統一為 Note。Connection 七欄映射至既有 context，保留其餘連線設定。Task List 的 Assignee／Status 改為獨立欄位，My Task 頁面移除。36 項後端測試、隔離瀏覽器及正式唯讀檢查通過。DUT Config 尚待欄位定義，未測實體 DUT。
+
+# 最新本機更新 — 2026-11-02
+
+[RF-01-008／013 與結果 Note](2026-11-02-result-note.md) 已完成並套用。報告格式另議，HTML/PDF 渲染未變。
+
 # 最新交接 — 2026-10-30
 
 先讀[最新handoff](2026-10-30-handoff.md)與[發布驗證](2026-10-30-release-verification.md)。BMCAgent已啟動，Task/Report/Plan/Execution更新已推送baga0607-cpu/bmcauto main。Viewer/Editor僅右側面板，獨立視窗取消。Plan依序為名稱+Project、頁籤、搜尋/Import/Rename/Delete、Case列表；點Case只切換已開啟工具。下方「尚未發布」屬歷史狀態。依使用者下一指示繼續。

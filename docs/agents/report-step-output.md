@@ -1,5 +1,17 @@
 # Per-step report output contract
 
+## HTML default and attachment-only logs (latest 2026-10-30 decision)
+
+The default delivery is a ZIP containing an HTML report plus separate .log attachments. Cases show name/status/summary; secondary test information is collapsed. Log contents must not be displayed inside the report, including in a preview/modal. Open attachment uses a relative link to the separate log file. PDF remains optional; browser printing expands metadata but cannot embed attachments, while the existing server PDF export still includes full log attachments. Execution Date displays Taiwan time as YYYY/MM/DD HH:MM:SS (UTC+08:00). See ../status/2026-10-30-html-report.md.
+
+## Current PDF layout (2026-10-30 supersedes the layout below)
+
+The PDF no longer prints Detail Test Method or Step/Criteria/Result tables. Each case shows Case Name/Result, Description, Result Summary, Task Name, FW Package, the empty DUT Configuration label, Tester, Execution Date, applicable manual/retest notes, and full Test log attachment names. Normal case blocks stay together when they fit on a page; no mandatory one-case-per-page rule.
+
+Result Summary uses the latest explicit finish reason (legacy top-level reason fallback); manual overrides use their recorded reason instead. Missing reasons point to available log evidence without inferred criteria/verdicts. Summary text is capped at 600 characters including an explicit excerpt notice. The complete log remains embedded unchanged, and missing logs are clearly marked. A supporting PDF reader can save/open these attachments. Existing log.step and report_definition recording contracts remain required for full evidence and compatibility; only their PDF table rendering is removed. Final/Reference selection and winner ownership are unchanged.
+
+The following Worksheet 1 table layout is historical; evidence-authoring rules still apply.
+
 The per-Test-Case PDF block follows the approved Worksheet 1 layout:
 
 1. Case Name and Result on the same row.
@@ -54,3 +66,13 @@ Group independently in Report Area and Reference Area. Reference results never c
 RF-01-001–006 now emit one explicit row per declared method using the existing computed checks and final reason. Unperformed declared steps emit Result=None (PDF —). Their requests, timing, parameters, prompts and acceptance conditions are unchanged. Existing Log evidence is retained. See ../status/2026-10-28-existing-source-step-output.md.
 
 Declare the original source file birth time in literal TEST_CASE.created_at, for example an ISO timestamp with timezone. The platform normalizes it to UTC and propagates it as source_created_at. Unknown time displays —. Do not use modification time or import time. Preserve this value during adaptations and normal source copies; a newly authored testcase must record its own actual file birth time. Browser file selection cannot supply native birth time by itself. Internal source_version remains a distinct immutable generation identifier and is not the displayed file timestamp.
+
+## 2026-11-02 execution Note data contract (report layout deferred)
+
+The user requested separate discussion before changing report format. Keep current HTML/PDF layouts. New executions may use `log.check(..., note="...")`, `log.step(..., note="...")` and `log.finish(status, reason, note="...")`; existing calls remain compatible. Note explains an accepted non-mandatory deviation while the check/case is PASS; actual observations remain truthful. Never convert a required failure to PASS merely because Note exists.
+
+Structured records and full Test log retain Note. Save result_json.note plus task_testcases.result_note for lightweight summaries; old rows default to empty. Rerun clears prior Note, manual override preserves execution evidence, and the winning result retains its note in Final aggregation data. Report attachment logs naturally contain new Note text, but no new HTML/PDF field is rendered pending discussion.
+
+## 2026-11-02 approved layout supersedes layout deferral
+
+The user approved and deployed the Case Name disclosure layout. HTML uses Bahnschrift 22px/600, same-row status, default collapsed cases, Test Data then Test Information. PDF displays the same sections fully expanded, with 16.5pt headings and embedded full logs. Test Data order is Description / Result Summary / Note / Spec Ref. (compliance) / Log; Test Information is Task Name / Tester / Execution Time / FW Package / DUT Configuration. Note reads existing result_json.note only. New optional TEST_CASE.spec_ref is captured in report_definition together with test_type/compliance; no historical backfill. See ../status/2026-11-02-approved-report-layout.md for fallback, validation and preservation details.
