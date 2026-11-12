@@ -41,7 +41,11 @@ class ReportPreviewTest(unittest.TestCase):
         self.assertIn('no-store', response.headers['Cache-Control'])
         html = response.get_json()['html']
         self.assertEqual(html.count('<article '), 1)
-        self.assertEqual(html.count('<details open '), 3)
+        self.assertEqual(html.count('<details open '), 1)
+        self.assertNotIn('<dt>Result Summary</dt>', html)
+        self.assertNotIn('<dt>Note</dt>', html)
+        self.assertIn('<section class="test-data"><h3>Test Data</h3>', html)
+        self.assertIn('<section class="test-information"><h3>Test Information</h3>', html)
         for value in ('Command', 'Judgement', 'Actual: 1.20.0', 'Preview tester', 'BMC: 1.0', 'Case &lt;0&gt;'):
             self.assertIn(value, html)
         for value in ('Case &lt;1&gt;', 'Task Two', 'NEVER-EXPORT-THIS-PASSWORD', '<script', 'href="logs/', 'print-report'):

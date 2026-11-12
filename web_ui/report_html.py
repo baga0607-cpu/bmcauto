@@ -82,8 +82,8 @@ def generate_html_report(db_path, reports, preview_case_id=None):
                     notes.append('Rerun needed: retained evidence predates changes to the Plan or Task connection settings.')
                 if manual:
                     notes.append('Manual result: '+display(manual.get('status'))+' · '+display(manual.get('reason')))
-                fields = [('Task Name', source.get('name')), ('Tester', setup.get('owner')), ('Execution Time', execution_date(row['executed_at'])), ('FW Package', firmware(setup)), ('DUT Configuration', None)]
-                info = ''.join(f'<div><dt>{escape(label)}</dt><dd>{escape('' if label == 'DUT Configuration' else display(value))}</dd></div>' for label,value in fields)
+                fields = [('Task Name', source.get('name')), ('Tester', setup.get('owner')), ('Execution Time', execution_date(row['executed_at'])), ('FW Package', firmware(setup)), ('Configuration', None)]
+                info = ''.join(f'<div><dt>{escape(label)}</dt><dd>{escape('' if label == 'Configuration' else display(value))}</dd></div>' for label,value in fields)
                 folder_id, folder_names, visited = row['folder_id'], [], set()
                 while folder_id in folders and folder_id not in visited:
                     visited.add(folder_id)
@@ -102,14 +102,13 @@ def generate_html_report(db_path, reports, preview_case_id=None):
                            '<tbody>'+method_body+'</tbody></table>')
                 cards.append(f'''<article class="case" id="{key}" data-status="{status}">
 <details class="case-disclosure"><summary class="case-heading"><svg class="case-chevron" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="m6 3 5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="case-title">{escape(row['display_name'] or row['testcase_id'])}</span><span class="status {status.lower()}">{status}</span></summary>
-<div class="case-expanded"><details class="test-data"><summary>Test Data</summary><dl class="data-fields">
+<div class="case-expanded"><section class="test-data"><h3>Test Data</h3><dl class="data-fields">
 <dt>Description</dt><dd class="description">{escape(description(result,metadata))}</dd>
-<dt>Result Summary</dt><dd class="reason">{escape(result_summary(result, manual))}</dd>
 {spec_field}<dt>Log</dt><dd class="case-actions">{actions}</dd></dl>
 {methods}
 {''.join('<p class="notice">'+escape(note)+'</p>' for note in notes)}
-</details><details class="test-information"><summary>Test Information</summary>
-<div class="detail-content"><dl>{info}</dl></div></details>
+</section><section class="test-information"><h3>Test Information</h3>
+<div class="detail-content"><dl>{info}</dl></div></section>
 </div></details></article>''')
             label = 'Reference' if area == 'reference' else 'Final Report' if report['final'] else 'Test Report'
             sections.append(''.join(cards) if preview else f'<section class="report-group"><div class="group-heading"><p class="eyebrow">{label} / {escape(task["project_name"])}</p><h2>{escape(report["label"])}</h2><p class="muted">{escape(task["plan_name"])} · {len(rows)} cases</p></div>'+''.join(cards)+'</section>')

@@ -66,7 +66,7 @@ class WorksheetReportTest(unittest.TestCase):
         text=text[text.index('Test Suite :'):]
         first=text[text.index('Case <0>'):text.index('Case <1>')]
         second=text[text.index('Case <1>'):text.index('Case <2>')]
-        for label in ['Test Data','Description','Result Summary','Log','Test Information','Task Name','FW Package','DUT Configuration','Tester','Execution Time']:
+        for label in ['Test Data','Description','Log','Test Information','Task Name','FW Package','Configuration','Tester','Execution Time']:
             self.assertIn(label,text)
         for value in ['Task One','Engineer One','1BMC: 1.0','ZERO observed','Description at execution <safe>']:self.assertIn(value,first)
         for value in ['Task Two','Engineer Two','1BMC: 2.0','FAILED observation']:self.assertIn(value,second)
@@ -97,7 +97,7 @@ class WorksheetReportTest(unittest.TestCase):
         self.assertIn('RAW_STEP_EVIDENCE',text)
         self.assertNotIn('COMPLETE_END',text)
         self.assertIn('Test Steps & Results',text)
-        self.assertIn('Explicit final reason <&> 中文',text)
+        self.assertNotIn('Result Summary',text)
         self.assertIn('Excerpt',text)
         self.assertIn('中文說明',text)
         self.assertLess(len(reader.pages),10)

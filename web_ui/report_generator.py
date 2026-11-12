@@ -573,7 +573,6 @@ def generate_task_pdf_report(task_id, output_path, db_path=None, log_dir=None, r
                 story.append(table)
             story.append(Paragraph('Test Data', styles['tc_title']))
             field('Description', description(result_data, metadata))
-            field('Result Summary', result_summary(result_data, manual))
 
             reference = specification_reference(result_data, metadata, cat_name)
             if reference is not None:
@@ -600,7 +599,7 @@ def generate_task_pdf_report(task_id, output_path, db_path=None, log_dir=None, r
             story.append(Paragraph('Test Information', styles['tc_title']))
             for label, value in [('Task Name', detail.get('name')), ('Tester', setup.get('owner')),
                                  ('Execution Time', execution_date(r['executed_at'])),
-                                 ('FW Package', firmware(setup)), ('DUT Configuration', ' ')]:
+                                 ('FW Package', firmware(setup)), ('Configuration', ' ')]:
                 field(label, value)
             story.append(Spacer(1,5))
             story.append(HRFlowable(width=COL_W, thickness=.5, color=C_BORDER))

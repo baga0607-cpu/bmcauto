@@ -48,7 +48,7 @@ const {chromium}=require(process.env.BMC_PLAYWRIGHT_MODULE||'playwright');
   await frame.locator('.method-table').waitFor();
   assert.equal(previews.at(-1),'/api/tasks/a/testcases/c0/report-preview');
   assert.deepEqual(await frame.locator('th').allTextContents(),['Step','Type','Description','Result','Judgement']);
-  assert.equal(await frame.locator('details[open]').count(),3);
+  assert.equal(await frame.locator('details[open]').count(),1);
   assert.equal(await page.locator('.report-preview-frame').getAttribute('sandbox'),'allow-same-origin');
   assert.ok((await frame.locator('body').innerText()).includes(conditional?'Note: DUT returned HTTP 404':'Actual: 1.20.0'));
   assert.ok(!(await frame.locator('body').innerText()).includes('Test B'));

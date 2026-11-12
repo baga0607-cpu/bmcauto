@@ -11,6 +11,7 @@ dl{margin:0}dl.data-fields,.detail-content dl>div{display:grid;grid-template-col
 @media(max-width:650px){main{margin:0;padding:26px 20px}.report-header{display:block}.report-header button{margin-top:16px}h1{font-size:30px}.stats{gap:18px}.case-expanded{padding-left:0}dl.data-fields,.detail-content dl>div{grid-template-columns:110px minmax(0,1fr);gap:12px}.data-fields,.detail-content{padding-left:0}}
 @media print{@page{size:A4;margin:15mm}body{background:white;font-size:10pt}main{margin:0;padding:0;max-width:none}.report-header button{display:none}.report-header{padding-bottom:14px}h1{font-size:26pt}h2{font-size:14pt}.stats{padding:10px 0}.stats strong{font-size:16pt}.report-group{margin-top:20px}.case{padding:5pt 0}.case-heading{break-after:avoid}.case-title{font-size:16.5pt}.case-chevron{display:none}.case-expanded{padding-left:0}.status{font-size:9pt}.print-note{display:block;font-size:8pt;color:var(--muted)}summary{list-style:none;font-size:10pt;padding:4pt 0;break-after:avoid}dt{font-size:9pt}dd{font-size:10pt}.data-fields,.detail-content{padding:2pt 0 6pt}dl.data-fields,.detail-content dl>div{grid-template-columns:102pt minmax(0,1fr);gap:4pt 12pt}.method-table{font-size:8.5pt;line-height:1.35}.method-table th,.method-table td{padding:2pt 4pt}.method-table caption{font-size:10pt;break-after:avoid}.method-table tr{break-inside:avoid}.footer{font-size:8pt}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
 .status.cp{color:#795000;background:#fff1cc}
+.test-data>h3,.test-information>h3{font-size:14px;font-weight:600;line-height:1.45;margin:0;padding:6px 0;break-after:avoid}
 </style></head><body><main>
 <header class="report-header"><div><p class="eyebrow">BMC Agent / Quality assurance</p><h1>BMC Test Report</h1><p class="generated">Generated {{GENERATED}}</p></div><button class="primary" id="print-report">Print / Save PDF</button></header>
 <div class="stats" aria-label="Formal report results">{{STATS}}</div>
@@ -21,14 +22,6 @@ dl{margin:0}dl.data-fields,.detail-content dl>div{display:grid;grid-template-col
 <script>
 (()=>{'use strict';
 let printState=null;
-// Explicit activation avoids asynchronous toggle events racing with print restore.
-document.querySelectorAll('.case-disclosure>.case-heading').forEach(heading=>{
-heading.addEventListener('click',event=>{
-event.preventDefault();const block=heading.parentElement;const opening=!block.open;
-block.open=opening;block.querySelectorAll('details').forEach(child=>child.open=false);
-if(opening)block.querySelector('.test-data').open=true;
-});
-});
 function preparePrint(){if(printState)return;printState=[...document.querySelectorAll('details')].map(el=>[el,el.open]);for(const [el] of printState)el.open=true;}
 window.addEventListener('beforeprint',preparePrint);
 window.addEventListener('afterprint',()=>{for(const [el,open] of printState||[])el.open=open;printState=null;});
