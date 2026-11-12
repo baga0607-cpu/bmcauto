@@ -10,9 +10,9 @@ const {chromium}=require(process.env.BMC_PLAYWRIGHT_MODULE||'playwright');
   const page=await browser.newPage({viewport:{width:1440,height:900}}),errors=[],writes=[],previews=[];
   page.on('pageerror',e=>errors.push(e.message));
   await page.addInitScript(()=>{if(window!==window.top)return;localStorage.setItem('bmc-execution-tabs-v1',JSON.stringify({ids:['a','b'],active:'a'}));window.EventSource=class{close(){}};});
-  const cases=[{id:'c0',tc_name:conditional?'RF-01-008 OpenAPI Document Endpoint':'RF-01-002 Service Root',automation:'automatic',script_kind:'single',selected:false,status:conditional?'CP':'Passed'},
+  const cases=[{id:'c0',tc_name:conditional?'RF-01-008 OpenAPI Document Endpoint':'RF-01-002 Service Root',automation:'automatic',script_kind:'single',selected:false,status:conditional?'C-PASS':'Passed'},
                {id:'c1',tc_name:'RF-01-001 Version Discovery',automation:'semi_automatic',script_kind:'single',selected:false,status:'TBD'}];
-  const a={id:'a',name:'Test A',plan_id:'pa',testcases:cases,counts:{Passed:conditional?0:1,CP:conditional?1:0,Failed:0},execution_active:false};
+  const a={id:'a',name:'Test A',plan_id:'pa',testcases:cases,counts:{Passed:conditional?0:1,'C-PASS':conditional?1:0,Failed:0},execution_active:false};
   const b={...a,id:'b',name:'Test B',plan_id:'pb',testcases:[{...cases[0],status:'Running'}],execution_active:true};
   const project={id:'p',name:'Project',plans:[{id:'pa',name:'Plan A',folders:[],testcases:cases,tasks:[a]},{id:'pb',name:'Plan B',folders:[],testcases:b.testcases,tasks:[b]}]};
   let fail=false,hold=false,release;
@@ -53,10 +53,10 @@ const {chromium}=require(process.env.BMC_PLAYWRIGHT_MODULE||'playwright');
   assert.ok((await frame.locator('body').innerText()).includes(conditional?'Note: DUT returned HTTP 404':'Actual: 1.20.0'));
   assert.ok(!(await frame.locator('body').innerText()).includes('Test B'));
   if(conditional){
-   assert.equal(await frame.locator('.status.cp').innerText(),'CP');
-   assert.deepEqual(await frame.locator('.method-table tbody tr td:last-child').allTextContents(),['COMPLETED','CP',...Array(7).fill('Skip')]);
+   assert.equal(await frame.locator('.status.c-pass').innerText(),'C-PASS');
+   assert.deepEqual(await frame.locator('.method-table tbody tr td:last-child').allTextContents(),['COMPLETED','C-PASS',...Array(7).fill('Skip')]);
    assert.equal(await frame.locator('dt').filter({hasText:/^Note$/}).count(),0);
-   assert.ok((await page.locator('#app').innerText().catch(()=>page.locator('body').innerText())).includes('CP'));
+   assert.ok((await page.locator('#app').innerText().catch(()=>page.locator('body').innerText())).includes('C-PASS'));
   }
   for(const theme of ['light','dark']){
    await page.evaluate(t=>document.documentElement.dataset.theme=t,theme);

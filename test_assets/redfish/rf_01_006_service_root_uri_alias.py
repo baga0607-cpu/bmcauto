@@ -2,149 +2,168 @@ import json
 import re
 from urllib.parse import urljoin, urlsplit
 
-TEST_CASE = {
-    "modified_at": "2026-11-02T06:11:19.396101+00:00",
-    "test_type": "compliance",
-    "spec_ref": [
-        "DSP0266 v1.25.0 section 6.7 Table 5 (/redfish/v1 alias); sections 6.6 and 7.2.3 (ServiceRoot); sections 9.6.2 and 9.6.3 (identity/type)."
-    ],
-    "created_at": '2026-10-19T07:42:16.950028+00:00',
-    "name": "RF-01-006 Service Root URI Alias",
-    "description": (
-        "GET /redfish/v1 without a trailing slash and verify direct ServiceRoot delivery or redirection to /redfish/v1/. "
-        "Record RedfishVersion without checking its expected value."
-    ),
-    "test_method": [
-        {
-            "step_1": (
-                "Using Task BMC connection settings, send GET /redfish/v1 without a trailing slash with "
-                "Accept: application/json and a fixed 15-second request timeout. "
-                "Record each response URI, status, headers and body. Follow supported "
-                "same-origin redirects, detecting loops, up to five redirects."
-            ),
-            "criteria": (
-                "The final HTTP status is 200. A direct response is allowed; after redirection, the final path must be /redfish/v1/. Never normalize the initial request to add a slash. Invalid Task settings, request "
-                "failure, missing redirect Location, loops, exceeding five redirects "
-                "or leaving the Task origin result in Fail with a reason. Redirect "
-                "safeguards are provisional pending RF-02; a boundary failure alone "
-                "does not establish a DMTF violation."
-            ),
-        },
-        {
-            "step_2": "Parse the final response body as JSON.",
-            "criteria": (
-                "The body is valid JSON and its top-level value is an object. "
-                "Invalid JSON or another top-level type results in Fail with a reason."
-            ),
-        },
-        {
-            "step_3": "Inspect @odata.type and @odata.id; record RedfishVersion if present.",
-            "criteria": (
-                "@odata.type is a ServiceRoot type identifier: "
-                "#ServiceRoot.v<major>_<minor>_<errata>.ServiceRoot or "
-                "#ServiceRoot.ServiceRoot. No particular Schema version is required. "
-                "@odata.id equals /redfish/v1/ exactly. Additional properties are "
-                "allowed. RedfishVersion is evidence only; its presence, format and "
-                "expected value are evaluated by RF-01-005. All criteria met results "
-                "in Pass; a content mismatch results in Fail with a reason. An "
-                "unexpected program problem or missing dependency results in Error."
-            ),
-        },
-    ],
-    "automation": "automatic",
-    "parameters": {},
-}
+TEST_CASE = {'modified_at': '2026-11-12T08:32:24.073188+00:00',
+ 'test_type': 'compliance',
+ 'spec_ref': ['DSP0266 v1.25.0 section 6.7 Table 5 (/redfish/v1 alias); sections 6.6 and 7.2.3 '
+              '(ServiceRoot); sections 9.6.2 and 9.6.3 (identity/type).'],
+ 'created_at': '2026-10-19T07:42:16.950028+00:00',
+ 'name': 'RF-01-006 Service Root URI Alias',
+ 'description': 'GET /redfish/v1 without a trailing slash and verify direct ServiceRoot delivery or '
+                'redirection to /redfish/v1/. Record RedfishVersion without checking its expected value.',
+ 'test_method': [{'step_number': 1,
+                  'type': 'Command',
+                  'step': 'Send GET /redfish/v1 and follow supported same-origin redirects.'},
+                 {'step_number': 1,
+                  'type': 'Checkpoint',
+                  'step': 'Verify that the final HTTP status is 200.'},
+                 {'step_number': 1,
+                  'type': 'Checkpoint',
+                  'step': 'Verify direct delivery or redirection to /redfish/v1/.'},
+                 {'step_number': 2, 'type': 'Action', 'step': 'Parse the response body as JSON.'},
+                 {'step_number': 2,
+                  'type': 'Checkpoint',
+                  'step': 'Verify that the response body can be parsed as JSON.'},
+                 {'step_number': 2,
+                  'type': 'Checkpoint',
+                  'step': 'Verify that the top-level JSON value is an object.'},
+                 {'step_number': 3,
+                  'type': 'Action',
+                  'step': 'Read @odata.type, @odata.id and RedfishVersion from the ServiceRoot.'},
+                 {'step_number': 3,
+                  'type': 'Checkpoint',
+                  'step': 'Verify that @odata.type identifies ServiceRoot; no particular schema version is '
+                          'required.'},
+                 {'step_number': 3,
+                  'type': 'Checkpoint',
+                  'step': 'Verify that @odata.id is exactly /redfish/v1/.'},
+                 {'step_number': 3,
+                  'type': 'Record',
+                  'step': 'Record RedfishVersion when present, without judging its value.',
+                  'observation': 'RedfishVersion'}],
+ 'automation': 'automatic',
+ 'parameters': {}}
 
 
 class CaseFailure(AssertionError):
     """Non-program failure with an actionable reason."""
 
 
-def _report_emit(context, number, result):
-    """Record the authored method and criteria without changing case judgement."""
-    method = TEST_CASE["test_method"][number - 1]
-    step = method.get("step_" + str(number), method.get("step"))
-    criteria = method.get("criteria")
+_METHOD_CHECKS = [('Final\\ HTTP\\ status', 1),
+ ('Service\\ Root\\ alias\\ resolution', 2),
+ ('Valid\\ JSON', 4),
+ ('Top\\-level\\ JSON\\ object', 5),
+ ('ServiceRoot\\ type', 7),
+ ('ServiceRoot\\ URI', 8)]
+
+
+def _method_emit(context, index, status, **detail):
+    item = TEST_CASE["test_method"][index]
+    result = dict(method_index=index, step_number=item["step_number"], type=item["type"],
+                  status=status, **detail)
+    result = json.loads(json.dumps(result, ensure_ascii=False), parse_constant=lambda value: value)
+    context.setdefault("_method_results", []).append(result)
     logger = context.get("log")
-    write = getattr(logger, "step", None) if logger is not None else None
-    if callable(write):
-        note = result.get('note') if isinstance(result, dict) else None
-        write(step, criteria, result, **({'note': note} if note else {}))
+    if callable(getattr(logger, "method_item", None)):
+        logger.method_item(item, result)
+    elif callable(getattr(logger, "step", None)):
+        logger.step(item["step"], None, result)
     else:
-        print("\n--- REPORT STEP ---")
-        print(json.dumps({"step": step, "criteria": criteria, "result": result}, ensure_ascii=False, indent=2))
+        print(json.dumps({"method": item, "result": result}, ensure_ascii=False))
 
 
 def _report_flush(context, status=None, reason=None):
-    state = context.get("_report_steps")
-    if not state or state["number"] is None:
+    phase = context.get("_method_phase")
+    if phase is None:
         return
-    number, checks = state["number"], state["checks"]
-    if status is not None:
-        outcome = status.upper()
-    elif checks:
-        outcome = "PASS" if all(check["passed"] for check in checks) else "FAIL"
-    else:
-        outcome = None
-    result = {"status": outcome, "checks": checks} if outcome is not None else None
-    if reason and result is not None:
-        result["reason"] = reason
-    notes = [check['note'] for check in checks if check.get('note')]
-    if notes and result is not None:
-        result['note'] = '\n'.join(dict.fromkeys(notes))
-    _report_emit(context, number, result)
-    state["seen"].append(number)
-    state["number"], state["checks"] = None, []
+    pending = context.get("_method_pending", [])
+    requests = context.get("_method_http", [])
+    index = next(i for i, item in enumerate(TEST_CASE["test_method"])
+                 if item["step_number"] == phase and item["type"] in ("Command", "Action"))
+    failed_parse = any(label in ("Valid JSON", "Valid XML", "XML parser safety boundary")
+                       and result["status"] == "FAIL" for _, label, result in pending)
+    skipped = context.pop("_method_action_skip", None)
+    outcome = ("Skip" if skipped else "ERROR" if status == "Error" else "FAILED" if failed_parse
+               or status == "Fail" and not pending else "COMPLETED")
+    detail = {"actual": {"responses": requests} if requests else "Operation completed"}
+    if outcome in ("FAILED", "ERROR", "Skip"):
+        detail = {"reason": skipped or reason or "Response parsing did not complete"}
+    _method_emit(context, index, outcome, **detail)
+    for index, label, result in pending:
+        _method_emit(context, index, **result)
+    context["_method_phase"] = None
+    context["_method_pending"], context["_method_http"] = [], []
 
 
 def _report_begin(context, number):
-    state = context.setdefault("_report_steps", {"number": None, "checks": [], "seen": []})
-    if state["number"] != number:
-        _report_flush(context)
-        state["number"] = number
-
-
-def _report_finish(context, status, reason):
-    _report_flush(context, status, reason)
-    state = context.get("_report_steps", {"seen": []})
-    for number in range(1, len(TEST_CASE["test_method"]) + 1):
-        if number not in state["seen"]:
-            _report_emit(context, number, None)
-    context.pop("_report_steps", None)
+    if context.get("_method_phase") == number:
+        return
+    _report_flush(context)
+    context["_method_phase"] = number
+    context.setdefault("_method_visited", set()).add(number)
+    context["_method_pending"], context["_method_http"] = [], []
+    item = next(item for item in TEST_CASE["test_method"]
+                if item["step_number"] == number and item["type"] in ("Command", "Action"))
+    if context.get("log") is not None:
+        context["log"].section(f'Step {number} | {item["type"]} | {item["step"]}')
 
 
 def _log(context, method, *args, **kwargs):
-    # Report evidence is separate from assertions and the final case outcome.
     if method == "section":
         number = kwargs.pop("report_step", None)
         if number is not None:
             _report_begin(context, number)
-    elif method == "check":
-        if kwargs.get("note"):
-            context.setdefault("_result_notes", []).append(kwargs["note"])
-        state = context.get("_report_steps")
-        if state and state["number"] is not None:
-            state["checks"].append({"label": args[0], "passed": bool(args[1]),
-                                    "expected": kwargs.get("expected"), "actual": kwargs.get("actual"), "note": kwargs.get("note")})
+        return
+    if method == "check":
+        import re
+        label, passed = args
+        index = next((index for pattern, index in _METHOD_CHECKS if re.fullmatch(pattern, label)), None)
+        if index is None:
+            raise RuntimeError("No declared Checkpoint for " + label)
+        phase = TEST_CASE["test_method"][index]["step_number"]
+        if context.get("_method_phase") != phase:
+            _report_begin(context, phase)
+        note = kwargs.get("note")
+        status = kwargs.pop("judgement", None) or ("C-PASS" if passed and note else "PASS" if passed else "FAIL")
+        result = {"status": status, "expected": kwargs.get("expected", True),
+                  "actual": {"source": label, "value": kwargs.get("actual", bool(passed))}}
+        if note and status == "C-PASS":
+            result["note"] = note
+        if kwargs.get("reason"):
+            result["reason"] = kwargs["reason"]
+        context.setdefault("_method_pending", []).append((index, label, result))
+        return
+    if method == "http":
+        context.setdefault("_method_http", []).append({"method": args[0], "uri": args[1], "status": args[2]})
     logger = context.get("log")
     if logger is not None:
         return getattr(logger, method)(*args, **kwargs)
-    # Standalone/offline execution remains possible without a platform import.
-    print("\n--- " + method.upper() + " ---")
-    print(json.dumps({"details": args, **kwargs}, ensure_ascii=False, indent=2))
+    print(json.dumps({"event": method, "details": args, **kwargs}, ensure_ascii=False))
 
 
 def _finish(context, status, reason, evidence, observations):
-    _report_finish(context, status, reason)
-    note = "\n".join(dict.fromkeys(context.get("_result_notes", [])))
-    context["case_result"] = {
-        "status": status, "reason": reason, "note": note, "evidence": evidence,
-        "observations": observations,
-    }
-    # Compatibility with the current runner; it still stores Error as Failed.
-    context["_tc_status"] = "PASS" if status == "Pass" else "FAIL"
+    _report_flush(context, status, reason)
+    results = context.setdefault("_method_results", [])
+    for index, item in enumerate(TEST_CASE["test_method"]):
+        if item["type"] == "Record" and item.get("observation") in observations:
+            _method_emit(context, index, "COMPLETED", actual=observations[item["observation"]])
+    observed = {result["method_index"] for result in results}
+    for index, item in enumerate(TEST_CASE["test_method"]):
+        if index not in observed:
+            skip_reason = ("No applicable item was encountered for this check."
+                           if item["step_number"] in context.get("_method_visited", set()) and status == "Pass"
+                           else "Prerequisite was unavailable or execution ended: " + reason)
+            _method_emit(context, index, "Skip", reason=skip_reason)
+    notes = list(dict.fromkeys(result["note"] for result in results if result["status"] == "C-PASS"))
+    if status == "Pass" and any(result["status"] in ("FAIL", "FAILED", "ERROR") for result in results):
+        status, reason = "Fail", "A required method item failed; see its recorded result"
+    elif status == "Pass" and notes:
+        status = "C-PASS"
+    note = "\n".join(notes) if status == "C-PASS" else ""
+    context["case_result"] = dict(status=status, reason=reason, note=note, evidence=evidence,
+                                  observations=observations, method_results=results)
+    context["_tc_status"] = {"Pass": "PASS", "C-PASS": "C-PASS", "Block": "BLOCK"}.get(status, "FAIL")
     if context.get("log") is not None:
-        _log(context, "finish", status, reason, **({"note": note} if note else {}))
+        context["log"].finish(status, reason, **({"note": note} if note else {}))
     else:
         print(json.dumps(context["case_result"], ensure_ascii=False))
     if status == "Fail":

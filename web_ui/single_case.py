@@ -436,7 +436,7 @@ def register(app, runtime):
                 originals.setdefault(path,path.read_text(encoding='utf-8'))
                 tc.settings_revision=(tc.settings_revision or 0)+1
                 for membership in s.query(TaskTestCase).filter_by(testcase_id=tc.system_id):
-                    if membership.executed_at or membership.result_json or membership.manual_override_json or membership.status in ('Passed','Failed','Block','CP'):
+                    if membership.executed_at or membership.result_json or membership.manual_override_json or membership.status in ('Passed','Failed','Block','CP','C-PASS'):
                         membership.needs_retest=True
                 path.write_text(item['source'],encoding='utf-8');updated.append(tc)
             else:
@@ -501,7 +501,7 @@ def register(app, runtime):
             tc.settings_json = json.dumps(settings, ensure_ascii=False)
             tc.settings_revision = (tc.settings_revision or 0) + 1
             for membership in s.query(TaskTestCase).filter_by(testcase_id=tc_id):
-                if membership.executed_at or membership.result_json or membership.manual_override_json or membership.status in ('Passed', 'Failed', 'CP'):
+                if membership.executed_at or membership.result_json or membership.manual_override_json or membership.status in ('Passed', 'Failed', 'CP', 'C-PASS'):
                     membership.needs_retest = True
             try:
                 path.write_text(source, encoding='utf-8')

@@ -2,11 +2,11 @@ import json
 from urllib.parse import urljoin, urlsplit
 
 TEST_CASE = {
-    "modified_at": "2026-11-12T08:00:00+00:00",
+    "modified_at": "2026-11-12T08:48:00+00:00",
     "test_type": "compliance",
     "spec_ref": [
         "DSP0266 v1.25.0 section 6.7 Table 4 (/redfish/v1/openapi.yaml, Required=No); section 11.3.4 Table 33 (OpenAPI document).",
-        "BMCAgent RF-01-008 acceptance policy: HTTP 404 with the explicit missing-URI message or HTTP 400 with matching Base.1.16.InvalidURI extended information is CP with a mandatory Note; invalid supplied documents and other errors retain their existing failure handling."
+        "BMCAgent RF-01-008 acceptance policy: HTTP 404 with the explicit missing-URI message or HTTP 400 with matching Base.1.16.InvalidURI extended information is C-PASS with a mandatory Note; invalid supplied documents and other errors retain their existing failure handling."
     ],
     "created_at": "2026-10-30T05:56:21.765986+00:00",
     "name": "RF-01-008 OpenAPI Document Endpoint",
@@ -98,7 +98,7 @@ def _log(context, method, *args, **kwargs):
                  "openapi property type": 6, "info property type": 7,
                  "paths property type": 8}.get(args[0], 1)
         note = kwargs.get("note")
-        status = "CP" if args[1] and note else "PASS" if args[1] else "FAIL"
+        status = "C-PASS" if args[1] and note else "PASS" if args[1] else "FAIL"
         detail = {key: value for key, value in kwargs.items() if value is not None}
         if note:
             context["_result_note"] = note
@@ -119,11 +119,11 @@ def _finish(context, status, reason, evidence, observations):
         if index not in results:
             _emit(context, index, "Skip", reason=(
                 "Optional endpoint is absent; no document is available for validation."
-                if status == "CP" else "Prerequisite did not complete: " + reason))
+                if status == "C-PASS" else "Prerequisite did not complete: " + reason))
     note = context.get("_result_note", "")
     context["case_result"] = dict(status=status, reason=reason, note=note,
                                   evidence=evidence, observations=observations)
-    context["_tc_status"] = {"Pass": "PASS", "CP": "CP"}.get(status, "FAIL")
+    context["_tc_status"] = {"Pass": "PASS", "C-PASS": "C-PASS"}.get(status, "FAIL")
     if context.get("log") is not None:
         context["log"].finish(status, reason, note=note or None)
     else:
@@ -247,14 +247,14 @@ def execute(client, context=None, preset=None):
                     identifier = " (Base.1.16.InvalidURI)" if response.status_code == 400 else ""
                     note = (f'DUT returned HTTP {response.status_code}{identifier} with message: "{message}" '
                             "DSP0266 1.25.0 section 6.7 Table 4 marks it Required=No "
-                            "(should support). Accepted as CP; document content was not validated.")
+                            "(should support). Accepted as C-PASS; document content was not validated.")
                     observations.update(initial_uri=urljoin(host, "/redfish/v1/openapi.yaml"),
                                         final_uri=url, redirect_count=hop, endpoint_provided=False,
                                         document_validated=False)
                     _log(context, "check", "Recommended OpenAPI endpoint", True,
                          expected="HTTP 200 preferred; absence is non-mandatory",
                          actual=actual, note=note)
-                    return _finish(context, "CP", "Optional OpenAPI endpoint absent; document checks skipped",
+                    return _finish(context, "C-PASS", "Optional OpenAPI endpoint absent; document checks skipped",
                                    evidence, observations)
                 _log(context, "check", "Final HTTP status", response.status_code == 200,
                      expected=200, actual=response.status_code)

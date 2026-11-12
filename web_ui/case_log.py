@@ -1,6 +1,6 @@
 """Per-execution readable logs. Sections describe evidence, never execution steps."""
 from datetime import datetime, timezone
-from result_policy import validate_method, validate_case_cp
+from result_policy import method_status, validate_method, validate_case_cp
 import json
 import re
 from pathlib import Path
@@ -115,7 +115,7 @@ class CaseLog:
         self._close_section()
         self.section_number += 1
         self.section_checks = 0
-        self._write('section', f'[{self.section_number}] {title}', [], title=str(title))
+        self._write('section', str(title), [], title=str(title))
 
     def http(self, method, uri, status, headers, body, request_headers=None):
         self.http_number += 1
@@ -230,6 +230,7 @@ class CaseLog:
                     method_type=kind, step_number=number, method_index=index)
 
     def finish(self, status, reason, note=None):
+        status = method_status(status)
         if self.finished:
             return
         validate_case_cp(status, {'log_records': self.records}, note)

@@ -29,7 +29,17 @@ class BlockMigrationTest(unittest.TestCase):
             migrate_block_status(conn)
             migrate_block_status(conn)
             self.assertEqual(tuple(conn.exec_driver_sql('SELECT * FROM task_testcases').one()), ('case','Failed','original evidence'))
-            conn.exec_driver_sql("UPDATE task_testcases SET status='CP'")
+            conn.exec_driver_sql("UPDATE task_testcases SET status='C-PASS'")
             self.assertEqual(conn.exec_driver_sql('PRAGMA integrity_check').scalar(), 'ok')
             self.assertEqual(list(conn.exec_driver_sql('PRAGMA foreign_key_check')), [])
+        engine.dispose()
+
+    def test_legacy_cp_rows_are_preserved_when_adding_c_pass(self):
+        engine=create_engine('sqlite://')
+        with engine.begin() as conn:
+            conn.exec_driver_sql("CREATE TABLE task_testcases(id TEXT PRIMARY KEY,status TEXT,log_text TEXT,CONSTRAINT ck_task_status CHECK(status IN ('TBD','Running','Passed','Failed','Block','CP')))")
+            conn.exec_driver_sql("INSERT INTO task_testcases VALUES('old','CP','Original CP log')")
+            migrate_block_status(conn);migrate_block_status(conn)
+            self.assertEqual(tuple(conn.exec_driver_sql('SELECT * FROM task_testcases').one()),('old','CP','Original CP log'))
+            conn.exec_driver_sql("INSERT INTO task_testcases VALUES('new','C-PASS','New evidence')")
         engine.dispose()

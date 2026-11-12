@@ -1,0 +1,45 @@
+diff --git a/web_ui/app.py b/web_ui/app.py
+index 7208caf..2626d3a 100644
+--- a/web_ui/app.py
++++ b/web_ui/app.py
+@@ -977,7 +977,7 @@ def run_testcase():
+                 case_log.records = [e['log_record'] for e in run['log_history'] if 'log_record' in e]
+                 if stopped or not any(r['kind'] == 'finish' for r in case_log.records):
+                     verdict = context.get('_tc_status') if run['status'] == 'done' else None
+-                    status = 'Stopped' if stopped else {'PASS':'Pass','BLOCK':'Block','CP':'CP'}.get(verdict, 'Fail')
++                    status = 'Stopped' if stopped else {'PASS':'Pass','BLOCK':'Block','CP':'C-PASS','C-PASS':'C-PASS'}.get(verdict, 'Fail')
+                     errors = [e.get('error') or e.get('text') for e in run['log_history'] if e.get('error') or e['type'] == 'error']
+                     reason = 'Execution stopped by operator' if stopped else next((e for e in reversed(errors) if e), 'Execution finished')
+                     case_log.finish(status, reason)
+@@ -988,7 +988,7 @@ def run_testcase():
+                     ps.begin_write(result_session)
+                     stopped = run_sessions[session_id].get("stop_requested") or run_sessions[session_id]["status"] == "stopped"
+                     verdict = locals().get("context", {}).get("_tc_status") if run_sessions[session_id]["status"] == "done" else None
+-                    outcome = "TBD" if stopped else {"PASS":"Passed","BLOCK":"Block","CP":"CP"}.get(verdict, "Failed")
++                    outcome = "TBD" if stopped else {"PASS":"Passed","BLOCK":"Block","CP":"C-PASS","C-PASS":"C-PASS"}.get(verdict, "Failed")
+                     with open(result_log_path, encoding="utf-8") as result_log:
+                         latest_log = result_log.read()
+                     # Persist this testcase's current structured evidence before the stream closes.
+
+diff --git a/web_ui/case_worker.py b/web_ui/case_worker.py
+index 5996c27..6bfbca0 100644
+--- a/web_ui/case_worker.py
++++ b/web_ui/case_worker.py
+@@ -51,7 +51,7 @@ def execute(config, emit, receive):
+                 emit({'type': 'case_start', 'case_name': name})
+                 try:
+                     sc.execute_script(config['root'], config['module'], client, context, settings.get('preset'))
+-                    verdict = {'PASS':'PASS', 'BLOCK':'BLOCK', 'CP':'CP'}.get(context.get('_tc_status'), 'FAIL')
++                    verdict = {'PASS':'PASS', 'BLOCK':'BLOCK', 'CP':'C-PASS', 'C-PASS':'C-PASS'}.get(context.get('_tc_status'), 'FAIL')
+                     emit({'type': 'case_done', 'case_name': name, 'result': verdict})
+                 except Exception as error:
+                     verdict, reason = 'FAIL', str(error)
+@@ -72,7 +72,7 @@ def execute(config, emit, receive):
+                 finally:
+                     builtins.input = original_input
+                     writer.flush()
+-                    log.finish({'PASS':'Pass','BLOCK':'Block','CP':'CP'}.get(verdict,'Fail'), reason)
++                    log.finish({'PASS':'Pass','BLOCK':'Block','CP':'C-PASS','C-PASS':'C-PASS'}.get(verdict,'Fail'), reason)
+ 
+ 
+ if __name__ == '__main__':

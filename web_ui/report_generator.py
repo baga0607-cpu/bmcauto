@@ -212,8 +212,8 @@ def _safe_name(name):
 
 def _status_para(status, styles):
     s = (status or 'tbd').lower()
-    if s == 'cp':
-        return Paragraph('CP', styles['status_tbd'])
+    if s in ('cp', 'c-pass'):
+        return Paragraph('C-PASS', styles['status_tbd'])
     if s in ('passed', 'pass'):
         return Paragraph('PASSED  [OK]', styles['status_pass'])
     elif s in ('failed', 'fail'):
@@ -386,14 +386,14 @@ def generate_task_pdf_report(task_id, output_path, db_path=None, log_dir=None, r
     passed  = sum(1 for r in rows if (r['status'] or '').lower() in ('passed', 'pass'))
     failed  = sum(1 for r in rows if (r['status'] or '').lower() in ('failed', 'fail'))
     blocked = sum(1 for r in rows if (r['status'] or '').lower() in ('block', 'blocked'))
-    conditional = sum(1 for r in rows if (r['status'] or '').upper() == 'CP')
+    conditional = sum(1 for r in rows if (r['status'] or '').upper() in ('CP', 'C-PASS'))
     tbd     = total - passed - failed - blocked - conditional
 
     cover_stats = [
         [Paragraph('<b>Total Cases</b>', styles['tbl_hdr']),
          Paragraph('<b>Passed</b>', styles['tbl_hdr']),
          Paragraph('<b>Failed</b>', styles['tbl_hdr']),
-         Paragraph('<b>CP</b>', styles['tbl_hdr']),
+         Paragraph('<b>C-PASS</b>', styles['tbl_hdr']),
          Paragraph('<b>Block</b>', styles['tbl_hdr']),
          Paragraph('<b>TBD</b>', styles['tbl_hdr'])],
         [Paragraph(str(total), styles['tbl_cell_bold']),
@@ -454,7 +454,7 @@ def generate_task_pdf_report(task_id, output_path, db_path=None, log_dir=None, r
             styles['toc_cat']))
         for r in cat_rows:
             tc_nm  = r['display_name'] or r['testcase_id']
-            status = (r['status'] or 'tbd').upper()
+            status = ('C-PASS' if r['status'] == 'CP' else r['status'] or 'tbd').upper()
             color  = '#1E7E34' if status == 'PASSED' else ('#B71C1C' if status == 'FAILED' else '#856404')
             story.append(Paragraph(
                 f'• {_xml_escape(str(tc_nm))} &nbsp;'
@@ -526,7 +526,7 @@ def generate_task_pdf_report(task_id, output_path, db_path=None, log_dir=None, r
             except (ValueError, TypeError):
                 manual = None
             if isinstance(manual, dict):
-                notes.append('Manual status: '+display(manual.get('status'))+'; Modified at: '+display(manual.get('modified_at'))+'; Reason: '+display(manual.get('reason')))
+                notes.append('Manual status: '+display('C-PASS' if manual.get('status') == 'CP' else manual.get('status'))+'; Modified at: '+display(manual.get('modified_at'))+'; Reason: '+display(manual.get('reason')))
             attach_names = []
             for content in [test_log_text(r['log_text'], r['api_log_text'])]:
                 if content:
@@ -549,7 +549,7 @@ def generate_task_pdf_report(task_id, output_path, db_path=None, log_dir=None, r
                 return Paragraph(_xml_escape(display(value)).replace('\n', '<br/>'), styles[style])
             case_header = Table([[
                 Paragraph(case_title_markup(tc_name, _CJK_FONT_BOLD), styles['case_name']),
-                cell({'Passed':'PASS','Failed':'FAIL','TBD':'NR','Block':'Block'}.get(status, display(status)),
+                cell({'CP':'C-PASS','Passed':'PASS','Failed':'FAIL','TBD':'NR','Block':'Block'}.get(status, display(status)),
                      'status_pass' if status == 'Passed' else 'status_fail' if status == 'Failed' else 'status_tbd'),
             ]], colWidths=[COL_W-65, 65])
             case_header.setStyle(TableStyle([
@@ -583,8 +583,8 @@ def generate_task_pdf_report(task_id, output_path, db_path=None, log_dir=None, r
             story.append(Paragraph('Test Steps &amp; Results', styles['tc_title']))
             table_rows = [[cell(label, 'tbl_cell_bold') for label in ('Step', 'Type', 'Description', 'Result', 'Judgement')]]
             table_rows.extend([cell(value if value != '' else ' ') for value in row] for row in method_table_rows(result_data, metadata))
-            if manual and manual.get('status') == 'CP':
-                table_rows.append([cell(v) for v in (' ', '—', 'Manual case judgement', 'Note: '+display(manual.get('reason')), 'CP')])
+            if manual and manual.get('status') in ('CP', 'C-PASS'):
+                table_rows.append([cell(v) for v in (' ', '—', 'Manual case judgement', 'Note: '+display(manual.get('reason')), 'C-PASS')])
             methods = Table(table_rows, colWidths=[COL_W*.06, COL_W*.13, COL_W*.39, COL_W*.25, COL_W*.17],
                             repeatRows=1, splitByRow=1, splitInRow=1)
             methods.setStyle(TableStyle([

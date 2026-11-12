@@ -171,12 +171,13 @@ def _method_table_rows(result, metadata):
         for index, item in enumerate(methods):
             if not isinstance(item, dict) or not is_typed(item):
                 continue
-            match = next(((position, r) for position, r in remaining
-                          if detail_of(r).get('method_index') == index
-                          or item.get('id') and (r.get('method_id') or detail_of(r).get('id')) == item['id']), None)
-            if match:
-                remaining.remove(match)
-                rows.append(typed(match[1], match[1].get('result')))
+            matches = [(position, r) for position, r in remaining
+                       if detail_of(r).get('method_index') == index
+                       or item.get('id') and (r.get('method_id') or detail_of(r).get('id')) == item['id']]
+            if matches:
+                for match in matches:
+                    remaining.remove(match)
+                    rows.append(typed(match[1], match[1].get('result')))
             else:
                 rows.append(typed(item))
         for number, (_, record) in enumerate(remaining, 1):

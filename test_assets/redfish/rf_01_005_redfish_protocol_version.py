@@ -2,130 +2,173 @@ import json
 import re
 from urllib.parse import urljoin, urlsplit
 
-TEST_CASE = {
-    "modified_at": "2026-11-02T06:11:19.396101+00:00",
-    "test_type": "compliance",
-    "spec_ref": [
-        "DSP0266 v1.25.0 section 6.6 (RedfishVersion format).",
-        "BMCAgent RF-01-005 acceptance policy: exact equality to the tester-supplied version; not a DMTF-mandated version value."
-    ],
-    "created_at": '2026-10-19T03:32:23.623177+00:00',
-    "name": "RF-01-005 Redfish Protocol Version",
-    "description": "Verify that ServiceRoot RedfishVersion exactly matches the tester-provided protocol version.",
-    "test_method": [
-        {
-            "step_1": "Read the expected version from Plan preset; if blank, ask the tester without an answer timeout.",
-            "criteria": "A nonblank string is supplied. Blank submission results in Fail: Tester did not provide a version number. This case remains semi-automatic even when preset is filled.",
-        },
-        {
-            "step_2": "Using Task connection settings, GET /redfish/v1/ with Accept: application/json and fixed 15-second HTTP timeout; record all responses and supported same-origin redirects.",
-            "criteria": "Final HTTP status is 200. Request failures or rejected redirects result in Fail with a reason. Provisional safeguards allow up to five redirects and reject loops or leaving the Task origin; RF-02 owns full redirect rules.",
-        },
-        {
-            "step_3": "Parse the JSON object and inspect RedfishVersion.",
-            "criteria": "RedfishVersion exists and is a string of three dot-separated decimal integers (major.minor.errata). Missing property: Fail, ServiceRoot did not provide RedfishVersion. Invalid type or format: Fail, RedfishVersion format does not meet requirements.",
-        },
-        {
-            "step_4": "Compare RedfishVersion with the tester-provided expected string exactly.",
-            "criteria": "Exact equality is Pass; any difference is Fail showing expected and actual values. No numeric ordering, trimming or version normalization is applied. A newer version does not automatically pass. Unexpected program problems or missing dependencies result in Error.",
-        },
-    ],
-    "automation": "semi_automatic",
-    "parameters": {
-        "preset": {"type": "string", "default": "", "label": "Expected RedfishVersion (blank: ask during execution)"},
-    },
-}
+TEST_CASE = {'modified_at': '2026-11-12T08:32:24.046757+00:00',
+ 'test_type': 'compliance',
+ 'spec_ref': ['DSP0266 v1.25.0 section 6.6 (RedfishVersion format).',
+              'BMCAgent RF-01-005 acceptance policy: exact equality to the tester-supplied version; not a '
+              'DMTF-mandated version value.'],
+ 'created_at': '2026-10-19T03:32:23.623177+00:00',
+ 'name': 'RF-01-005 Redfish Protocol Version',
+ 'description': 'Verify that ServiceRoot RedfishVersion exactly matches the tester-provided protocol '
+                'version.',
+ 'test_method': [{'step_number': 1,
+                  'type': 'Action',
+                  'step': 'Read the expected RedfishVersion from the preset, or ask the tester if it is '
+                          'blank.'},
+                 {'step_number': 1,
+                  'type': 'Checkpoint',
+                  'step': 'Verify that a nonblank expected version string was supplied.'},
+                 {'step_number': 2,
+                  'type': 'Command',
+                  'step': 'Send GET /redfish/v1/ and follow supported same-origin redirects.'},
+                 {'step_number': 2,
+                  'type': 'Checkpoint',
+                  'step': 'Verify that the final HTTP status is 200.'},
+                 {'step_number': 3, 'type': 'Action', 'step': 'Parse the response body as JSON.'},
+                 {'step_number': 3,
+                  'type': 'Checkpoint',
+                  'step': 'Verify that the response body can be parsed as JSON.'},
+                 {'step_number': 3,
+                  'type': 'Checkpoint',
+                  'step': 'Verify that the top-level JSON value is an object.'},
+                 {'step_number': 4, 'type': 'Action', 'step': 'Read the RedfishVersion property.'},
+                 {'step_number': 4, 'type': 'Checkpoint', 'step': 'Verify that RedfishVersion is present.'},
+                 {'step_number': 4,
+                  'type': 'Checkpoint',
+                  'step': 'Verify that RedfishVersion is a string of three dot-separated decimal integers.'},
+                 {'step_number': 5,
+                  'type': 'Action',
+                  'step': 'Compare RedfishVersion with the expected version without normalization.'},
+                 {'step_number': 5,
+                  'type': 'Checkpoint',
+                  'step': 'Verify that RedfishVersion exactly matches the supplied string.'}],
+ 'automation': 'semi_automatic',
+ 'parameters': {'preset': {'type': 'string',
+                           'default': '',
+                           'label': 'Expected RedfishVersion (blank: ask during execution)'}}}
 
 
 class CaseFailure(AssertionError):
     """Non-program failure with an actionable reason."""
 
 
-def _report_emit(context, number, result):
-    """Record the authored method and criteria without changing case judgement."""
-    method = TEST_CASE["test_method"][number - 1]
-    step = method.get("step_" + str(number), method.get("step"))
-    criteria = method.get("criteria")
+_METHOD_CHECKS = [('Tester\\ supplied\\ expected\\ version', 1),
+ ('Final\\ HTTP\\ status', 3),
+ ('Valid\\ JSON', 5),
+ ('Top\\-level\\ JSON\\ object', 6),
+ ('RedfishVersion\\ is\\ present', 8),
+ ('RedfishVersion\\ format', 9),
+ ('Exact\\ RedfishVersion\\ match', 11)]
+
+
+def _method_emit(context, index, status, **detail):
+    item = TEST_CASE["test_method"][index]
+    result = dict(method_index=index, step_number=item["step_number"], type=item["type"],
+                  status=status, **detail)
+    result = json.loads(json.dumps(result, ensure_ascii=False), parse_constant=lambda value: value)
+    context.setdefault("_method_results", []).append(result)
     logger = context.get("log")
-    write = getattr(logger, "step", None) if logger is not None else None
-    if callable(write):
-        note = result.get('note') if isinstance(result, dict) else None
-        write(step, criteria, result, **({'note': note} if note else {}))
+    if callable(getattr(logger, "method_item", None)):
+        logger.method_item(item, result)
+    elif callable(getattr(logger, "step", None)):
+        logger.step(item["step"], None, result)
     else:
-        print("\n--- REPORT STEP ---")
-        print(json.dumps({"step": step, "criteria": criteria, "result": result}, ensure_ascii=False, indent=2))
+        print(json.dumps({"method": item, "result": result}, ensure_ascii=False))
 
 
 def _report_flush(context, status=None, reason=None):
-    state = context.get("_report_steps")
-    if not state or state["number"] is None:
+    phase = context.get("_method_phase")
+    if phase is None:
         return
-    number, checks = state["number"], state["checks"]
-    if status is not None:
-        outcome = status.upper()
-    elif checks:
-        outcome = "PASS" if all(check["passed"] for check in checks) else "FAIL"
-    else:
-        outcome = None
-    result = {"status": outcome, "checks": checks} if outcome is not None else None
-    if reason and result is not None:
-        result["reason"] = reason
-    notes = [check['note'] for check in checks if check.get('note')]
-    if notes and result is not None:
-        result['note'] = '\n'.join(dict.fromkeys(notes))
-    _report_emit(context, number, result)
-    state["seen"].append(number)
-    state["number"], state["checks"] = None, []
+    pending = context.get("_method_pending", [])
+    requests = context.get("_method_http", [])
+    index = next(i for i, item in enumerate(TEST_CASE["test_method"])
+                 if item["step_number"] == phase and item["type"] in ("Command", "Action"))
+    failed_parse = any(label in ("Valid JSON", "Valid XML", "XML parser safety boundary")
+                       and result["status"] == "FAIL" for _, label, result in pending)
+    skipped = context.pop("_method_action_skip", None)
+    outcome = ("Skip" if skipped else "ERROR" if status == "Error" else "FAILED" if failed_parse
+               or status == "Fail" and not pending else "COMPLETED")
+    detail = {"actual": {"responses": requests} if requests else "Operation completed"}
+    if outcome in ("FAILED", "ERROR", "Skip"):
+        detail = {"reason": skipped or reason or "Response parsing did not complete"}
+    _method_emit(context, index, outcome, **detail)
+    for index, label, result in pending:
+        _method_emit(context, index, **result)
+    context["_method_phase"] = None
+    context["_method_pending"], context["_method_http"] = [], []
 
 
 def _report_begin(context, number):
-    state = context.setdefault("_report_steps", {"number": None, "checks": [], "seen": []})
-    if state["number"] != number:
-        _report_flush(context)
-        state["number"] = number
-
-
-def _report_finish(context, status, reason):
-    _report_flush(context, status, reason)
-    state = context.get("_report_steps", {"seen": []})
-    for number in range(1, len(TEST_CASE["test_method"]) + 1):
-        if number not in state["seen"]:
-            _report_emit(context, number, None)
-    context.pop("_report_steps", None)
+    if context.get("_method_phase") == number:
+        return
+    _report_flush(context)
+    context["_method_phase"] = number
+    context.setdefault("_method_visited", set()).add(number)
+    context["_method_pending"], context["_method_http"] = [], []
+    item = next(item for item in TEST_CASE["test_method"]
+                if item["step_number"] == number and item["type"] in ("Command", "Action"))
+    if context.get("log") is not None:
+        context["log"].section(f'Step {number} | {item["type"]} | {item["step"]}')
 
 
 def _log(context, method, *args, **kwargs):
-    # Report evidence is separate from assertions and the final case outcome.
     if method == "section":
         number = kwargs.pop("report_step", None)
         if number is not None:
             _report_begin(context, number)
-    elif method == "check":
-        if kwargs.get("note"):
-            context.setdefault("_result_notes", []).append(kwargs["note"])
-        state = context.get("_report_steps")
-        if state and state["number"] is not None:
-            state["checks"].append({"label": args[0], "passed": bool(args[1]),
-                                    "expected": kwargs.get("expected"), "actual": kwargs.get("actual"), "note": kwargs.get("note")})
+        return
+    if method == "check":
+        import re
+        label, passed = args
+        index = next((index for pattern, index in _METHOD_CHECKS if re.fullmatch(pattern, label)), None)
+        if index is None:
+            raise RuntimeError("No declared Checkpoint for " + label)
+        phase = TEST_CASE["test_method"][index]["step_number"]
+        if context.get("_method_phase") != phase:
+            _report_begin(context, phase)
+        note = kwargs.get("note")
+        status = kwargs.pop("judgement", None) or ("C-PASS" if passed and note else "PASS" if passed else "FAIL")
+        result = {"status": status, "expected": kwargs.get("expected", True),
+                  "actual": {"source": label, "value": kwargs.get("actual", bool(passed))}}
+        if note and status == "C-PASS":
+            result["note"] = note
+        if kwargs.get("reason"):
+            result["reason"] = kwargs["reason"]
+        context.setdefault("_method_pending", []).append((index, label, result))
+        return
+    if method == "http":
+        context.setdefault("_method_http", []).append({"method": args[0], "uri": args[1], "status": args[2]})
     logger = context.get("log")
     if logger is not None:
         return getattr(logger, method)(*args, **kwargs)
-    # Standalone/offline execution remains possible without a platform import.
-    print("\n--- " + method.upper() + " ---")
-    print(json.dumps({"details": args, **kwargs}, ensure_ascii=False, indent=2))
+    print(json.dumps({"event": method, "details": args, **kwargs}, ensure_ascii=False))
 
 
 def _finish(context, status, reason, evidence, observations):
-    _report_finish(context, status, reason)
-    note = "\n".join(dict.fromkeys(context.get("_result_notes", [])))
-    context["case_result"] = {
-        "status": status, "reason": reason, "note": note, "evidence": evidence,
-        "observations": observations,
-    }
-    # Compatibility with the current runner; it still stores Error as Failed.
-    context["_tc_status"] = "PASS" if status == "Pass" else "FAIL"
+    _report_flush(context, status, reason)
+    results = context.setdefault("_method_results", [])
+    for index, item in enumerate(TEST_CASE["test_method"]):
+        if item["type"] == "Record" and item.get("observation") in observations:
+            _method_emit(context, index, "COMPLETED", actual=observations[item["observation"]])
+    observed = {result["method_index"] for result in results}
+    for index, item in enumerate(TEST_CASE["test_method"]):
+        if index not in observed:
+            skip_reason = ("No applicable item was encountered for this check."
+                           if item["step_number"] in context.get("_method_visited", set()) and status == "Pass"
+                           else "Prerequisite was unavailable or execution ended: " + reason)
+            _method_emit(context, index, "Skip", reason=skip_reason)
+    notes = list(dict.fromkeys(result["note"] for result in results if result["status"] == "C-PASS"))
+    if status == "Pass" and any(result["status"] in ("FAIL", "FAILED", "ERROR") for result in results):
+        status, reason = "Fail", "A required method item failed; see its recorded result"
+    elif status == "Pass" and notes:
+        status = "C-PASS"
+    note = "\n".join(notes) if status == "C-PASS" else ""
+    context["case_result"] = dict(status=status, reason=reason, note=note, evidence=evidence,
+                                  observations=observations, method_results=results)
+    context["_tc_status"] = {"Pass": "PASS", "C-PASS": "C-PASS", "Block": "BLOCK"}.get(status, "FAIL")
     if context.get("log") is not None:
-        _log(context, "finish", status, reason, **({"note": note} if note else {}))
+        context["log"].finish(status, reason, **({"note": note} if note else {}))
     else:
         print(json.dumps(context["case_result"], ensure_ascii=False))
     if status == "Fail":
@@ -161,7 +204,7 @@ def execute(client, context=None, preset=None):
             expected = ""
     observations["expected_version_source"] = source
     supplied = isinstance(expected, str) and bool(expected.strip())
-    _log(context, "check", "Tester supplied expected version", supplied)
+    _log(context, "check", "Tester supplied expected version", supplied, actual=expected)
     if not supplied:
         reason = "Tester did not provide a version number" if expected is None or isinstance(expected, str) else "Tester-provided version must be a string"
         return _finish(context, "Fail", reason, evidence, observations)
@@ -248,7 +291,7 @@ def execute(client, context=None, preset=None):
                 _log(context, "check", "Valid JSON", True)
                 _log(context, "check", "Top-level JSON object", isinstance(body, dict),
                      expected="object", actual=type(body).__name__)
-                _log(context, "section", "Document content validation", report_step=3)
+                _log(context, "section", "Document content validation", report_step=4)
                 if not isinstance(body, dict):
                     reason = "Response body is not a JSON object"
                     break
@@ -265,7 +308,7 @@ def execute(client, context=None, preset=None):
                 if not valid_version:
                     reason = "RedfishVersion format does not meet requirements"
                     break
-                _log(context, "section", "Expected and actual protocol version comparison", report_step=4)
+                _log(context, "section", "Expected and actual protocol version comparison", report_step=5)
                 _log(context, "check", "Exact RedfishVersion match", actual == expected,
                      expected=expected, actual=actual)
                 if actual != expected:

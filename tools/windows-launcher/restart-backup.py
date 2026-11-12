@@ -40,7 +40,7 @@ def main():
             changed = [key for key in before.keys() | current.keys() if before.get(key) != current.get(key)]
             ddl = conn.execute("SELECT sql FROM sqlite_master WHERE name='task_testcases'").fetchone()[0]
             result = dict(integrity=integrity, foreign_key_errors=len(foreign_keys), changed_tables=changed,
-                          cp_schema="'CP'" in ddl, tables=len(current))
+                          conditional_pass_schema="'C-PASS'" in ddl, tables=len(current))
             (target / 'after-verification.json').write_text(json.dumps(result), encoding='utf-8')
             print(json.dumps(result))
             if changed:

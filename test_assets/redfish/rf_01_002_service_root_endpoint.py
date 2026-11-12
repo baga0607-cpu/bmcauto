@@ -4,7 +4,7 @@ import re
 from urllib.parse import urljoin, urlsplit
 
 TEST_CASE = {
-    "modified_at": "2026-11-12T03:43:44.828Z",
+    "modified_at": "2026-11-12T08:48:00+00:00",
     "test_type": "compliance",
     "spec_ref": [
         "DSP0266 v1.25.0 sections 6.6, 6.7 Table 4 and 7.2.3 (ServiceRoot); sections 9.6.2 and 9.6.3 (resource identity/type)."
@@ -145,7 +145,7 @@ def _check(context, method_index, passed, expected, actual):
 
 
 def _skip(context, method_index, reason):
-    _emit(context, method_index, "NOT_EVALUATED", reason=reason)
+    _emit(context, method_index, "Skip", reason=reason)
 
 
 def _finish(context, status, reason, evidence, observations):
@@ -154,7 +154,7 @@ def _finish(context, status, reason, evidence, observations):
         _emit(context, active, "ERROR" if status == "Error" else "FAILED", reason=reason)
     for index, item in enumerate(TEST_CASE["test_method"]):
         if index not in context["_method_results"]:
-            pending = {"Command": "NOT_RUN", "Action": "NOT_RUN", "Checkpoint": "NOT_EVALUATED", "Record": "NOT_RECORDED"}
+            pending = {"Command": "Skip", "Action": "Skip", "Checkpoint": "Skip", "Record": "Skip"}
             _emit(context, index, pending[item["type"]], reason=reason)
     context["case_result"] = {
         "status": status, "reason": reason, "evidence": evidence,
@@ -311,4 +311,4 @@ def _inspect(context, body, observations):
     if present:
         observations["RedfishVersion"] = body["RedfishVersion"]
     _done(context, 11, {"present": present})
-    _emit(context, 12, "RECORDED", body["RedfishVersion"] if present else "Not present")
+    _emit(context, 12, "COMPLETED", body["RedfishVersion"] if present else "Not present")

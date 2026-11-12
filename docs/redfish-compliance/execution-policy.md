@@ -1,3 +1,5 @@
+2026-11-12 amendment: Conditional acceptance in RF-01-008 and RF-01-013 is now C-PASS with mandatory Note, not PASS plus Note. Other acceptance conditions remain unchanged. Unsupported archive-only limitations remain Block. See [series handoff](../status/2026-11-12-rf01-series-c-pass.md). Earlier CP references are historical names.
+
 # Compliance 測項執行與結果政策
 
 > RF-01-008 current acceptance rule: HTTP 400 is PASS with Note only when one Redfish @Message.ExtendedInfo entry contains both MessageId Base.1.16.InvalidURI and the exact Message “The URI /redfish/v1/openapi.yaml was not found.” Other 400 responses fail. The existing explicit-message HTTP 404 rule still applies.

@@ -51,7 +51,7 @@ def final_memberships(session, plan, tasks):
         winner, source, latest = None, None, float('-inf')
         for task, memberships in zip(tasks, maps):
             row = memberships.get(tc.system_id)
-            if row is None or row.status not in ('Passed', 'Failed', 'Block', 'CP'):
+            if row is None or row.status not in ('Passed', 'Failed', 'Block', 'CP', 'C-PASS'):
                 continue
             case = task_case_dict(row, tc)
             raw = case.get('result_updated_at') or (case.get('manual_override') or {}).get('modified_at') or case.get('executed_at')
@@ -139,7 +139,7 @@ def prepare_report(session, plan, tasks, final):
         report_task = Task(id=str(uuid.uuid4()), plan_id=plan.id, name='Final Report - '+plan.name,
             environment_config='Per-case environment belongs to the source Task.',
             task_metadata=json.dumps({'report_type':'Final Report', 'source_task_count':len(tasks),
-                'aggregation':'Latest PASS / FAIL / CP / Block per case; NR and Running ignored. Equal times use later Task column.',
+                'aggregation':'Latest PASS / FAIL / C-PASS / Block per case; NR and Running ignored. Equal times use later Task column.',
                 'environment_note':'Per-case evidence comes from the source Task; Task environments may differ.'}))
         session.add(report_task)
         session.flush()

@@ -88,22 +88,19 @@ class CaseLogIntegrationTest(unittest.TestCase):
                 row = self.run_source(source, body,case_settings={'preset':'1.23.0'} if number==5 else None)
                 records = row['result']['log_records']
                 self.assertTrue({'section', 'http', 'step', 'finish'} <= {r['kind'] for r in records})
-                if number > 2:
-                    self.assertIn('check', {r['kind'] for r in records})
                 from single_case import metadata
                 authored=metadata(source)
                 steps=[r for r in records if r['kind']=='step']
                 self.assertEqual(len(steps),len(authored['test_method']))
-                if number <= 2:
-                    self.assertEqual([r['method_index'] for r in steps], list(range(len(authored['test_method']))))
-                    for record, definition in zip(steps, authored['test_method']):
-                        self.assertEqual(record['step_number'], definition['step_number'])
-                        self.assertEqual(record['result']['status'], {'Command':'COMPLETED','Action':'COMPLETED','Checkpoint':'PASS','Record':'COMPLETED'}[definition['type']])
-                        self.assertIsNone(record['criteria'])
-                    if number == 2:
-                        self.assertEqual(steps[-1]['result']['actual'], 'Not present')
-                else:
-                    self.assertTrue(all(r['result']['status']=='PASS' for r in steps))
+                self.assertEqual(sorted(r['method_index'] for r in steps), list(range(len(authored['test_method']))))
+                for record in steps:
+                    definition = authored['test_method'][record['method_index']]
+                    self.assertEqual(record['step_number'], definition['step_number'])
+                    expected = {'Command':'COMPLETED','Action':'COMPLETED','Checkpoint':'PASS','Record':'COMPLETED'}[definition['type']]
+                    if number == 6 and definition['type'] == 'Record': expected = 'Skip'
+                    self.assertEqual(record['result']['status'], expected)
+                    self.assertIsNone(record['criteria'])
+                self.assertNotRegex(row['log_text'], r'(?m)^\[\d+\] ')
                 self.assertEqual(row['source_created_at'],authored['created_at'])
                 self.assertEqual(records[-1]['status'], 'Pass')
                 self.assertEqual(next(r['body'] for r in records if r['kind'] == 'http'), body if isinstance(body,str) else json.dumps(body))

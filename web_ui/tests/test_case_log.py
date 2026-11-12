@@ -57,8 +57,9 @@ class CaseLogTest(unittest.TestCase):
         log.finish('Pass', 'All checks met')
         log.finish('Fail', 'must not duplicate')
         text = result.getvalue()
-        for label in ('[1] Inspect document', 'HTTP evidence #1', 'PASS | HTTP status', 'Final result'):
+        for label in ('Inspect document', 'HTTP evidence #1', 'PASS | HTTP status', 'Final result'):
             self.assertIn(label, text)
+        self.assertNotRegex(text, r"(?m)^\[\d+\] ")
         self.assertIn('    "value": 1', text)
         self.assertNotIn('secret', text)
         self.assertNotIn('secret', json.dumps(log.records))
