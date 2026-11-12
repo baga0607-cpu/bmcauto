@@ -2,7 +2,7 @@ import json
 from urllib.parse import urljoin, urlsplit
 
 TEST_CASE = {
-    "modified_at": '2026-11-12T09:02:07.701445+00:00',
+    "modified_at": "2026-11-12T09:11:35.094005+00:00",
     "test_type": "compliance",
     "spec_ref": ['DSP0266 v1.25.0 section 6.7, Table 4 (/redfish/v1/openapi.yaml); section 11.3.4, Table 33 '
  '(openapi.yaml terms).'],
@@ -18,7 +18,7 @@ TEST_CASE = {
     {
         "step_number": 1,
         "type": "Checkpoint",
-        "step": 'Verify HTTP 200. Project acceptance policy: use C-PASS only for HTTP 404 with message "The URI /redfish/v1/openapi.yaml was not found.", or HTTP 400 with both MessageId Base.1.16.InvalidURI and that exact Message in the same @Message.ExtendedInfo entry. Record the actual response and acceptance reason in Note; skip document checks when absence is accepted.'
+        "step": "Verify the response using these acceptance rules:\n\n- PASS: HTTP 200.\n- C-PASS - HTTP 404: The message exactly matches \"The URI /redfish/v1/openapi.yaml was not found.\"\n- C-PASS - HTTP 400: A single @Message.ExtendedInfo entry contains both:\n  - MessageId: Base.1.16.InvalidURI\n  - Message: \"The URI /redfish/v1/openapi.yaml was not found.\" (exact match)\n- FAIL: Any other response.\n\nC-PASS is a project acceptance policy. Include the actual response and acceptance reason in Note, and skip the remaining document checks."
     },
     {
         "step_number": 2,
