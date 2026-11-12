@@ -945,6 +945,19 @@ def handle_task(task_id, entity_label="Task"):
         session.close()
 
 
+@app.route('/api/tasks/<task_id>/testcases/<case_id>/report-preview', methods=['GET'])
+def preview_case_report(task_id, case_id):
+    from report_html import generate_case_preview
+    try:
+        with DbSession() as session:
+            db_path = session.get_bind().url.database
+        response = jsonify(html=generate_case_preview(db_path, task_id, case_id))
+        response.headers['Cache-Control'] = 'no-store'
+        return response
+    except ps.StateError as exc:
+        return jsonify(error=str(exc)), exc.code
+
+
 @app.route('/api/projects/<project_id>/reports', methods=['POST'])
 @app.route('/api/projects/<project_id>/reports/logs', methods=['POST'])
 def generate_selected_reports(project_id):

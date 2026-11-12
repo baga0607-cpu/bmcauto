@@ -1,3 +1,5 @@
+**最新功能（2026-11-12）**：Execution 新增單一 Test Case 報告預覽；本機按鈕在 Log 右側，彈窗共用正式報告渲染並支援 Refresh。驗證、遠端舊版接點與精確本機 patch 見 [報告預覽交接](2026-11-12-execution-report-preview.md)。
+
 **最新規則（2026-11-12）**：取消 S/C/R ID；採 Step／Type／Description／Result／Judgement 五欄，Type 僅 Command／Action／Checkpoint／Record。RF-01-001／002、Log 與報告同步更新，見 [編號與 Type 交接](2026-11-12-numbered-method-types.md)。
 
 **最新報告更新（2026-11-12）**：HTML／PDF 加入 Step、Checkpoint、Record 關聯 ID 與結果表，採緊湊列距；驗證與發佈範圍見 [報告交接](2026-11-12-report-method-results.md)。

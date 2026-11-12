@@ -1,3 +1,5 @@
+2026-11-12 Execution report preview: read-only single-Case modal reuses the production HTML renderer, with refresh and no export or data writes. See docs/status/2026-11-12-execution-report-preview.md for UI integration and publication-baseline differences.
+
 2026-11-12 latest method contract: Step / Type / Description / Result / Judgement. Only Command and Action show numbered main steps; Checkpoint and Record follow with blank Step cells. No displayed S/C/R IDs or Type=Step. Record has no judgement. See docs/status/2026-11-12-numbered-method-types.md.
 
 2026-11-12 report update supersedes earlier omission of method tables: HTML/PDF include compact ID / Type / Description / Result rows for Step, Checkpoint and Record, with explicit source-step links and recorded statuses. Cases remain initially collapsed; opening shows Test Data. See docs/status/2026-11-12-report-method-results.md.

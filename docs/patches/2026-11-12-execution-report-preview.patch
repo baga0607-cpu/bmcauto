@@ -1,0 +1,51 @@
+diff --git a/web_ui/static/workbench.js b/web_ui/static/workbench.js
+index 3215973..bda04b0 100644
+--- a/web_ui/static/workbench.js
++++ b/web_ui/static/workbench.js
+@@ -507,14 +507,14 @@ function executionIconButton(label,action,name,kind='',extra=''){
+  return button(icon(name),action,'execution-icon-button '+kind,'title="'+escape(label)+'" aria-label="'+escape(label)+'" '+extra);
+ }
+ function executionRunButton(task){return task.execution_active?executionIconButton('Stop Execution','stop','stop','danger'):executionIconButton('Run Selected Cases','run','play','primary',executionBusy()||state.executionSelectionBusy?'disabled':'');}
+-Object.assign(icons,{log:'M6 3h9l4 4v14H6z M14 3v5h5 M9 12h7 M9 16h7',play:'M7 4l14 8-14 8z',stop:'M5 5h14v14H5z',selectAll:'M4 4h16v16H4z M7 12l3 3 7-7',clearSelection:'M4 4h16v16H4z M8 8l8 8 M16 8l-8 8',parameters:'M4 6h16 M4 12h16 M4 18h16 M8 3v6 M16 9v6 M10 15v6',scope:'M8 4h12v17H4V4h4 M8 2h8v4H8z M8 11l2 2 5-5 M8 17h8',connection:'M8 3v5 M16 3v5 M6 8h12v3a6 6 0 0 1-12 0z M12 17v4'});
++Object.assign(icons,{reportPreview:'M4 3h11l4 4v6 M14 3v5h5 M8 11h5 M8 15h3 M4 3v18h7 M21 21l-3-3 M19 15a4 4 0 1 1-8 0 4 4 0 0 1 8 0',log:'M6 3h9l4 4v14H6z M14 3v5h5 M9 12h7 M9 16h7',play:'M7 4l14 8-14 8z',stop:'M5 5h14v14H5z',selectAll:'M4 4h16v16H4z M7 12l3 3 7-7',clearSelection:'M4 4h16v16H4z M8 8l8 8 M16 8l-8 8',parameters:'M4 6h16 M4 12h16 M4 18h16 M8 3v6 M16 9v6 M10 15v6',scope:'M8 4h12v17H4V4h4 M8 2h8v4H8z M8 11l2 2 5-5 M8 17h8',connection:'M8 3v5 M16 3v5 M6 8h12v3a6 6 0 0 1-12 0z M12 17v4'});
+ function executionRows(task){
+  const busy=executionBusy()||state.executionSelectionBusy,cases=executionCases(task);
+  return cases.map(c=>{
+  const label=({TBD:'NR',Passed:'PASS',Failed:'FAIL',Block:'Block',Running:'Running'})[c.status]||'NR';
+  const attrs='data-id="'+escape(c.id)+'"';
+- return '<tr class="execution-case-row" data-execution-case="'+escape(c.id)+'"><td><input type="checkbox" data-run="'+escape(c.id)+'" aria-label="Run '+escape(c.tc_name)+'" '+(c.selected?'checked ':'')+(busy||c.script_kind!=='single'?'disabled':'')+'></td><td><div class="execution-case-name">'+automation(c.automation)+'<strong data-no-translate>'+escape(c.tc_name)+'</strong></div>'+(c.needs_retest?'<span class="status stale">Rerun needed</span>':'')+'</td><td>'+button(label,'execution-annotation','status '+escape(String(c.status).toLowerCase()),attrs+(c.status==='Running'?' data-no-translate':'')+' aria-label="Result Annotation: '+escape(c.tc_name)+'"')+'</td><td>'+(task.execution_active&&c.status==='Running'?executionIconButton('Stop this case and continue with the next selected case','execution-stop-one','stop','danger',attrs):executionIconButton('Run: '+c.tc_name,'execution-run-one','play','',attrs+' '+(busy||c.script_kind!=='single'?'disabled':'')))+'</td><td>'+executionIconButton('Log: '+c.tc_name,'execution-log','log','',attrs)+'</td><td>'+(c.automation==='automatic'?'':executionIconButton('Parameters: '+c.tc_name,'execution-parameters','parameters','',attrs+' '+(executionBusy()||c.script_kind!=='single'||c.status==='Running'?'disabled':'')))+'</td></tr>';
+- }).join('')||'<tr><td colspan="6" class="empty">'+(task.testcases.length?'No matching Test Cases.':'No Test Cases. Use Scope to add cases.')+'</td></tr>';
++ return '<tr class="execution-case-row" data-execution-case="'+escape(c.id)+'"><td><input type="checkbox" data-run="'+escape(c.id)+'" aria-label="Run '+escape(c.tc_name)+'" '+(c.selected?'checked ':'')+(busy||c.script_kind!=='single'?'disabled':'')+'></td><td><div class="execution-case-name">'+automation(c.automation)+'<strong data-no-translate>'+escape(c.tc_name)+'</strong></div>'+(c.needs_retest?'<span class="status stale">Rerun needed</span>':'')+'</td><td>'+button(label,'execution-annotation','status '+escape(String(c.status).toLowerCase()),attrs+(c.status==='Running'?' data-no-translate':'')+' aria-label="Result Annotation: '+escape(c.tc_name)+'"')+'</td><td>'+(task.execution_active&&c.status==='Running'?executionIconButton('Stop this case and continue with the next selected case','execution-stop-one','stop','danger',attrs):executionIconButton('Run: '+c.tc_name,'execution-run-one','play','',attrs+' '+(busy||c.script_kind!=='single'?'disabled':'')))+'</td><td>'+executionIconButton('Log: '+c.tc_name,'execution-log','log','',attrs)+'</td><td>'+executionIconButton('Report preview: '+c.tc_name,'execution-report-preview','reportPreview','',attrs)+'</td><td>'+(c.automation==='automatic'?'':executionIconButton('Parameters: '+c.tc_name,'execution-parameters','parameters','',attrs+' '+(executionBusy()||c.script_kind!=='single'||c.status==='Running'?'disabled':'')))+'</td></tr>';
++ }).join('')||'<tr><td colspan="7" class="empty">'+(task.testcases.length?'No matching Test Cases.':'No Test Cases. Use Scope to add cases.')+'</td></tr>';
+ }
+ function executionControlsContent(project,plan,task){
+  const busy=executionBusy(),filter=executionView().filters?.[task.id]||'all';
+@@ -558,6 +558,7 @@ function closeExecutionDialog(force=false){
+ }
+ async function openExecutionDialog(kind,caseId,opener){
+  if(!closeExecutionDialog())return;
++ ReportPreview.close();
+  const {project,plan,task}=context();if(!task)return;
+  if(kind==='parameters'&&executionBusy())throw Error('Parameters are locked while testing is active.');
+  const tc=task.testcases.find(c=>c.id===caseId);
+@@ -1215,6 +1216,7 @@ async function doAction(action, element) {
+   else if(action==='scope-all'||action==='scope-none'){state.scope=new Set(action==='scope-all'?plan.testcases.filter(c=>c.script_kind==='single').map(c=>c.id):[]);state.dirty=true;await draw();}
+   else if(action==='run'||action==='execution-run-one'){await startExecutionCases(task,action==='execution-run-one'?[element.dataset.id]:executionCases(task).filter(c=>c.selected&&c.script_kind==='single').map(c=>c.id));}
+   else if(action==='execution-select-all'||action==='execution-select-none'){await saveExecutionSelection(task,executionCases(task).filter(c=>c.script_kind==='single').map(c=>[c.id,action==='execution-select-all']));}
++  else if(action==='execution-report-preview'){const tc=task?.testcases.find(c=>c.id===element.dataset.id);if(!tc)return;if(!closeExecutionDialog())return;await ReportPreview.open({taskId:task.id,caseId:tc.id,taskName:task.name,caseName:tc.tc_name,opener:element});}
+   else if(['execution-scope','execution-connection','execution-parameters','execution-annotation','execution-log'].includes(action)){await openExecutionDialog(action.slice(10),element.dataset.id,element);}
+   else if(action==='execution-response'){const running=task.testcases.find(c=>c.status==='Running');if(running)await openExecutionDialog('log',running.id,element);}
+   else if(action==='execution-stop-one'){if(!task.execution_active||!task.testcases.some(c=>c.id===element.dataset.id&&c.status==='Running'))return;const current=await api('/api/tasks/'+task.id+'/execution');await api('/api/tasks/'+task.id+'/testcases/'+encodeURIComponent(element.dataset.id)+'/execution/stop','POST',{execution_token:current.execution_token,session_id:current.session_id});toast('Stop requested for this case. The next selected case will run after cleanup.');}
+diff --git a/web_ui/tests/execution_controls.test.cjs b/web_ui/tests/execution_controls.test.cjs
+index a01d60e..924b1e2 100644
+--- a/web_ui/tests/execution_controls.test.cjs
++++ b/web_ui/tests/execution_controls.test.cjs
+@@ -31,7 +31,7 @@ await page.route('http://controls.test/**',async route=>{
+  await route.fulfill({json:pathname.endsWith('/logs')?data:JSON.parse(JSON.stringify(data,(key,value)=>['log_text','result'].includes(key)?undefined:value))});
+ });
+ await page.goto('http://controls.test/#/execution');await page.locator('.execution-case-row').first().waitFor();
+-assert.equal(await page.locator('.execution-toolbar [data-action=run],.execution-toolbar [data-action=stop]').count(),1);assert.equal(await page.locator('.execution-case-row').first().locator('[data-action=execution-run-one],[data-action=execution-stop-one]').count(),1);assert.deepEqual(await page.locator('[data-execution-case=c1] button').evaluateAll(buttons=>buttons.map(b=>b.dataset.action)),['execution-annotation','execution-run-one','execution-log','execution-parameters']);assert.equal(await page.locator('.execution-case-table thead').count(),0);assert.equal(await page.locator('.execution-case-row').first().locator('td').count(),6);assert.equal(await page.locator('.execution-toolbar .execution-icon-button').count(),5);assert.ok(await page.locator('.execution-icon-button').evaluateAll(items=>items.every(b=>b.querySelector('svg')&&b.getAttribute('aria-label')&&b.title&&!b.textContent.trim())));
++assert.equal(await page.locator('.execution-toolbar [data-action=run],.execution-toolbar [data-action=stop]').count(),1);assert.equal(await page.locator('.execution-case-row').first().locator('[data-action=execution-run-one],[data-action=execution-stop-one]').count(),1);assert.deepEqual(await page.locator('[data-execution-case=c1] button').evaluateAll(buttons=>buttons.map(b=>b.dataset.action)),['execution-annotation','execution-run-one','execution-log','execution-report-preview','execution-parameters']);assert.equal(await page.locator('.execution-case-table thead').count(),0);assert.equal(await page.locator('.execution-case-row').first().locator('td').count(),7);assert.equal(await page.locator('.execution-toolbar .execution-icon-button').count(),5);assert.ok(await page.locator('.execution-icon-button').evaluateAll(items=>items.every(b=>b.querySelector('svg')&&b.getAttribute('aria-label')&&b.title&&!b.textContent.trim())));
+ assert.equal(await page.getByRole('link',{name:'Test Plans',exact:true}).count(),0);assert.equal(await page.getByRole('link',{name:'Task Info',exact:true}).count(),0);assert.equal(await page.locator('.execution-summary,.case-editor').count(),0);
+ // Saving a row dialog redraws the same Task. Keep the operator's place in the list.
+ const scroller=page.locator('.execution-case-scroll');
