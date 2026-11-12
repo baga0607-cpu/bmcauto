@@ -1,3 +1,5 @@
+2026-11-12 最新實例更新：既有 Repository 與 Plan 的 RF-01-001／002／008 已更新最新來源，原設定與歷史證據保留並備份，3 筆既有結果標記需重測，可直接重新執行；其餘 RF-01 無既有副本，未新增。詳見 [既有測項更新紀錄](2026-11-12-rf01-installed-update.md)。
+
 2026-11-12 最新：RF-01-001～013 已全部套用 Command／Action／Checkpoint／Record、C-PASS／Skip 與 Note 規則；新 Log 移除 [n] 區段前綴。正式服務 16:48 重啟，資料不變；獨立 Repository／Plan 副本仍需更新來源。詳見 [全系列查核交接](2026-11-12-rf01-series-c-pass.md)。下方舊 CP 等記載為歷史狀態。
 
 2026-11-12 latest report: Case Name is the only disclosure; Test Data and Test Information expand together. Result Summary and standalone Note removed, method table retained under Test Data. Formal service updated at 16:17. See [report hierarchy](2026-11-12-report-hierarchy.md).
