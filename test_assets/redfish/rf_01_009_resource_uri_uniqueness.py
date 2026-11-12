@@ -3,7 +3,7 @@ import re
 from collections import deque
 from urllib.parse import urljoin, urlsplit, urlunsplit
 
-TEST_CASE = {'modified_at': '2026-11-12T09:02:07.705010+00:00',
+TEST_CASE = {'modified_at': "2026-11-12T09:19:33.010505+00:00",
  'test_type': 'compliance',
  'spec_ref': ['DSP0266 v1.25.0 section 6.1 (unique resource paths); section 9.6.2 (resource identity); section '
  '7.2.2 (collection pagination).'],
@@ -29,18 +29,17 @@ TEST_CASE = {'modified_at': '2026-11-12T09:02:07.705010+00:00',
                   'step': 'Verify matching collection identity and type across pagination links.'},
                  {'step_number': 2,
                   'type': 'Checkpoint',
-                  'step': 'Verify that traversal completed without unread resources, invalid links or '
-                          'pagination issues.'},
+                  'step': "Verify that traversal completed without:\n- Resources that could not be read.\n- Invalid links.\n- Pagination errors."},
                  {'step_number': 3,
                   'type': 'Action',
                   'step': 'Group identity paths and compare resource URLs and proven collection-page '
                           'relationships.'},
                  {'step_number': 3,
                   'type': 'Checkpoint',
-                  'step': 'Project coverage policy: verify that each observed identity path represents one established resource identity. Unresolved identity groups fail this check but do not prove a collision.'},
+                  'step': "Verify that each observed identity path maps to one established resource identity.\n\nProject coverage policy:\n- An unresolved identity group fails this check.\n- An unresolved group does not, by itself, prove an identity collision."},
                  {'step_number': 3,
                   'type': 'Checkpoint',
-                  'step': 'Project coverage policy: verify that the complete discovered scope was assessed; incomplete coverage prevents PASS.'},
+                  'step': "Verify that all items within the discovered scope were assessed.\n\nProject coverage policy: incomplete coverage prevents PASS."},
                  {'step_number': 3,
                   'type': 'Record',
                   'step': 'Record the number of resource/page responses observed.',

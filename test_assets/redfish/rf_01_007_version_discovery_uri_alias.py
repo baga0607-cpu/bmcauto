@@ -1,7 +1,7 @@
 import json
 from urllib.parse import urljoin, urlsplit
 
-TEST_CASE = {'modified_at': '2026-11-12T08:32:24.102289+00:00',
+TEST_CASE = {'modified_at': "2026-11-12T09:19:33.002619+00:00",
  'test_type': 'compliance',
  'spec_ref': ['DSP0266 v1.25.0 section 6.7 Table 5 (/redfish/ alias); section 6.6 (version discovery).'],
  'created_at': '2026-10-30T05:45:01.857118+00:00',
@@ -15,7 +15,7 @@ TEST_CASE = {'modified_at': '2026-11-12T08:32:24.102289+00:00',
                   'step': 'Verify that the final HTTP status is 200.'},
                  {'step_number': 1,
                   'type': 'Checkpoint',
-                  'step': 'Verify direct delivery or redirection to /redfish.'},
+                  'step': "Verify either accepted behavior:\n- /redfish/ returns the response directly.\n- After redirection, the final URI path is /redfish."},
                  {'step_number': 2, 'type': 'Action', 'step': 'Parse the response body as JSON.'},
                  {'step_number': 2,
                   'type': 'Checkpoint',

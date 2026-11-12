@@ -2,7 +2,7 @@ import json
 import re
 from urllib.parse import urljoin, urlsplit
 
-TEST_CASE = {'modified_at': '2026-11-12T08:32:24.073188+00:00',
+TEST_CASE = {'modified_at': "2026-11-12T09:19:32.994606+00:00",
  'test_type': 'compliance',
  'spec_ref': ['DSP0266 v1.25.0 section 6.7 Table 5 (/redfish/v1 alias); sections 6.6 and 7.2.3 '
               '(ServiceRoot); sections 9.6.2 and 9.6.3 (identity/type).'],
@@ -18,7 +18,7 @@ TEST_CASE = {'modified_at': '2026-11-12T08:32:24.073188+00:00',
                   'step': 'Verify that the final HTTP status is 200.'},
                  {'step_number': 1,
                   'type': 'Checkpoint',
-                  'step': 'Verify direct delivery or redirection to /redfish/v1/.'},
+                  'step': "Verify either accepted behavior:\n- /redfish/v1 returns the response directly.\n- After redirection, the final URI path is /redfish/v1/."},
                  {'step_number': 2, 'type': 'Action', 'step': 'Parse the response body as JSON.'},
                  {'step_number': 2,
                   'type': 'Checkpoint',
@@ -31,8 +31,7 @@ TEST_CASE = {'modified_at': '2026-11-12T08:32:24.073188+00:00',
                   'step': 'Read @odata.type, @odata.id and RedfishVersion from the ServiceRoot.'},
                  {'step_number': 3,
                   'type': 'Checkpoint',
-                  'step': 'Verify that @odata.type identifies ServiceRoot; no particular schema version is '
-                          'required.'},
+                  'step': "Verify that @odata.type is a string matching either accepted form:\n- #ServiceRoot.v<major>_<minor>_<errata>.ServiceRoot\n- #ServiceRoot.ServiceRoot\n\nEach version component must contain one or more digits. No specific schema version is required."},
                  {'step_number': 3,
                   'type': 'Checkpoint',
                   'step': 'Verify that @odata.id is exactly /redfish/v1/.'},

@@ -4,7 +4,7 @@ import re
 from collections import deque
 from urllib.parse import urljoin, urlsplit, urlunsplit
 
-TEST_CASE = {'modified_at': '2026-11-12T08:32:24.158088+00:00',
+TEST_CASE = {'modified_at': "2026-11-12T09:19:33.017066+00:00",
  'test_type': 'compliance',
  'spec_ref': ['DSP0266 v1.25.0 section 6.1 (URI characters and percent encoding).',
               'RFC 3986 sections 2.1, 3.2.2 and 3.5 (encoding, IPv6 authority and fragments); RFC 6901 '
@@ -25,15 +25,13 @@ TEST_CASE = {'modified_at': '2026-11-12T08:32:24.158088+00:00',
                           'invoke Actions or fetch external services.'},
                  {'step_number': 2,
                   'type': 'Checkpoint',
-                  'step': 'Verify that traversal completed without unread resources, invalid links or '
-                          'pagination issues.'},
+                  'step': "Verify that traversal completed without:\n- Resources that could not be read.\n- Invalid links.\n- Pagination errors."},
                  {'step_number': 3,
                   'type': 'Action',
                   'step': 'Inspect original URI components before normalization.'},
                  {'step_number': 3,
                   'type': 'Checkpoint',
-                  'step': 'Verify safe characters and valid encoding: percent escapes only in queries; allow '
-                          'structural IPv6 and JSON Pointer escapes.'},
+                  'step': "Verify each original URI reference against these rules:\n- The value is a nonempty string.\n- No raw whitespace, control characters or non-ASCII characters.\n- No unsafe characters: <, >, \", {, }, |, \\, ^, ~, [, ], or backtick, except as allowed below.\n- Percent encoding is allowed only in the query component. Each % must be followed by two hexadecimal digits.\n- Square brackets are allowed around a valid IPv6 address in the authority.\n- ~0 and ~1 are allowed in the fragment for JSON Pointer escaping.\n- No additional raw # inside the fragment."},
                  {'step_number': 3,
                   'type': 'Checkpoint',
                   'step': 'Verify that the complete discovered scope was assessed.'}],

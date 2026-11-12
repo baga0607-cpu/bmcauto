@@ -1,7 +1,7 @@
 import json
 from urllib.parse import urljoin, urlsplit
 
-TEST_CASE = {'modified_at': '2026-11-12T08:32:23.977853+00:00',
+TEST_CASE = {'modified_at': "2026-11-12T09:19:32.969260+00:00",
  'test_type': 'compliance',
  'spec_ref': ['DSP0266 v1.25.0 section 6.7 Table 4; section 7.2.4; section 8.4.3 Table 15 (OData service '
               'document).'],
@@ -27,8 +27,7 @@ TEST_CASE = {'modified_at': '2026-11-12T08:32:23.977853+00:00',
                   'step': 'Read and resolve @odata.context against the response URI.'},
                  {'step_number': 3,
                   'type': 'Checkpoint',
-                  'step': 'Verify that @odata.context is a nonempty URI string without whitespace or control '
-                          'characters.'},
+                  'step': "Verify that @odata.context meets all conditions:\n- It is a string.\n- It is not empty.\n- It contains no whitespace or control characters."},
                  {'step_number': 3,
                   'type': 'Checkpoint',
                   'step': 'Verify that @odata.context resolves to this service at /redfish/v1/$metadata.'},

@@ -2,7 +2,7 @@ import json
 from urllib.parse import urljoin, urlsplit
 import xml.etree.ElementTree as ET
 
-TEST_CASE = {'modified_at': '2026-11-12T08:32:24.009656+00:00',
+TEST_CASE = {'modified_at': "2026-11-12T09:19:32.977199+00:00",
  'test_type': 'compliance',
  'spec_ref': ['DSP0266 v1.25.0 section 6.7 Table 4; sections 7.2.4 and 8.4.2 (OData metadata); section '
               '11.1.4 (CSDL format).'],
@@ -20,7 +20,7 @@ TEST_CASE = {'modified_at': '2026-11-12T08:32:24.009656+00:00',
                   'step': 'Parse the response bytes as XML using the declared encoding.'},
                  {'step_number': 2,
                   'type': 'Checkpoint',
-                  'step': 'Verify that parsing does not require DTD processing (parser safeguard).'},
+                  'step': "Verify that the XML document contains no DTD declaration.\n\nThis is a parser safeguard: DTD processing is disabled."},
                  {'step_number': 2,
                   'type': 'Checkpoint',
                   'step': 'Verify that the response body can be parsed as XML.'},
@@ -33,7 +33,7 @@ TEST_CASE = {'modified_at': '2026-11-12T08:32:24.009656+00:00',
                   'step': 'Verify that the root namespace is http://docs.oasis-open.org/odata/ns/edmx.'},
                  {'step_number': 3,
                   'type': 'Checkpoint',
-                  'step': 'Verify that the unqualified Version attribute is exactly 4.0.'}],
+                  'step': "Verify that the root element has a Version attribute with:\n- No namespace prefix.\n- The exact value \"4.0\"."}],
  'automation': 'automatic',
  'parameters': {}}
 

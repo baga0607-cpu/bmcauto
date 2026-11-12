@@ -4,7 +4,7 @@ import re
 from urllib.parse import urljoin, urlsplit
 
 TEST_CASE = {
-    "modified_at": "2026-11-12T08:48:00+00:00",
+    "modified_at": "2026-11-12T09:19:32.962262+00:00",
     "test_type": "compliance",
     "spec_ref": [
         "DSP0266 v1.25.0 sections 6.6, 6.7 Table 4 and 7.2.3 (ServiceRoot); sections 9.6.2 and 9.6.3 (resource identity/type)."
@@ -51,7 +51,7 @@ TEST_CASE = {
         {
             "step_number": 3,
             "type": "Checkpoint",
-            "step": "Verify that the value matches `#ServiceRoot.v<major>_<minor>_<errata>.ServiceRoot`, with digits in each version component, or equals `#ServiceRoot.ServiceRoot`."
+            "step": "Verify that @odata.type matches either accepted form:\n- #ServiceRoot.v<major>_<minor>_<errata>.ServiceRoot\n- #ServiceRoot.ServiceRoot\n\nIn the versioned form, each version component must contain one or more digits."
         },
         {
             "step_number": 4,

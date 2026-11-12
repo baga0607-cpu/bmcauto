@@ -3,7 +3,7 @@ import re
 from collections import deque
 from urllib.parse import urljoin, urlsplit, urlunsplit, unquote
 
-TEST_CASE = {'modified_at': '2026-11-12T09:02:07.735272+00:00',
+TEST_CASE = {'modified_at': "2026-11-12T09:19:33.038611+00:00",
  'test_type': 'compliance',
  'spec_ref': ['DSP0266 v1.25.0 section 6.1 (fragment references); sections 9.5.7 and 9.6.2 (reference '
  'properties and resource identity).',
@@ -24,22 +24,20 @@ TEST_CASE = {'modified_at': '2026-11-12T09:02:07.735272+00:00',
                           'invoke Actions or fetch external services.'},
                  {'step_number': 2,
                   'type': 'Checkpoint',
-                  'step': 'Verify that traversal completed without unread resources, invalid links or '
-                          'pagination issues.'},
+                  'step': "Verify that traversal completed without:\n- Resources that could not be read.\n- Invalid links.\n- Pagination errors."},
                  {'step_number': 3,
                   'type': 'Action',
                   'step': 'Resolve each fragment as a JSON Pointer and classify its target using advertised '
                           'local schemas.'},
                  {'step_number': 3,
                   'type': 'Checkpoint',
-                  'step': 'Project coverage policy: verify that at least one applicable local fragment reference was found; no applicable references fail this check.'},
+                  'step': "Verify that at least one applicable local fragment reference was found.\n\nProject coverage policy: no applicable references means FAIL for this check."},
                  {'step_number': 3,
                   'type': 'Checkpoint',
-                  'step': 'Verify that each pointer target exists and has the schema-required resource '
-                          'identity.'},
+                  'step': "Verify each fragment reference:\n- The JSON Pointer target exists.\n- The advertised schema establishes the reference type.\n- For a resource reference, the target has a nonempty string @odata.id that identifies the referenced resource."},
                  {'step_number': 3,
                   'type': 'Checkpoint',
-                  'step': 'Project coverage policy: verify that the complete discovered scope and required schema evidence were assessed; incomplete evidence prevents PASS.'}],
+                  'step': "Verify that the assessment includes:\n- All items within the discovered scope.\n- The schema evidence required to classify the references.\n\nProject coverage policy: incomplete scope or schema evidence prevents PASS."}],
  'automation': 'automatic',
  'parameters': {}}
 

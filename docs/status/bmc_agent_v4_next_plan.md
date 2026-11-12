@@ -1,3 +1,5 @@
+2026-11-12 最新：其餘 RF-01 已依確認版本整理 11 支、26 個 Checkpoint；Result 與判定邏輯不變。Repository 11 筆、既有 Plan 的 002 已同步，設定與歷史證據保留。見 [全系列 Checkpoint 交接](2026-11-12-rf01-checkpoints.md)。
+
 2026-11-12 最新：RF-01-008 Checkpoint 已依確認版本分行條列，Result 與判定邏輯不變；正式 Repository／Plan 各一筆同步，設定與歷史證據保留。見 [Checkpoint 整理交接](2026-11-12-rf008-checkpoint.md)。
 
 2026-11-12 最新：RF-01 全系列完成 Spec Ref. 查核，005／008／009／011／012／013 的專案政策移至 Checkpoint；實際原因仍記在 Note。正式 Repository／Plan 已同步，設定與歷史證據保留。見 [引用與政策分離交接](2026-11-12-rf01-spec-ref.md)。

@@ -3,7 +3,7 @@ import re
 from collections import deque
 from urllib.parse import urljoin, urlsplit, urlunsplit
 
-TEST_CASE = {'modified_at': '2026-11-12T09:02:07.756697+00:00',
+TEST_CASE = {'modified_at': "2026-11-12T09:19:33.047925+00:00",
  'test_type': 'compliance',
  'spec_ref': ['DSP0266 v1.25.0 sections 6.1 and 6.7 (relative references in response bodies and HTTP headers).',
  'RFC 3986 section 4.2 (relative-reference syntax); Redfish section 6.7 imposes narrower allowed '
@@ -24,21 +24,19 @@ TEST_CASE = {'modified_at': '2026-11-12T09:02:07.756697+00:00',
                           'invoke Actions or fetch external services.'},
                  {'step_number': 2,
                   'type': 'Checkpoint',
-                  'step': 'Verify that traversal completed without unread resources, invalid links or '
-                          'pagination issues.'},
+                  'step': "Verify that traversal completed without:\n- Resources that could not be read.\n- Invalid links.\n- Pagination errors."},
                  {'step_number': 3,
                   'type': 'Action',
                   'step': 'Classify original Body and GET-response header URI references before resolution.'},
                  {'step_number': 3,
                   'type': 'Checkpoint',
-                  'step': 'Verify that each relative reference starts with / or // followed by a valid '
-                          'authority; absolute URIs are allowed.'},
+                  'step': "Verify that each relative reference uses either accepted form:\n- /path: starts with a single /.\n- //authority/path: starts with // and includes a valid authority.\n\nAbsolute URIs are also allowed."},
                  {'step_number': 3,
                   'type': 'Checkpoint',
-                  'step': 'Project coverage policy: verify that at least one applicable relative reference was found; no applicable references fail this check.'},
+                  'step': "Verify that at least one applicable relative reference was found.\n\nProject coverage policy: no applicable references means FAIL for this check."},
                  {'step_number': 3,
                   'type': 'Checkpoint',
-                  'step': 'Project coverage policy: verify that the complete discovered scope was assessed; incomplete evidence prevents PASS.'}],
+                  'step': "Verify that all items within the discovered scope were assessed.\n\nProject coverage policy: incomplete coverage prevents PASS."}],
  'automation': 'automatic',
  'parameters': {}}
 

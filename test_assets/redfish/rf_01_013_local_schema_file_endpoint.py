@@ -8,7 +8,7 @@ from collections import deque
 from urllib.parse import urljoin, urlsplit, urlunsplit
 import xml.etree.ElementTree as ET
 
-TEST_CASE = {'modified_at': '2026-11-12T09:02:07.768712+00:00',
+TEST_CASE = {'modified_at': "2026-11-12T09:19:33.073309+00:00",
  'test_type': 'compliance',
  'spec_ref': ['DSP0266 v1.25.0 section 6.7 Table 4 (/redfish/v1/Schemas/<SchemaFile>, Required=No); section '
  '8.4.2.1 (local schema references).',
@@ -45,10 +45,10 @@ TEST_CASE = {'modified_at': '2026-11-12T09:02:07.768712+00:00',
                   'step': 'Read the declared archive member if applicable and parse the schema document.'},
                  {'step_number': 4,
                   'type': 'Checkpoint',
-                  'step': 'Verify the supported JSON Schema or CSDL XML minimum document structure. This check does not perform full schema validation.'},
+                  'step': "Verify the minimum document structure for the declared file type:\n- JSON Schema.\n- CSDL XML.\n\nThis check performs minimum document recognition, not full schema validation."},
                  {'step_number': 4,
                   'type': 'Checkpoint',
-                  'step': 'Verify the recommended JSON schema dialect. Project acceptance policy: accept a recognized alternative as C-PASS and record the actual file, dialect and acceptance reason in Note.'},
+                  'step': "For a recognized JSON schema document, assess its declared dialect:\n- PASS: Uses http://redfish.dmtf.org/schemas/v1/redfish-schema-v1.json.\n- C-PASS: Uses another dialect accepted by the supported document-recognition checks.\n\nC-PASS is a project acceptance policy. Include the actual file, dialect and acceptance reason in Note."},
                  {'step_number': 4,
                   'type': 'Checkpoint',
                   'step': 'Verify that every supported declared file was acquired and recognized.'},
@@ -57,10 +57,10 @@ TEST_CASE = {'modified_at': '2026-11-12T09:02:07.768712+00:00',
                   'step': 'Assess the recommended /redfish/v1/Schemas/ endpoint and the verified scope.'},
                  {'step_number': 5,
                   'type': 'Checkpoint',
-                  'step': 'Verify an advertised /redfish/v1/Schemas/<SchemaFile> entry. Project acceptance policy: missing verified evidence is C-PASS with a Note explaining the observed scope; this does not prove absence. Other declared local locations are evaluated independently.'},
+                  'step': "Assess the advertised /redfish/v1/Schemas/<SchemaFile> entries:\n- PASS: At least one advertised entry was successfully retrieved and recognized.\n- C-PASS: No advertised entry was verified.\n\nC-PASS is a project acceptance policy:\n- Explain the observed scope and acceptance reason in Note.\n- Missing verified evidence does not prove that the endpoint is absent.\n- Evaluate files at other declared local locations independently."},
                  {'step_number': 5,
                   'type': 'Checkpoint',
-                  'step': 'Project acceptance policy: verify complete discovery and successful acquisition and recognition of all declared supported local files. Required failures remain FAIL regardless of recommendation results; unsupported archive limitations retain Block.'}],
+                  'step': "Verify that all required checks completed:\n- Discovery is complete.\n- Every declared supported local file was successfully retrieved.\n- Every retrieved file passed the supported document-recognition checks.\n\nProject acceptance policy:\n- Required failures keep the Case at FAIL, even if a recommendation check is C-PASS.\n- If an unsupported archive is the only remaining obstacle, retain the Case outcome Block."}],
  'automation': 'automatic',
  'parameters': {}}
 
