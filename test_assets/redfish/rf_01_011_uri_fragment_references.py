@@ -3,14 +3,11 @@ import re
 from collections import deque
 from urllib.parse import urljoin, urlsplit, urlunsplit, unquote
 
-TEST_CASE = {'modified_at': '2026-11-12T08:32:24.184571+00:00',
+TEST_CASE = {'modified_at': '2026-11-12T09:02:07.735272+00:00',
  'test_type': 'compliance',
  'spec_ref': ['DSP0266 v1.25.0 section 6.1 (fragment references); sections 9.5.7 and 9.6.2 (reference '
-              'properties and resource identity).',
-              'RFC 6901 sections 3, 4 and 6 (JSON Pointer syntax, evaluation and URI fragment '
-              'representation).',
-              'BMCAgent RF-01-011 coverage policy: no applicable fragments or incomplete schema/scope '
-              'evidence prevents PASS.'],
+ 'properties and resource identity).',
+ 'RFC 6901 sections 3, 4 and 6 (JSON Pointer syntax, evaluation and URI fragment representation).'],
  'created_at': '2026-10-30T06:23:36.474763+00:00',
  'name': 'RF-01-011 URI Fragment References',
  'description': 'Resolve discovered local URI fragments as JSON Pointers and verify schema-classified '
@@ -35,14 +32,14 @@ TEST_CASE = {'modified_at': '2026-11-12T08:32:24.184571+00:00',
                           'local schemas.'},
                  {'step_number': 3,
                   'type': 'Checkpoint',
-                  'step': 'Verify that at least one applicable local fragment reference was found.'},
+                  'step': 'Project coverage policy: verify that at least one applicable local fragment reference was found; no applicable references fail this check.'},
                  {'step_number': 3,
                   'type': 'Checkpoint',
                   'step': 'Verify that each pointer target exists and has the schema-required resource '
                           'identity.'},
                  {'step_number': 3,
                   'type': 'Checkpoint',
-                  'step': 'Verify that the complete discovered scope was assessed.'}],
+                  'step': 'Project coverage policy: verify that the complete discovered scope and required schema evidence were assessed; incomplete evidence prevents PASS.'}],
  'automation': 'automatic',
  'parameters': {}}
 

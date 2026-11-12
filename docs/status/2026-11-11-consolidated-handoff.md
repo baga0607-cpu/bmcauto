@@ -1,3 +1,5 @@
+2026-11-12 最新：RF-01 全系列完成 Spec Ref. 查核，005／008／009／011／012／013 的專案政策移至 Checkpoint；實際原因仍記在 Note。正式 Repository／Plan 已同步，設定與歷史證據保留。見 [引用與政策分離交接](2026-11-12-rf01-spec-ref.md)。
+
 2026-11-12 最新實例更新：既有 Repository 與 Plan 的 RF-01-001／002／008 已更新最新來源，原設定與歷史證據保留並備份，3 筆既有結果標記需重測，可直接重新執行；其餘 RF-01 無既有副本，未新增。詳見 [既有測項更新紀錄](2026-11-12-rf01-installed-update.md)。
 
 2026-11-12 最新：RF-01-001～013 已全部套用 Command／Action／Checkpoint／Record、C-PASS／Skip 與 Note 規則；新 Log 移除 [n] 區段前綴。正式服務 16:48 重啟，資料不變；獨立 Repository／Plan 副本仍需更新來源。詳見 [全系列查核交接](2026-11-12-rf01-series-c-pass.md)。下方舊 CP 等記載為歷史狀態。

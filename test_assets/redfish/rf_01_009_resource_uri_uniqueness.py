@@ -3,12 +3,10 @@ import re
 from collections import deque
 from urllib.parse import urljoin, urlsplit, urlunsplit
 
-TEST_CASE = {'modified_at': '2026-11-12T08:32:24.129666+00:00',
+TEST_CASE = {'modified_at': '2026-11-12T09:02:07.705010+00:00',
  'test_type': 'compliance',
- 'spec_ref': ['DSP0266 v1.25.0 section 6.1 (unique resource paths); section 9.6.2 (resource identity); '
-              'section 7.2.2 (collection pagination).',
-              'BMCAgent RF-01-009 coverage policy: complete discovered scope and no unresolved identity '
-              'groups; unresolved candidates are not proof of a collision.'],
+ 'spec_ref': ['DSP0266 v1.25.0 section 6.1 (unique resource paths); section 9.6.2 (resource identity); section '
+ '7.2.2 (collection pagination).'],
  'created_at': '2026-10-30T06:05:45.102559+00:00',
  'name': 'RF-01-009 Resource URI Uniqueness',
  'description': 'Traverse discoverable local Redfish resources and collection pages; assess resource '
@@ -39,11 +37,10 @@ TEST_CASE = {'modified_at': '2026-11-12T08:32:24.129666+00:00',
                           'relationships.'},
                  {'step_number': 3,
                   'type': 'Checkpoint',
-                  'step': 'Verify that each observed identity path represents one established resource '
-                          'identity.'},
+                  'step': 'Project coverage policy: verify that each observed identity path represents one established resource identity. Unresolved identity groups fail this check but do not prove a collision.'},
                  {'step_number': 3,
                   'type': 'Checkpoint',
-                  'step': 'Verify that the complete discovered scope was assessed.'},
+                  'step': 'Project coverage policy: verify that the complete discovered scope was assessed; incomplete coverage prevents PASS.'},
                  {'step_number': 3,
                   'type': 'Record',
                   'step': 'Record the number of resource/page responses observed.',

@@ -8,14 +8,12 @@ from collections import deque
 from urllib.parse import urljoin, urlsplit, urlunsplit
 import xml.etree.ElementTree as ET
 
-TEST_CASE = {'modified_at': '2026-11-12T08:32:24.247522+00:00',
+TEST_CASE = {'modified_at': '2026-11-12T09:02:07.768712+00:00',
  'test_type': 'compliance',
  'spec_ref': ['DSP0266 v1.25.0 section 6.7 Table 4 (/redfish/v1/Schemas/<SchemaFile>, Required=No); section '
-              '8.4.2.1 (local schema references).',
-              'DSP0268 v2026.2 section 6.61.3 (JsonSchemaFile Location/Uri and ArchiveUri/ArchiveFile).',
-              'DSP0266 v1.25.0 sections 11.1.4 and 11.2.4 (CSDL and JSON Schema format).',
-              'BMCAgent RF-01-013 acceptance policy: declared local supported files are accepted '
-              'independently of /Schemas/ evidence; minimum recognition is not full schema validation.'],
+ '8.4.2.1 (local schema references).',
+ 'DSP0268 v2026.2 section 6.61.3 (JsonSchemaFile Location/Uri and ArchiveUri/ArchiveFile).',
+ 'DSP0266 v1.25.0 sections 11.1.4 and 11.2.4 (CSDL and JSON Schema format).'],
  'created_at': '2026-10-30T07:27:24.936887+00:00',
  'name': 'RF-01-013 Local Schema File Endpoint',
  'description': 'Retrieve advertised local schema files and assess document recognition separately from the '
@@ -47,11 +45,10 @@ TEST_CASE = {'modified_at': '2026-11-12T08:32:24.247522+00:00',
                   'step': 'Read the declared archive member if applicable and parse the schema document.'},
                  {'step_number': 4,
                   'type': 'Checkpoint',
-                  'step': 'Verify the supported JSON Schema or CSDL XML minimum document structure.'},
+                  'step': 'Verify the supported JSON Schema or CSDL XML minimum document structure. This check does not perform full schema validation.'},
                  {'step_number': 4,
                   'type': 'Checkpoint',
-                  'step': 'Verify the recommended JSON schema dialect, or conditionally accept a recognized '
-                          'alternative with a Note.'},
+                  'step': 'Verify the recommended JSON schema dialect. Project acceptance policy: accept a recognized alternative as C-PASS and record the actual file, dialect and acceptance reason in Note.'},
                  {'step_number': 4,
                   'type': 'Checkpoint',
                   'step': 'Verify that every supported declared file was acquired and recognized.'},
@@ -60,12 +57,10 @@ TEST_CASE = {'modified_at': '2026-11-12T08:32:24.247522+00:00',
                   'step': 'Assess the recommended /redfish/v1/Schemas/ endpoint and the verified scope.'},
                  {'step_number': 5,
                   'type': 'Checkpoint',
-                  'step': 'Verify an advertised /Schemas/ entry, or conditionally accept missing evidence '
-                          'with a Note; do not infer absence.'},
+                  'step': 'Verify an advertised /redfish/v1/Schemas/<SchemaFile> entry. Project acceptance policy: missing verified evidence is C-PASS with a Note explaining the observed scope; this does not prove absence. Other declared local locations are evaluated independently.'},
                  {'step_number': 5,
                   'type': 'Checkpoint',
-                  'step': 'Verify complete discovery and successful validation of all declared local '
-                          'files.'}],
+                  'step': 'Project acceptance policy: verify complete discovery and successful acquisition and recognition of all declared supported local files. Required failures remain FAIL regardless of recommendation results; unsupported archive limitations retain Block.'}],
  'automation': 'automatic',
  'parameters': {}}
 

@@ -2,12 +2,10 @@ import json
 from urllib.parse import urljoin, urlsplit
 
 TEST_CASE = {
-    "modified_at": "2026-11-12T08:48:00+00:00",
+    "modified_at": '2026-11-12T09:02:07.701445+00:00',
     "test_type": "compliance",
-    "spec_ref": [
-        "DSP0266 v1.25.0 section 6.7 Table 4 (/redfish/v1/openapi.yaml, Required=No); section 11.3.4 Table 33 (OpenAPI document).",
-        "BMCAgent RF-01-008 acceptance policy: HTTP 404 with the explicit missing-URI message or HTTP 400 with matching Base.1.16.InvalidURI extended information is C-PASS with a mandatory Note; invalid supplied documents and other errors retain their existing failure handling."
-    ],
+    "spec_ref": ['DSP0266 v1.25.0 section 6.7, Table 4 (/redfish/v1/openapi.yaml); section 11.3.4, Table 33 '
+ '(openapi.yaml terms).'],
     "created_at": "2026-10-30T05:56:21.765986+00:00",
     "name": "RF-01-008 OpenAPI Document Endpoint",
     "description": "Verify the minimum OpenAPI document structure when the endpoint is available; conditionally accept explicitly confirmed absence of this optional endpoint.",
@@ -20,7 +18,7 @@ TEST_CASE = {
     {
         "step_number": 1,
         "type": "Checkpoint",
-        "step": "Verify HTTP 200, or conditionally accept an explicitly confirmed missing optional OpenAPI endpoint."
+        "step": 'Verify HTTP 200. Project acceptance policy: use C-PASS only for HTTP 404 with message "The URI /redfish/v1/openapi.yaml was not found.", or HTTP 400 with both MessageId Base.1.16.InvalidURI and that exact Message in the same @Message.ExtendedInfo entry. Record the actual response and acceptance reason in Note; skip document checks when absence is accepted.'
     },
     {
         "step_number": 2,

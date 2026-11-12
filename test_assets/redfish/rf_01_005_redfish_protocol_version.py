@@ -2,11 +2,9 @@ import json
 import re
 from urllib.parse import urljoin, urlsplit
 
-TEST_CASE = {'modified_at': '2026-11-12T08:32:24.046757+00:00',
+TEST_CASE = {'modified_at': '2026-11-12T09:02:07.683659+00:00',
  'test_type': 'compliance',
- 'spec_ref': ['DSP0266 v1.25.0 section 6.6 (RedfishVersion format).',
-              'BMCAgent RF-01-005 acceptance policy: exact equality to the tester-supplied version; not a '
-              'DMTF-mandated version value.'],
+ 'spec_ref': ['DSP0266 v1.25.0 section 6.6 (RedfishVersion format).'],
  'created_at': '2026-10-19T03:32:23.623177+00:00',
  'name': 'RF-01-005 Redfish Protocol Version',
  'description': 'Verify that ServiceRoot RedfishVersion exactly matches the tester-provided protocol '
@@ -41,7 +39,7 @@ TEST_CASE = {'modified_at': '2026-11-12T08:32:24.046757+00:00',
                   'step': 'Compare RedfishVersion with the expected version without normalization.'},
                  {'step_number': 5,
                   'type': 'Checkpoint',
-                  'step': 'Verify that RedfishVersion exactly matches the supplied string.'}],
+                  'step': 'Project acceptance policy: verify that RedfishVersion exactly matches the tester-supplied string. The expected version is not prescribed by DMTF.'}],
  'automation': 'semi_automatic',
  'parameters': {'preset': {'type': 'string',
                            'default': '',

@@ -3,14 +3,11 @@ import re
 from collections import deque
 from urllib.parse import urljoin, urlsplit, urlunsplit
 
-TEST_CASE = {'modified_at': '2026-11-12T08:32:24.215631+00:00',
+TEST_CASE = {'modified_at': '2026-11-12T09:02:07.756697+00:00',
  'test_type': 'compliance',
- 'spec_ref': ['DSP0266 v1.25.0 sections 6.1 and 6.7 (relative references in response bodies and HTTP '
-              'headers).',
-              'RFC 3986 section 4.2 (relative-reference syntax); Redfish section 6.7 imposes narrower '
-              'allowed forms.',
-              'BMCAgent RF-01-012 coverage policy: at least one applicable relative reference and complete '
-              'discovered scope are required for PASS.'],
+ 'spec_ref': ['DSP0266 v1.25.0 sections 6.1 and 6.7 (relative references in response bodies and HTTP headers).',
+ 'RFC 3986 section 4.2 (relative-reference syntax); Redfish section 6.7 imposes narrower allowed '
+ 'forms.'],
  'created_at': '2026-10-30T07:19:35.437164+00:00',
  'name': 'RF-01-012 Relative URI References',
  'description': 'Inspect discovered Body and GET-response header URI references for the Redfish '
@@ -38,10 +35,10 @@ TEST_CASE = {'modified_at': '2026-11-12T08:32:24.215631+00:00',
                           'authority; absolute URIs are allowed.'},
                  {'step_number': 3,
                   'type': 'Checkpoint',
-                  'step': 'Verify that at least one applicable relative reference was found.'},
+                  'step': 'Project coverage policy: verify that at least one applicable relative reference was found; no applicable references fail this check.'},
                  {'step_number': 3,
                   'type': 'Checkpoint',
-                  'step': 'Verify that the complete discovered scope was assessed.'}],
+                  'step': 'Project coverage policy: verify that the complete discovered scope was assessed; incomplete evidence prevents PASS.'}],
  'automation': 'automatic',
  'parameters': {}}
 
