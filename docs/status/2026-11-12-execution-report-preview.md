@@ -1,5 +1,9 @@
 # Execution: single Test Case report preview — 2026-11-12
 
+## Formal restart completed
+
+2026-11-12 follow-up: restarted the local formal service at http://127.0.0.1:5000 after confirming zero active runs and zero active Tasks. SQLite online backup is under bmca-runtime/backups/2026-11-12-report-preview-restart. Before/after fingerprints of all 21 tables are identical; integrity_check is ok and foreign_key_check has zero violations. The homepage and preview JavaScript return HTTP 200; the served Execution code includes the new button. A read-only request for an existing real Task membership successfully rendered one Case with the Judgement column. No test was executed or result changed. Reload the browser to use the feature. This supersedes the earlier no-restart validation note below.
+
 ## Delivered behavior
 
 In the local Execution case table, Report preview is the icon immediately to the right of Log and before Parameters. The button is available for completed, not-run, stale and running memberships. It opens a native modal for the selected Task and Case, with the five-column Step / Type / Description / Result / Judgement report, description, summary, Note, Spec Ref. when applicable, and Test Information expanded initially.
