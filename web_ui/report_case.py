@@ -1,4 +1,6 @@
 """Report fields from declared definitions and explicit execution evidence."""
+from result_policy import method_status
+from case_log import result_note
 import json
 from datetime import datetime, timezone, timedelta
 
@@ -95,7 +97,7 @@ def description(result, metadata):
     return display((definition if isinstance(definition, dict) else metadata).get('description'))
 
 
-def method_table_rows(result, metadata):
+def _method_table_rows(result, metadata):
     """Step / Type / Description / Result / Judgement; never infer a verdict.
 
     Numbered definitions join observations by captured method position. Historical
@@ -109,19 +111,19 @@ def method_table_rows(result, metadata):
             return bounded(display(value)), MISSING
         if 'status' not in value:
             return bounded(display(value)), MISSING
-        status, parts = value['status'], []
+        status, parts = method_status(value['status']), []
         if kind == 'Record' and status == 'NOT_RECORDED':
             parts.append('Not recorded')
-        for key in ('expected', 'actual', 'reason'):
+        for key in ('expected', 'actual', 'reason', 'note'):
             if key not in value:
                 continue
             raw = value[key]
-            if key == 'actual' and raw is None and status in ('NOT_RUN', 'NOT_EVALUATED', 'NOT_RECORDED'):
+            if key == 'actual' and raw is None and status in ('Skip',):
                 continue
             rendered = 'null' if raw is None else '""' if raw == '' else display(raw)
             parts.append(key.capitalize() + ': ' + rendered)
         text = '\n'.join(parts) or ('Recorded' if kind == 'Record' and status == 'RECORDED' else MISSING)
-        return bounded(text), MISSING if kind == 'Record' else display(status)
+        return bounded(text), display(status)
 
     def typed(item, value=None):
         detail = value if isinstance(value, dict) else {}
@@ -180,6 +182,14 @@ def method_table_rows(result, metadata):
         for number, (_, record) in enumerate(remaining, 1):
             rows.append(typed(record, record.get('result')) if is_typed(record)
                         else legacy(record, number, record.get('result')))
+        for record in explicit:
+            detail = record.get('result')
+            if isinstance(detail, dict):
+                for check in detail.get('checks', []):
+                    if isinstance(check, dict):
+                        value = dict(check, status='PASS' if check.get('passed') is True else 'FAIL' if check.get('passed') is False else MISSING)
+                        content, judgement = observation(value, 'Checkpoint')
+                        rows.append(('', 'Checkpoint', display(check.get('label')), content, judgement))
         return rows
     if any(isinstance(r, dict) and r.get('kind') in ('section', 'check') for r in records):
         number = 0
@@ -190,7 +200,7 @@ def method_table_rows(result, metadata):
                 number += 1
                 rows.append((str(number), 'Action', display(record.get('title')), MISSING, MISSING))
             elif record.get('kind') == 'check':
-                value = {k: record[k] for k in ('expected', 'actual') if k in record}
+                value = {k: record[k] for k in ('expected', 'actual', 'note') if k in record}
                 value['status'] = 'PASS' if record.get('passed') is True else 'FAIL' if record.get('passed') is False else MISSING
                 content, judgement = observation(value, 'Checkpoint')
                 rows.append(('', 'Checkpoint', display(record.get('label')), content, judgement))
@@ -209,3 +219,14 @@ def firmware(setup):
         return MISSING
     return '\n'.join(display(item.get('component'))+': '+display(item.get('version'))
                      for item in package if isinstance(item, dict)) or MISSING
+
+
+def method_table_rows(result, metadata):
+    rows = _method_table_rows(result, metadata)
+    # Retain unassociated historical case notes without inventing a step link,
+    # a new Record, or retroactively changing PASS to CP.
+    note = result_note(result)
+    if note and not any(note in row[3] for row in rows):
+        rows.append(('', MISSING, 'Case-level note (no recorded step association)',
+                     'Note: ' + note, MISSING))
+    return rows

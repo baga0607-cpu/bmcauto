@@ -3,15 +3,16 @@ const {chromium}=require(process.env.BMC_PLAYWRIGHT_MODULE||'playwright');
 (async()=>{
  const qa=process.env.BMC_REPORT_QA_DIR;
  assert.ok(qa,'Set BMC_REPORT_QA_DIR to the test_report_preview fixture directory.');
- const template=fs.readFileSync(path.join(qa,'preview.html'),'utf8');
+ const conditional=process.env.BMC_CP_REPORT==='1';
+ const template=fs.readFileSync(path.join(qa,conditional?'cp-preview.html':'preview.html'),'utf8');
  const browser=await chromium.launch({executablePath:process.env.BMC_CHROME_PATH||'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true});
  try{
   const page=await browser.newPage({viewport:{width:1440,height:900}}),errors=[],writes=[],previews=[];
   page.on('pageerror',e=>errors.push(e.message));
   await page.addInitScript(()=>{if(window!==window.top)return;localStorage.setItem('bmc-execution-tabs-v1',JSON.stringify({ids:['a','b'],active:'a'}));window.EventSource=class{close(){}};});
-  const cases=[{id:'c0',tc_name:'RF-01-002 Service Root',automation:'automatic',script_kind:'single',selected:false,status:'Passed'},
+  const cases=[{id:'c0',tc_name:conditional?'RF-01-008 OpenAPI Document Endpoint':'RF-01-002 Service Root',automation:'automatic',script_kind:'single',selected:false,status:conditional?'CP':'Passed'},
                {id:'c1',tc_name:'RF-01-001 Version Discovery',automation:'semi_automatic',script_kind:'single',selected:false,status:'TBD'}];
-  const a={id:'a',name:'Test A',plan_id:'pa',testcases:cases,counts:{Passed:1,Failed:0},execution_active:false};
+  const a={id:'a',name:'Test A',plan_id:'pa',testcases:cases,counts:{Passed:conditional?0:1,CP:conditional?1:0,Failed:0},execution_active:false};
   const b={...a,id:'b',name:'Test B',plan_id:'pb',testcases:[{...cases[0],status:'Running'}],execution_active:true};
   const project={id:'p',name:'Project',plans:[{id:'pa',name:'Plan A',folders:[],testcases:cases,tasks:[a]},{id:'pb',name:'Plan B',folders:[],testcases:b.testcases,tasks:[b]}]};
   let fail=false,hold=false,release;
@@ -49,8 +50,14 @@ const {chromium}=require(process.env.BMC_PLAYWRIGHT_MODULE||'playwright');
   assert.deepEqual(await frame.locator('th').allTextContents(),['Step','Type','Description','Result','Judgement']);
   assert.equal(await frame.locator('details[open]').count(),3);
   assert.equal(await page.locator('.report-preview-frame').getAttribute('sandbox'),'allow-same-origin');
-  assert.ok((await frame.locator('body').innerText()).includes('Actual: 1.20.0'));
+  assert.ok((await frame.locator('body').innerText()).includes(conditional?'Note: DUT returned HTTP 404':'Actual: 1.20.0'));
   assert.ok(!(await frame.locator('body').innerText()).includes('Test B'));
+  if(conditional){
+   assert.equal(await frame.locator('.status.cp').innerText(),'CP');
+   assert.deepEqual(await frame.locator('.method-table tbody tr td:last-child').allTextContents(),['COMPLETED','CP',...Array(7).fill('Skip')]);
+   assert.equal(await frame.locator('dt').filter({hasText:/^Note$/}).count(),0);
+   assert.ok((await page.locator('#app').innerText().catch(()=>page.locator('body').innerText())).includes('CP'));
+  }
   for(const theme of ['light','dark']){
    await page.evaluate(t=>document.documentElement.dataset.theme=t,theme);
    const box=await dialog.boundingBox();assert.ok(box.x>=0&&box.y>=0&&box.y+box.height<=900);

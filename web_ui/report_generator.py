@@ -212,6 +212,8 @@ def _safe_name(name):
 
 def _status_para(status, styles):
     s = (status or 'tbd').lower()
+    if s == 'cp':
+        return Paragraph('CP', styles['status_tbd'])
     if s in ('passed', 'pass'):
         return Paragraph('PASSED  [OK]', styles['status_pass'])
     elif s in ('failed', 'fail'):
@@ -384,21 +386,24 @@ def generate_task_pdf_report(task_id, output_path, db_path=None, log_dir=None, r
     passed  = sum(1 for r in rows if (r['status'] or '').lower() in ('passed', 'pass'))
     failed  = sum(1 for r in rows if (r['status'] or '').lower() in ('failed', 'fail'))
     blocked = sum(1 for r in rows if (r['status'] or '').lower() in ('block', 'blocked'))
-    tbd     = total - passed - failed - blocked
+    conditional = sum(1 for r in rows if (r['status'] or '').upper() == 'CP')
+    tbd     = total - passed - failed - blocked - conditional
 
     cover_stats = [
         [Paragraph('<b>Total Cases</b>', styles['tbl_hdr']),
          Paragraph('<b>Passed</b>', styles['tbl_hdr']),
          Paragraph('<b>Failed</b>', styles['tbl_hdr']),
+         Paragraph('<b>CP</b>', styles['tbl_hdr']),
          Paragraph('<b>Block</b>', styles['tbl_hdr']),
          Paragraph('<b>TBD</b>', styles['tbl_hdr'])],
         [Paragraph(str(total), styles['tbl_cell_bold']),
          Paragraph(f'<font color="#1E7E34"><b>{passed}</b></font>', styles['tbl_cell']),
          Paragraph(f'<font color="#B71C1C"><b>{failed}</b></font>', styles['tbl_cell']),
+         Paragraph(str(conditional), styles['tbl_cell']),
          Paragraph(str(blocked), styles['tbl_cell']),
          Paragraph(str(tbd), styles['tbl_cell'])],
     ]
-    t_stats = Table(cover_stats, colWidths=[COL_W / 5] * 5)
+    t_stats = Table(cover_stats, colWidths=[COL_W / 6] * 6)
     t_stats.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), C_BLUE_HEADER),
         ('BACKGROUND', (0, 1), (-1, 1), C_ROW_ALT),
@@ -569,7 +574,7 @@ def generate_task_pdf_report(task_id, output_path, db_path=None, log_dir=None, r
             story.append(Paragraph('Test Data', styles['tc_title']))
             field('Description', description(result_data, metadata))
             field('Result Summary', result_summary(result_data, manual))
-            field('Note', note_text(result_data))
+
             reference = specification_reference(result_data, metadata, cat_name)
             if reference is not None:
                 field('Spec Ref.', reference)
@@ -579,6 +584,8 @@ def generate_task_pdf_report(task_id, output_path, db_path=None, log_dir=None, r
             story.append(Paragraph('Test Steps &amp; Results', styles['tc_title']))
             table_rows = [[cell(label, 'tbl_cell_bold') for label in ('Step', 'Type', 'Description', 'Result', 'Judgement')]]
             table_rows.extend([cell(value if value != '' else ' ') for value in row] for row in method_table_rows(result_data, metadata))
+            if manual and manual.get('status') == 'CP':
+                table_rows.append([cell(v) for v in (' ', '—', 'Manual case judgement', 'Note: '+display(manual.get('reason')), 'CP')])
             methods = Table(table_rows, colWidths=[COL_W*.06, COL_W*.13, COL_W*.39, COL_W*.25, COL_W*.17],
                             repeatRows=1, splitByRow=1, splitInRow=1)
             methods.setStyle(TableStyle([

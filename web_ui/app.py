@@ -1354,7 +1354,7 @@ def run_testcase():
             msg_queue.put({'type': 'case_start', 'case_name': tc_name})
             try:
                 sc.execute_script(MAIN_PROGRAM_DIR, module_path, client, context, case_settings.get('preset'))
-                result = 'FAIL' if context.get('_tc_status') in ('FAIL', 'Failed') else 'PASS'
+                result = {'PASS':'PASS', 'CP':'CP', 'BLOCK':'BLOCK'}.get(context.get('_tc_status'), 'FAIL')
                 msg_queue.put({'type': 'case_done', 'case_name': tc_name, 'result': result})
             except TestInterrupted: raise
             except Exception as error:
@@ -1390,7 +1390,7 @@ def run_testcase():
             if not case_log.finished:
                 state = run_sessions[session_id]["status"]
                 stopped = state == "stopped" or run_sessions[session_id].get("stop_requested")
-                status = "Stopped" if stopped else ("Pass" if state == "done" and locals().get("context", {}).get("_tc_status") == "PASS" else "Fail")
+                status = "Stopped" if stopped else ({"PASS":"Pass","CP":"CP","BLOCK":"Block"}.get(locals().get("context", {}).get("_tc_status"), "Fail") if state == "done" else "Fail")
                 errors = [event.get("error") or event.get("text") for event in run_sessions[session_id]["log_history"]
                           if event.get("type") == "error" or event.get("error")]
                 case_log.finish(status, next((error for error in reversed(errors) if error),
@@ -1404,7 +1404,7 @@ def run_testcase():
                 try:
                     ps.begin_write(result_session)
                     stopped = run_sessions[session_id].get("stop_requested") or run_sessions[session_id]["status"] == "stopped"
-                    outcome = "TBD" if stopped else ("Passed" if run_sessions[session_id]["status"] == "done" and locals().get("context", {}).get("_tc_status") == "PASS" else "Failed")
+                    outcome = "TBD" if stopped else ({"PASS":"Passed","CP":"CP","BLOCK":"Block"}.get(locals().get("context", {}).get("_tc_status"), "Failed") if run_sessions[session_id]["status"] == "done" else "Failed")
                     with open(result_log_path, encoding="utf-8") as result_log:
                         latest_log = result_log.read()
                     # Persist this testcase's current structured evidence before the stream closes.

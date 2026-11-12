@@ -1,3 +1,5 @@
+2026-11-12 latest: RF-01-008 and shared Log / Execution / preview / HTML / PDF now support CP + mandatory Note, Skip + Reason, and Record COMPLETED. Standalone report Note removed; historical notes retained in table. Formal service restart / independent Plan source update pending. See [docs/status/2026-11-12-rf008-conditional-pass.md](docs/status/2026-11-12-rf008-conditional-pass.md).
+
 2026-11-12 Execution report preview: read-only single-Case modal reuses the production HTML renderer, with refresh and no export or data writes. See docs/status/2026-11-12-execution-report-preview.md for UI integration and publication-baseline differences.
 
 2026-11-12 latest method contract: Step / Type / Description / Result / Judgement. Only Command and Action show numbered main steps; Checkpoint and Record follow with blank Step cells. No displayed S/C/R IDs or Type=Step. Record has no judgement. See docs/status/2026-11-12-numbered-method-types.md.

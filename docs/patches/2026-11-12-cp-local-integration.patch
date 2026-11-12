@@ -1,0 +1,237 @@
+diff --git a/web_ui/app.py b/web_ui/app.py
+index 2a3b350..7208caf 100644
+--- a/web_ui/app.py
++++ b/web_ui/app.py
+@@ -977,7 +977,7 @@ def run_testcase():
+                 case_log.records = [e['log_record'] for e in run['log_history'] if 'log_record' in e]
+                 if stopped or not any(r['kind'] == 'finish' for r in case_log.records):
+                     verdict = context.get('_tc_status') if run['status'] == 'done' else None
+-                    status = 'Stopped' if stopped else {'PASS':'Pass','BLOCK':'Block'}.get(verdict, 'Fail')
++                    status = 'Stopped' if stopped else {'PASS':'Pass','BLOCK':'Block','CP':'CP'}.get(verdict, 'Fail')
+                     errors = [e.get('error') or e.get('text') for e in run['log_history'] if e.get('error') or e['type'] == 'error']
+                     reason = 'Execution stopped by operator' if stopped else next((e for e in reversed(errors) if e), 'Execution finished')
+                     case_log.finish(status, reason)
+@@ -988,7 +988,7 @@ def run_testcase():
+                     ps.begin_write(result_session)
+                     stopped = run_sessions[session_id].get("stop_requested") or run_sessions[session_id]["status"] == "stopped"
+                     verdict = locals().get("context", {}).get("_tc_status") if run_sessions[session_id]["status"] == "done" else None
+-                    outcome = "TBD" if stopped else {"PASS":"Passed","BLOCK":"Block"}.get(verdict, "Failed")
++                    outcome = "TBD" if stopped else {"PASS":"Passed","BLOCK":"Block","CP":"CP"}.get(verdict, "Failed")
+                     with open(result_log_path, encoding="utf-8") as result_log:
+                         latest_log = result_log.read()
+                     # Persist this testcase's current structured evidence before the stream closes.
+diff --git a/web_ui/case_worker.py b/web_ui/case_worker.py
+index 5bfed9b..5996c27 100644
+--- a/web_ui/case_worker.py
++++ b/web_ui/case_worker.py
+@@ -51,7 +51,7 @@ def execute(config, emit, receive):
+                 emit({'type': 'case_start', 'case_name': name})
+                 try:
+                     sc.execute_script(config['root'], config['module'], client, context, settings.get('preset'))
+-                    verdict = {'PASS':'PASS', 'BLOCK':'BLOCK'}.get(context.get('_tc_status'), 'FAIL')
++                    verdict = {'PASS':'PASS', 'BLOCK':'BLOCK', 'CP':'CP'}.get(context.get('_tc_status'), 'FAIL')
+                     emit({'type': 'case_done', 'case_name': name, 'result': verdict})
+                 except Exception as error:
+                     verdict, reason = 'FAIL', str(error)
+@@ -72,7 +72,7 @@ def execute(config, emit, receive):
+                 finally:
+                     builtins.input = original_input
+                     writer.flush()
+-                    log.finish({'PASS':'Pass','BLOCK':'Block'}.get(verdict,'Fail'), reason)
++                    log.finish({'PASS':'Pass','BLOCK':'Block','CP':'CP'}.get(verdict,'Fail'), reason)
+
+
+ if __name__ == '__main__':
+diff --git a/web_ui/plan_state.py b/web_ui/plan_state.py
+index 3736239..9c0f46f 100644
+--- a/web_ui/plan_state.py
++++ b/web_ui/plan_state.py
+@@ -3,6 +3,7 @@
+ Every write starts with SQLite BEGIN IMMEDIATE before reading lock state. A Plan
+ is locked by a Task row, so independent processes observe the same lock.
+ """
++from result_policy import validate_case_cp
+ from case_log import test_log_text, result_note
+ import json
+ import case_order as co
+@@ -177,8 +178,9 @@ def set_manual_status(session,task_id,tc_id,data):
+     task,row,tc=live_task_case(session,task_id,tc_id)
+     unlocked(session,task.plan_id)
+     status=data.get('status'); reason=data.get('reason','')
+-    if status not in ('TBD','Passed','Failed','Block'): raise StateError('Manual status must be TBD, Passed, Failed, or Block')
++    if status not in ('TBD','Passed','Failed','Block','CP'): raise StateError('Manual status must be TBD, Passed, Failed, Block, or CP')
+     if not isinstance(reason,str): raise StateError('Manual reason must be text')
++    if status == 'CP' and not reason.strip(): raise StateError('CP requires a Note in Reason')
+     row.status=status
+     row.manual_override_json=json.dumps(dict(status=status,reason=reason.strip(),modified_at=datetime.now(timezone.utc).isoformat()),ensure_ascii=False)
+     session.flush()
+@@ -188,7 +190,7 @@ def set_manual_status(session,task_id,tc_id,data):
+ def summary(session,task_id,root=None,include_evidence=True):
+     from task_management import display_setup
+     task=require(session,Task,task_id)
+-    cases=[]; counts={'Passed':0,'Failed':0,'Block':0,'TBD':0}
++    cases=[]; counts={'Passed':0,'Failed':0,'Block':0,'CP':0,'TBD':0}
+     query=session.query(TaskTestCase,TestCase).join(TestCase,TaskTestCase.testcase_id==TestCase.system_id).filter(TaskTestCase.task_id==task_id,TestCase.plan_id==task.plan_id).order_by(TaskTestCase.position)
+     if not include_evidence:
+         query=query.options(defer(TaskTestCase.result_json),defer(TaskTestCase.log_text),defer(TaskTestCase.api_log_text))
+@@ -197,7 +199,7 @@ def summary(session,task_id,root=None,include_evidence=True):
+         import single_case
+         case['automation']=single_case.automation_for_case(root,tc)
+         case.update(single_case.source_dates_for_case(root,tc))
+-        cases.append(case); counts[row.status if row.status in ('Passed','Failed','Block') else 'TBD']+=1
++        cases.append(case); counts[row.status if row.status in ('Passed','Failed','Block','CP') else 'TBD']+=1
+     return dict(id=task.id,task_id=task.id,name=task.name,plan_id=task.plan_id,execution_active=bool(task.execution_active),setup=display_setup(task.task_metadata),connection_configured=bool(te.normalize(task.environment_config)["host"]),testcases=co.arrange(session,'plan:'+task.plan_id,cases),counts=counts)
+
+ def start_execution(session,task_id,ids):
+@@ -214,7 +216,7 @@ def start_execution(session,task_id,ids):
+
+ def canonical_status(status):
+     value=str(status or '').casefold()
+-    return {'pass':'Passed','passed':'Passed','fail':'Failed','failed':'Failed','block':'Block','blocked':'Block','running':'Running','tbd':'TBD','pending':'TBD','tdb':'TBD','interrupted':'TBD'}.get(value,'Failed')
++    return {'pass':'Passed','passed':'Passed','cp':'CP','fail':'Failed','failed':'Failed','block':'Block','blocked':'Block','running':'Running','tbd':'TBD','pending':'TBD','tdb':'TBD','interrupted':'TBD'}.get(value,'Failed')
+
+ def check_execution_token(task, token):
+     if not task.execution_active or not token or token != task.execution_token: raise StateError('Stale or inactive execution',409)
+@@ -228,12 +230,14 @@ def save_result(session,task_id,data):
+     if row.testcase_id not in json.loads(task.execution_selection or '[]'): raise StateError('Testcase is not selected for this execution')
+     row.status=canonical_status(data.get('status'))
+     result = dict(data.get('result',data))
++    try: validate_case_cp(row.status, result, result_note(result))
++    except ValueError as error: raise StateError(str(error))
+     row.result_note = result_note(result)
+     result['note'] = row.result_note
+     row.result_json=json.dumps(result,ensure_ascii=False)
+     row.log_text=data.get('log_text',data.get('log','')); row.api_log_text=data.get('api_log_text','')
+     row.executed_at=data.get('executed_at'); row.bug_id=data.get('bug_id',row.bug_id)
+-    if row.status in ('Passed','Failed'):
++    if row.status in ('Passed','Failed','CP'):
+         row.needs_retest=False
+     session.flush()
+
+@@ -340,10 +344,10 @@ def delete_content(session,main_program_dir,data,folder=None,testcases=None,fold
+ def migrate_block_status(conn):
+     """Expand the old SQLite CHECK while preserving every row, index and trigger."""
+     ddl=conn.exec_driver_sql("SELECT sql FROM sqlite_master WHERE type='table' AND name='task_testcases'").scalar()
+-    if not ddl or 'ck_task_status' not in ddl or "'Block'" in ddl:
++    if not ddl or 'ck_task_status' not in ddl or "'CP'" in ddl:
+         return
+     import re
+-    updated=re.sub(r"status IN \([^)]*\)", "status IN ('TBD','Running','Passed','Failed','Block')", ddl, count=1, flags=re.I)
++    updated=re.sub(r"status IN \([^)]*\)", "status IN ('TBD','Running','Passed','Failed','Block','CP')", ddl, count=1, flags=re.I)
+     if updated==ddl: raise ValueError('Unrecognized Task status constraint')
+     updated=re.sub(r'CREATE TABLE\s+task_testcases', 'CREATE TABLE task_testcases_block_migration', updated, count=1, flags=re.I)
+     if updated==ddl or 'CREATE TABLE task_testcases_block_migration' not in updated: raise ValueError('Unrecognized Task table schema')
+diff --git a/web_ui/models.py b/web_ui/models.py
+index 16f5453..54cc4d4 100644
+--- a/web_ui/models.py
++++ b/web_ui/models.py
+@@ -186,7 +186,7 @@ class Task(Base):
+ class TaskTestCase(Base):
+     __tablename__ = 'task_testcases'
+     __table_args__ = (UniqueConstraint('task_id', 'testcase_id', name='uq_task_scope'),
+-                      CheckConstraint("status IN ('TBD','Running','Passed','Failed','Block')", name='ck_task_status'))
++                      CheckConstraint("status IN ('TBD','Running','Passed','Failed','Block','CP')", name='ck_task_status'))
+     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+     task_id = Column("task_id", String(100), ForeignKey('tasks.id', ondelete='CASCADE'), nullable=False)
+
+diff --git a/web_ui/static/workbench.js b/web_ui/static/workbench.js
+index bda04b0..2f622f3 100644
+--- a/web_ui/static/workbench.js
++++ b/web_ui/static/workbench.js
+@@ -151,7 +151,7 @@ async function projectSectionPage(project) {
+ async function refresh(render=true) { const result=await api('/api/projects'); state.projects=result.projects; drawTree(); if(render) await draw(); }
+ function matrixStatus(value) {
+   if(value===null)return '<span class="help" title="Not in Task scope">—</span>';
+-  const style={PASS:'passed',FAIL:'failed',Block:'blocked',NR:'tbd',Running:'running'}[value];
++  const style={PASS:'passed',CP:'cp',FAIL:'failed',Block:'blocked',NR:'tbd',Running:'running'}[value];
+   return `<span class="status ${style}">${value}</span>`;
+ }
+ function sizePlanColumns() {
+@@ -159,7 +159,7 @@ function sizePlanColumns() {
+   if(!cell)return;
+   const style=getComputedStyle(cell),canvas=document.createElement('canvas'),measure=canvas.getContext('2d');
+   measure.font=`${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+-  const labels=['Total Cases','Completion','PASS','FAIL','Block','Not Run','Task'];
++  const labels=['Total Cases','Completion','PASS','CP','FAIL','Block','Not Run','Task'];
+   const width=Math.ceil(Math.max(...labels.map(label=>measure.measureText(label).width))+parseFloat(style.paddingLeft)+parseFloat(style.paddingRight))+2;
+   table.style.setProperty('--summary-column-width',width+'px');
+   const create=$('.plan-list-footer button');
+@@ -175,9 +175,9 @@ function planList(project, readOnly=false) {
+   const rows=project.plans.map(plan=>{
+     const summary=PlanMatrix.summarize(plan),expanded=state.expandedPlans?.has(plan.id),matrixId='matrix-'+plan.id;
+     const matrix=`<div class="table-wrap plan-matrix" id="${escape(matrixId)}"><table aria-label="${escape(plan.name)} Matrix"><thead><tr><th scope="col">Case</th>${plan.tasks.map(task=>`<th scope="col"><a href="${path(project,plan,task)}">${escape(task.name)}</a></th>`).join('')}<th scope="col">Final</th></tr></thead><tbody>${summary.rows.map(row=>`<tr><th scope="row">${escape(row.name)}</th>${row.cells.map(cell=>`<td>${matrixStatus(cell)}</td>`).join('')}<td>${matrixStatus(row.final)}</td></tr>`).join('')||`<tr><td colspan="${plan.tasks.length+2}">No Test Cases</td></tr>`}</tbody></table></div>`;
+-    return `<tr><td><a href="${path(project,plan)}">${escape(plan.name)}</a></td><td>${summary.total}</td><td>${summary.completed}/${summary.total}</td><td>${summary.counts.PASS}</td><td>${summary.counts.FAIL}</td><td>${summary.counts.Block}</td><td>${summary.counts.NR}</td><td>${button(String(plan.tasks.length),'toggle-plan-matrix','small-button matrix-toggle',`data-id="${escape(plan.id)}" aria-label="${escape(plan.name)} Task Matrix" aria-expanded="${Boolean(expanded)}" aria-controls="${escape(matrixId)}"`)}</td></tr><tr ${expanded?'':'hidden'} class="matrix-row"><td colspan="8">${matrix}</td></tr>`;
++    return `<tr><td><a href="${path(project,plan)}">${escape(plan.name)}</a></td><td>${summary.total}</td><td>${summary.completed}/${summary.total}</td><td>${summary.counts.PASS}</td><td>${summary.counts.CP}</td><td>${summary.counts.FAIL}</td><td>${summary.counts.Block}</td><td>${summary.counts.NR}</td><td>${button(String(plan.tasks.length),'toggle-plan-matrix','small-button matrix-toggle',`data-id="${escape(plan.id)}" aria-label="${escape(plan.name)} Task Matrix" aria-expanded="${Boolean(expanded)}" aria-controls="${escape(matrixId)}"`)}</td></tr><tr ${expanded?'':'hidden'} class="matrix-row"><td colspan="9">${matrix}</td></tr>`;
+   }).join('');
+-  return `<div class="table-wrap plan-overview"><table><thead><tr><th>Plan</th><th>Total Cases</th><th>Completion</th><th>PASS</th><th>FAIL</th><th>Block</th><th>Not Run</th><th data-no-translate>Task</th></tr></thead><tbody>${rows}${!rows?'<tr><td colspan="8">No Test Plans</td></tr>':''}</tbody></table></div>${readOnly?'':`<div class="plan-list-footer">${button('Create','new-plan','primary')}</div>`}`;
++  return `<div class="table-wrap plan-overview"><table><thead><tr><th>Plan</th><th>Total Cases</th><th>Completion</th><th>PASS</th><th>CP</th><th>FAIL</th><th>Block</th><th>Not Run</th><th data-no-translate>Task</th></tr></thead><tbody>${rows}${!rows?'<tr><td colspan="9">No Test Plans</td></tr>':''}</tbody></table></div>${readOnly?'':`<div class="plan-list-footer">${button('Create','new-plan','primary')}</div>`}`;
+ }
+ function planTabIds(project){
+  state.planTabOrders??={};
+@@ -225,17 +225,17 @@ function reportPage(project){
+     const disabled=busy||(kind==='plan'?plan.locked:task.execution_active||choice.plans.has(plan.id));
+     return `<input type="checkbox" data-report-select="${kind}" data-plan-id="${escape(plan.id)}" ${task?`data-task-id="${escape(task.id)}"`:''} aria-label="${escape((task?.name||plan.name)+' '+(task?'Task Report':'Final Report'))}" ${checked?'checked':''} ${disabled?'disabled':''}>`;
+   };
+-  const numbers=(summary,count)=>`<td>${summary.total}</td><td>${summary.completed}/${summary.total}</td><td>${summary.counts.PASS}</td><td>${summary.counts.FAIL}</td><td>${summary.counts.Block}</td><td>${summary.counts.NR}</td><td>${count}</td>`;
++  const numbers=(summary,count)=>`<td>${summary.total}</td><td>${summary.completed}/${summary.total}</td><td>${summary.counts.PASS}</td><td>${summary.counts.CP}</td><td>${summary.counts.FAIL}</td><td>${summary.counts.Block}</td><td>${summary.counts.NR}</td><td>${count}</td>`;
+   const rows=project.plans.map(plan=>{
+     const expanded=state.reportExpanded.has(plan.id),summary=PlanMatrix.summarize(plan),children='report-plan-'+plan.id;
+-    const matrix=state.reportMatrices.has(plan.id)?`<tr class="report-matrix-row"><td colspan="8"><div class="table-wrap plan-matrix"><table><thead><tr><th>Case</th>${plan.tasks.map(t=>`<th><a href="${TaskManagement.infoLink(t)}">${escape(t.name)}</a></th>`).join('')}<th>Final</th></tr></thead><tbody>${summary.rows.map(row=>`<tr><th scope="row">${escape(row.name)}</th>${row.cells.map(cell=>`<td>${matrixStatus(cell)}</td>`).join('')}<td>${matrixStatus(row.final)}</td></tr>`).join('')||`<tr><td colspan="${plan.tasks.length+2}">No Test Cases</td></tr>`}</tbody></table></div></td></tr>`:'';
++    const matrix=state.reportMatrices.has(plan.id)?`<tr class="report-matrix-row"><td colspan="9"><div class="table-wrap plan-matrix"><table><thead><tr><th>Case</th>${plan.tasks.map(t=>`<th><a href="${TaskManagement.infoLink(t)}">${escape(t.name)}</a></th>`).join('')}<th>Final</th></tr></thead><tbody>${summary.rows.map(row=>`<tr><th scope="row">${escape(row.name)}</th>${row.cells.map(cell=>`<td>${matrixStatus(cell)}</td>`).join('')}<td>${matrixStatus(row.final)}</td></tr>`).join('')||`<tr><td colspan="${plan.tasks.length+2}">No Test Cases</td></tr>`}</tbody></table></div></td></tr>`:'';
+     const taskRows=plan.tasks.map(task=>{
+       const ids=new Set(task.testcases.map(c=>c.id)),taskSummary=PlanMatrix.summarize({...plan,testcases:plan.testcases.filter(c=>ids.has(c.id)),tasks:[task]});
+       return `<tr class="report-task-row"><td><div class="report-task-label">${check('task',plan,task)}<a href="${TaskManagement.infoLink(task)}" data-no-translate>${escape(task.name)}</a></div></td>${numbers(taskSummary,'—')}</tr>`;
+-    }).join('')||'<tr><td colspan="8" class="help">No Tasks yet</td></tr>';
++    }).join('')||'<tr><td colspan="9" class="help">No Tasks yet</td></tr>';
+     return `<tbody><tr class="report-plan-row"><td><div class="report-plan-label">${check('plan',plan)}<button type="button" class="report-plan-toggle" data-action="report-plan-toggle" data-id="${escape(plan.id)}" aria-expanded="${expanded}" aria-controls="${escape(children)}" ${busy?'disabled':''}><span class="report-chevron ${expanded?'is-open':''}">${icon('chevron')}</span><span data-no-translate>${escape(plan.name)}</span></button></div></td>${numbers(summary,button(String(plan.tasks.length),'report-matrix','small-button',`data-id="${escape(plan.id)}" aria-label="${escape(plan.name)} Task Matrix" aria-expanded="${state.reportMatrices.has(plan.id)}" ${busy?'disabled':''}`))}</tr></tbody><tbody id="${escape(children)}" ${expanded?'':'hidden'}>${taskRows}${matrix}</tbody>`;
+   }).join('');
+-  return `<section class="report-workspace" aria-label="Report"><div class="toolbar"><div class="actions">${button(selecting?'Cancel selection':'Select Report','report-select','',busy?'disabled':'')}${selecting?button(busy?'Generating report…':'Generate Report','report-generate','primary',!selected||busy?'disabled':''):''}</div>${selecting?'<span class="help">Select Plans or Tasks, then arrange formal and reference reports.</span>':''}</div><div class="table-wrap plan-overview report-overview"><table><thead><tr><th>Plan / Task</th><th>Total Cases</th><th>Completion</th><th>PASS</th><th>FAIL</th><th>Block</th><th>Not Run</th><th>Task</th></tr></thead>${rows||'<tbody><tr><td colspan="8">No Test Plans</td></tr></tbody>'}</table></div></section>`;
++  return `<section class="report-workspace" aria-label="Report"><div class="toolbar"><div class="actions">${button(selecting?'Cancel selection':'Select Report','report-select','',busy?'disabled':'')}${selecting?button(busy?'Generating report…':'Generate Report','report-generate','primary',!selected||busy?'disabled':''):''}</div>${selecting?'<span class="help">Select Plans or Tasks, then arrange formal and reference reports.</span>':''}</div><div class="table-wrap plan-overview report-overview"><table><thead><tr><th>Plan / Task</th><th>Total Cases</th><th>Completion</th><th>PASS</th><th>CP</th><th>FAIL</th><th>Block</th><th>Not Run</th><th>Task</th></tr></thead>${rows||'<tbody><tr><td colspan="9">No Test Plans</td></tr></tbody>'}</table></div></section>`;
+ }
+ function bindReportSelection(){
+   const choice=state.reportSelection;if(!choice)return;
+@@ -314,7 +314,7 @@ function projectPage(project) {
+     (state.panel?.includes('project')||state.panel?.includes('plan')?nameForm(state.panel):'')+
+     (state.projects.length?`<div class="table-wrap"><table><thead><tr><th>Project</th><th>Plans</th><th>Tasks</th></tr></thead><tbody>${state.projects.map(item=>`<tr><td><a href="${path(item)}">${escape(item.name)}</a></td><td>${item.plans.length}</td><td>${item.plans.reduce((n,p)=>n+p.tasks.length,0)+(item.planning_task_count||0)}</td></tr>`).join('')}</tbody></table></div>`:empty('Create your first Project','Start with a Project, then create a Test Plan and load standard Test Cases.',button('New Project','new-project','primary')));
+ }
+-function tasksTable(project, plan, report=false) { return plan.tasks.length?`<div class="table-wrap"><table><thead><tr><th>Task</th><th>Scope</th><th>Current results</th><th>${report?'Report':'Action'}</th></tr></thead><tbody>${plan.tasks.map(task=>`<tr><td><a href="${path(project,plan,task)}">${escape(task.name)}</a>${task.execution_active?'<p class="help">Execution active</p>':''}</td><td>${task.testcases.length} Test Cases</td><td>${task.counts.Passed} passed · ${task.counts.Failed} failed${task.testcases.some(c=>c.needs_retest)?'<p class="help">Plan changed — rerun needed</p>':''}</td><td>${report?button('Generate report','report','small-button',`data-id="${escape(task.id)}" ${task.execution_active?'disabled':''}`):`<a href="${path(project,plan,task)}">Open Task</a>`}</td></tr>`).join('')}</tbody></table></div>`:empty('No Tasks yet','When the Plan is ready, create a Task and choose its Test Cases.',report?'':button('New Task','new-task','primary',plan.locked?'disabled':'')); }
++function tasksTable(project, plan, report=false) { return plan.tasks.length?`<div class="table-wrap"><table><thead><tr><th>Task</th><th>Scope</th><th>Current results</th><th>${report?'Report':'Action'}</th></tr></thead><tbody>${plan.tasks.map(task=>`<tr><td><a href="${path(project,plan,task)}">${escape(task.name)}</a>${task.execution_active?'<p class="help">Execution active</p>':''}</td><td>${task.testcases.length} Test Cases</td><td>${task.counts.Passed} passed · ${task.counts.CP||0} CP · ${task.counts.Failed} failed${task.testcases.some(c=>c.needs_retest)?'<p class="help">Plan changed — rerun needed</p>':''}</td><td>${report?button('Generate report','report','small-button',`data-id="${escape(task.id)}" ${task.execution_active?'disabled':''}`):`<a href="${path(project,plan,task)}">Open Task</a>`}</td></tr>`).join('')}</tbody></table></div>`:empty('No Tasks yet','When the Plan is ready, create a Task and choose its Test Cases.',report?'':button('New Task','new-task','primary',plan.locked?'disabled':'')); }
+ function listSelectionItems(type){
+  const plan=context().plan,source=state.importSource;
+  if(type==='plan')return [...(plan?.folders||[]).map(f=>({kind:'folder',id:f.id})),...(plan?.testcases||[]).map(c=>({kind:'case',id:c.id}))];
+@@ -511,7 +511,7 @@ Object.assign(icons,{reportPreview:'M4 3h11l4 4v6 M14 3v5h5 M8 11h5 M8 15h3 M4 3
+ function executionRows(task){
+  const busy=executionBusy()||state.executionSelectionBusy,cases=executionCases(task);
+  return cases.map(c=>{
+- const label=({TBD:'NR',Passed:'PASS',Failed:'FAIL',Block:'Block',Running:'Running'})[c.status]||'NR';
++ const label=({TBD:'NR',Passed:'PASS',CP:'CP',Failed:'FAIL',Block:'Block',Running:'Running'})[c.status]||'NR';
+  const attrs='data-id="'+escape(c.id)+'"';
+  return '<tr class="execution-case-row" data-execution-case="'+escape(c.id)+'"><td><input type="checkbox" data-run="'+escape(c.id)+'" aria-label="Run '+escape(c.tc_name)+'" '+(c.selected?'checked ':'')+(busy||c.script_kind!=='single'?'disabled':'')+'></td><td><div class="execution-case-name">'+automation(c.automation)+'<strong data-no-translate>'+escape(c.tc_name)+'</strong></div>'+(c.needs_retest?'<span class="status stale">Rerun needed</span>':'')+'</td><td>'+button(label,'execution-annotation','status '+escape(String(c.status).toLowerCase()),attrs+(c.status==='Running'?' data-no-translate':'')+' aria-label="Result Annotation: '+escape(c.tc_name)+'"')+'</td><td>'+(task.execution_active&&c.status==='Running'?executionIconButton('Stop this case and continue with the next selected case','execution-stop-one','stop','danger',attrs):executionIconButton('Run: '+c.tc_name,'execution-run-one','play','',attrs+' '+(busy||c.script_kind!=='single'?'disabled':'')))+'</td><td>'+executionIconButton('Log: '+c.tc_name,'execution-log','log','',attrs)+'</td><td>'+executionIconButton('Report preview: '+c.tc_name,'execution-report-preview','reportPreview','',attrs)+'</td><td>'+(c.automation==='automatic'?'':executionIconButton('Parameters: '+c.tc_name,'execution-parameters','parameters','',attrs+' '+(executionBusy()||c.script_kind!=='single'||c.status==='Running'?'disabled':'')))+'</td></tr>';
+  }).join('')||'<tr><td colspan="7" class="empty">'+(task.testcases.length?'No matching Test Cases.':'No Test Cases. Use Scope to add cases.')+'</td></tr>';
+@@ -595,7 +595,7 @@ async function openExecutionDialog(kind,caseId,opener){
+  if(kind==='connection')html=await settingsPage(task);
+  if(kind==='scope')html='<form><div class="actions">'+button('Select all','dialog-scope-all')+button('Clear selection','dialog-scope-none')+'</div><div class="table-wrap"><table><thead><tr><th>Include</th><th>Case Name</th><th>Folder</th></tr></thead><tbody>'+plan.testcases.map(c=>'<tr><td><input type="checkbox" data-dialog-scope="'+escape(c.id)+'" aria-label="Include '+escape(c.tc_name)+'" '+(task.testcases.some(t=>t.id===c.id)?'checked ':'')+(plan.locked||c.script_kind!=='single'?'disabled':'')+'></td><td>'+automation(c.automation)+escape(c.tc_name)+'</td><td>'+escape(c.folder_path||'Unfiled')+'</td></tr>').join('')+'</tbody></table></div><div class="form-actions"><button type="submit" class="primary" '+(plan.locked?'disabled':'')+'>Save scope</button></div></form>';
+  if(kind==='parameters'){d.def=await api('/api/plans/'+d.planId+'/testcases/'+d.caseId+'/definition');html='<p class="help">Saved parameters belong to '+escape(plan.name)+' and apply to every Task using this Plan case.</p><form><fieldset '+(executionBusy()||d.def.editing_locked?'disabled':'')+'><div class="fields">'+(parameterFields(d.def.metadata,d.def.settings||{})||'<p>No editable parameters.</p>')+'</div><div class="form-actions"><button type="submit" class="primary">Save parameters</button></div></fieldset></form>';}
+- if(kind==='annotation')html=(tc.manual_override?'<p class="help">'+escape(tc.manual_override.reason||'')+'</p>':'')+'<form><fieldset '+(task.execution_active?'disabled':'')+'><div class="fields"><label class="field"><span>Status</span><select name="status">'+[['TBD','NR'],['Passed','PASS'],['Failed','FAIL'],['Block','Block']].map(([v,l])=>'<option value="'+v+'" '+(tc.status===v?'selected':'')+'>'+l+'</option>').join('')+'</select></label><label class="field"><span>Reason</span><input name="reason" required></label><label class="field"><span>Bug ID</span><input name="bug_id" value="'+escape(tc.bug_id)+'"></label></div><div class="form-actions"><button type="submit" class="primary">Save annotation</button></div></fieldset></form>';
++ if(kind==='annotation')html=(tc.manual_override?'<p class="help">'+escape(tc.manual_override.reason||'')+'</p>':'')+'<form><fieldset '+(task.execution_active?'disabled':'')+'><div class="fields"><label class="field"><span>Status</span><select name="status">'+[['TBD','NR'],['Passed','PASS'],['CP','CP'],['Failed','FAIL'],['Block','Block']].map(([v,l])=>'<option value="'+v+'" '+(tc.status===v?'selected':'')+'>'+l+'</option>').join('')+'</select></label><label class="field"><span>Reason / Note for CP</span><input name="reason" required></label><label class="field"><span>Bug ID</span><input name="bug_id" value="'+escape(tc.bug_id)+'"></label></div><div class="form-actions"><button type="submit" class="primary">Save annotation</button></div></fieldset></form>';
+  if(kind==='log')html='<p class="help" data-execution-log-notice hidden>Showing the latest 65,536 characters. Export saves the complete test log.</p><pre class="log code" data-execution-log data-no-translate></pre><div data-execution-input></div>';
+  if(executionDialog!==d)return;el.querySelector('.execution-dialog-body').innerHTML=html;
+  for(const b of el.querySelectorAll('[data-action^="dialog-scope-"]'))b.onclick=e=>{e.stopPropagation();if(plan.locked)return;el.querySelectorAll('[data-dialog-scope]:not(:disabled)').forEach(c=>c.checked=b.dataset.action==='dialog-scope-all');d.dirty=true;};
+@@ -658,7 +658,7 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)executionP
+
+ function evidence(task) {
+   const tc=task.testcases.find(c=>c.id===state.caseId); if(!tc)return '';
+-  return `<h2>${automation(tc.automation)}${escape(tc.tc_name)}</h2><div class="metadata"><span>Latest result ${status(tc.status)}</span><span>Executed <strong>${escape(date(tc.executed_at))}</strong></span></div>${tc.needs_retest?'<div class="notice">Retained evidence predates the current Plan definition or Task connection settings. Rerun needed.</div>':''}${tc.manual_override?`<p class="help">Manual result: ${escape(tc.manual_override.status)} · ${escape(tc.manual_override.reason||'No reason recorded')}</p>`:''}<div class="actions"><strong>Test log</strong></div><pre class="log code" id="log-output">${escape(state.activeTask===task.id && tc.status==='Running'?state.log:tc.log_text||'No test log. Run this Test Case to collect evidence.')}</pre><div id="input-slot">${state.activeTask===task.id&&state.prompt?inputForm(state.prompt.session,state.prompt.text):''}</div><details><summary>Result annotation</summary><form id="annotation-form"><div class="fields"><label class="field"><span>Manual status</span><select name="status" ${task.execution_active?'disabled':''}><option value="TBD">Not run / pending</option><option value="Passed">Passed</option><option value="Failed">Failed</option><option value="Block">Block</option></select></label><label class="field"><span>Reason</span><input name="reason" ${task.execution_active?'disabled':''}></label><label class="field"><span>Bug ID</span><input name="bug_id" value="${escape(tc.bug_id)}" ${task.execution_active?'disabled':''}></label></div><div class="form-actions"><button ${task.execution_active?'disabled':''}>Save annotation</button></div></form></details>`;
++  return `<h2>${automation(tc.automation)}${escape(tc.tc_name)}</h2><div class="metadata"><span>Latest result ${status(tc.status)}</span><span>Executed <strong>${escape(date(tc.executed_at))}</strong></span></div>${tc.needs_retest?'<div class="notice">Retained evidence predates the current Plan definition or Task connection settings. Rerun needed.</div>':''}${tc.manual_override?`<p class="help">Manual result: ${escape(tc.manual_override.status)} · ${escape(tc.manual_override.reason||'No reason recorded')}</p>`:''}<div class="actions"><strong>Test log</strong></div><pre class="log code" id="log-output">${escape(state.activeTask===task.id && tc.status==='Running'?state.log:tc.log_text||'No test log. Run this Test Case to collect evidence.')}</pre><div id="input-slot">${state.activeTask===task.id&&state.prompt?inputForm(state.prompt.session,state.prompt.text):''}</div><details><summary>Result annotation</summary><form id="annotation-form"><div class="fields"><label class="field"><span>Manual status</span><select name="status" ${task.execution_active?'disabled':''}><option value="TBD">Not run / pending</option><option value="Passed">Passed</option><option value="CP">CP</option><option value="Failed">Failed</option><option value="Block">Block</option></select></label><label class="field"><span>Reason / Note for CP</span><input name="reason" ${task.execution_active?'disabled':''}></label><label class="field"><span>Bug ID</span><input name="bug_id" value="${escape(tc.bug_id)}" ${task.execution_active?'disabled':''}></label></div><div class="form-actions"><button ${task.execution_active?'disabled':''}>Save annotation</button></div></form></details>`;
+ }
+ function repositoryCheck(kind,id){return `<input type="checkbox" class="repository-batch-check" data-kind="${kind}" data-id="${escape(id)}" aria-label="Select ${kind}" ${state.repositorySelection?.has(kind+':'+id)?'checked':''}>`;}
+ function repositorySelectionData(){const folders=[],cases=[];for(const value of state.repositorySelection||[]){const [kind,id]=value.split(':');(kind==='folder'?folders:cases).push(id);}return {folder_ids:folders,case_ids:cases};}
+@@ -1359,7 +1359,7 @@ async function runTask(id,ids,token,session=null){
+  if(state.activeTask)throw Error('This window is already monitoring an execution.');state.activeTask=id;
+  try{
+    if(session){state.log='';await stream(session,id,context().task?.testcases.find(c=>c.status==='Running')?.id);}
+-   for(const tcId of ids){const current=await api(`/api/tasks/${id}/execution`);if(!current.execution_active||current.stop_requested)break;if(current.completed_testcase_ids?.includes(tcId))continue;const summary=await api(`/api/tasks/${id}/summary`);const tc=summary.testcases.find(c=>c.id===tcId);if(!tc||tc.status==='Passed'||tc.status==='Failed')continue;
++   for(const tcId of ids){const current=await api(`/api/tasks/${id}/execution`);if(!current.execution_active||current.stop_requested)break;if(current.completed_testcase_ids?.includes(tcId))continue;const summary=await api(`/api/tasks/${id}/summary`);const tc=summary.testcases.find(c=>c.id===tcId);if(!tc||tc.status==='Passed'||tc.status==='Failed'||tc.status==='CP')continue;
+      const run=await api('/api/run','POST',{task_id:id,testcase_id:tcId,execution_token:token});state.log='';for(const view of Object.values(state.executionViews||{}))if(view.ids.includes(id))view.cases[id]=tcId;if(context().task?.id===id)state.caseId=tcId;await refresh();await stream(run.session_id,id,tcId);
+    }
+    const current=await api(`/api/tasks/${id}/execution`);if(current.execution_active&&!current.session_id)await api(`/api/tasks/${id}/execution/finish`,'POST',{execution_token:token});

@@ -792,3 +792,5 @@ body.plan-list-workspace .plan-tabs-heading>.page-heading{margin:0}
 body.plan-list-workspace .plan-tabs{flex:none;width:100%;margin:0}
 body.plan-list-workspace .plan-inline-editor{height:auto;min-height:0;padding:0;overflow:visible}
 body.plan-list-workspace .plan-inline-editor>.repository-page-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 8px}
+
+.status.cp{background:var(--warn-bg);color:var(--warn)}

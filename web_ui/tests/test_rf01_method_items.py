@@ -121,7 +121,7 @@ class MethodItemsTest(unittest.TestCase):
         rows, _, _, _ = self.run_case(0, [response({})], "Fail")
         self.assertEqual(rows["C3a"]["status"], "FAIL")
         for key in ("C3b", "C3c"):
-            self.assertEqual(rows[key]["status"], "NOT_EVALUATED")
+            self.assertEqual(rows[key]["status"], "Skip")
             self.assertIn("v1 is missing", rows[key]["reason"])
 
     def test_v1_type_and_value_have_separate_attribution(self):
@@ -130,26 +130,26 @@ class MethodItemsTest(unittest.TestCase):
             self.assertEqual(rows[failed]["status"], "FAIL")
             self.assertEqual(rows["C2b"]["status"], "PASS")
             if failed == "C3b":
-                self.assertEqual(rows["C3c"]["status"], "NOT_EVALUATED")
+                self.assertEqual(rows["C3c"]["status"], "Skip")
 
     def test_parse_failure_and_top_level_type(self):
         for i in range(2):
             rows, _, _, _ = self.run_case(i, [response("invalid JSON")], "Fail")
             self.assertEqual(rows["S2"]["status"], "FAILED")
             self.assertEqual(rows["C2a"]["status"], "FAIL")
-            self.assertEqual(rows["C2b"]["status"], "NOT_EVALUATED")
+            self.assertEqual(rows["C2b"]["status"], "Skip")
             for body in ([], None, "42", '"hello"'):
                 rows, _, _, _ = self.run_case(i, [response(body)], "Fail")
                 self.assertEqual(rows["C2a"]["status"], "PASS")
                 self.assertEqual(rows["C2b"]["status"], "FAIL")
-                self.assertEqual(rows["S3"]["status"], "NOT_RUN")
+                self.assertEqual(rows["S3"]["status"], "Skip")
 
     def test_independent_002_checks_and_record_survive_failure(self):
         body = {"@odata.type": "#Wrong.Type", "@odata.id": "/wrong", "RedfishVersion": 123}
         rows, ctx, _, _ = self.run_case(1, [response(body)], "Fail")
         self.assertEqual(rows["C3b"]["status"], "FAIL")
         self.assertEqual(rows["C4b"]["status"], "FAIL")
-        self.assertEqual(rows["R5"]["status"], "RECORDED")
+        self.assertEqual(rows["R5"]["status"], "COMPLETED")
         self.assertEqual(rows["R5"]["actual"], 123)
         self.assertIn("Step 3", ctx["case_result"]["reason"])
         self.assertIn("Step 4", ctx["case_result"]["reason"])
@@ -157,13 +157,13 @@ class MethodItemsTest(unittest.TestCase):
         for key in ("C3a", "C4a"):
             self.assertEqual(rows[key]["status"], "FAIL")
         for key in ("C3b", "C4b"):
-            self.assertEqual(rows[key]["status"], "NOT_EVALUATED")
+            self.assertEqual(rows[key]["status"], "Skip")
         self.assertEqual(rows["R5"]["actual"], "Not present")
 
     def test_record_never_judges_value_or_presence(self):
         for value in (None, False, 0, "", "1.2.3", {"unusual": True}, float("nan"), float("inf")):
             rows, _, _, _ = self.run_case(1, [response(dict(GOOD[1], RedfishVersion=value))])
-            self.assertEqual(rows["R5"]["status"], "RECORDED")
+            self.assertEqual(rows["R5"]["status"], "COMPLETED")
         rows, _, _, _ = self.run_case(1, [response(GOOD[1])])
         self.assertEqual(rows["R5"]["actual"], "Not present")
 
@@ -176,7 +176,7 @@ class MethodItemsTest(unittest.TestCase):
             rows, _, _, _ = self.run_case(i, [response(GOOD[i], 404)], "Fail")
             self.assertEqual(rows["S1"]["status"], "COMPLETED")
             self.assertEqual(rows["C1"]["status"], "FAIL")
-            self.assertEqual(rows["S2"]["status"], "NOT_RUN")
+            self.assertEqual(rows["S2"]["status"], "Skip")
 
     def test_redirect_guards_and_request_contract(self):
         for i in range(2):
@@ -189,7 +189,7 @@ class MethodItemsTest(unittest.TestCase):
                 rows, _, _, calls = self.run_case(i, [response("", 302, {"Location": location})], "Fail")
                 self.assertEqual(len(calls), 1)
                 self.assertEqual(rows["S1"]["status"], "FAILED")
-                self.assertEqual(rows["C1"]["status"], "NOT_EVALUATED")
+                self.assertEqual(rows["C1"]["status"], "Skip")
             self.run_case(i, [response("", 301)], "Fail")
 
     def test_failure_error_dependency_and_sensitive_headers(self):
@@ -217,7 +217,7 @@ class MethodItemsTest(unittest.TestCase):
         result = {"method_index": 12, "type": "Record", "step_number": 5, "status": "PASS"}
         with self.assertRaises(ValueError):
             logger.method_item(item, result)
-        result["status"] = "RECORDED"
+        result["status"] = "COMPLETED"
         result["step_number"] = 4
         with self.assertRaises(ValueError):
             logger.method_item(item, result)

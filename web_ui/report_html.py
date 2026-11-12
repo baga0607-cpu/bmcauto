@@ -60,7 +60,7 @@ def generate_html_report(db_path, reports, preview_case_id=None):
                         pass
                 source = report['source_details'].get(row['testcase_id'], {}) if report['source_details'] is not None else {'name':task['name'], 'setup':object_value(task['task_metadata'])}
                 setup = source.get('setup') or {}
-                status = {'Passed':'PASS', 'Failed':'FAIL', 'Block':'Block', 'Running':'Running'}.get(row['status'], 'NR')
+                status = {'Passed':'PASS', 'CP':'CP', 'Failed':'FAIL', 'Block':'Block', 'Running':'Running'}.get(row['status'], 'NR')
                 if area == 'report':
                     totals[status] += 1
                 text = '' if preview else test_log_text(row['log_text'], row['api_log_text'])
@@ -93,6 +93,8 @@ def generate_html_report(db_path, reports, preview_case_id=None):
                 spec_field = '' if reference is None else f'<dt>Spec Ref.</dt><dd>{escape(reference)}</dd>'
                 method_body = ''.join('<tr>'+''.join('<td>'+escape(value)+'</td>' for value in method)+'</tr>'
                                       for method in method_table_rows(result, metadata))
+                if manual and manual.get('status') == 'CP':
+                    method_body += '<tr><td></td><td>—</td><td>Manual case judgement</td><td>Note: '+escape(display(manual.get('reason')))+'</td><td>CP</td></tr>'
                 methods = ('<table class="method-table"><caption>Test Steps &amp; Results</caption>'
                            '<colgroup><col class="method-step"><col class="method-type"><col><col class="method-result"><col class="method-judgement"></colgroup>'
                            '<thead><tr><th scope="col">Step</th><th scope="col">Type</th>'
@@ -103,7 +105,6 @@ def generate_html_report(db_path, reports, preview_case_id=None):
 <div class="case-expanded"><details class="test-data"><summary>Test Data</summary><dl class="data-fields">
 <dt>Description</dt><dd class="description">{escape(description(result,metadata))}</dd>
 <dt>Result Summary</dt><dd class="reason">{escape(result_summary(result, manual))}</dd>
-<dt>Note</dt><dd class="execution-note">{escape(note_text(result))}</dd>
 {spec_field}<dt>Log</dt><dd class="case-actions">{actions}</dd></dl>
 {methods}
 {''.join('<p class="notice">'+escape(note)+'</p>' for note in notes)}
@@ -113,7 +114,7 @@ def generate_html_report(db_path, reports, preview_case_id=None):
             label = 'Reference' if area == 'reference' else 'Final Report' if report['final'] else 'Test Report'
             sections.append(''.join(cards) if preview else f'<section class="report-group"><div class="group-heading"><p class="eyebrow">{label} / {escape(task["project_name"])}</p><h2>{escape(report["label"])}</h2><p class="muted">{escape(task["plan_name"])} · {len(rows)} cases</p></div>'+''.join(cards)+'</section>')
     generated = execution_date(datetime.now(timezone.utc).isoformat())
-    stats = ''.join(f'<div><strong>{count}</strong><span>{label}</span></div>' for label,count in [('Total',sum(totals.values())),('PASS',totals['PASS']),('FAIL',totals['FAIL']),('Block',totals['Block']),('NR',totals['NR']),('Running',totals['Running'])] if count or label in ('Total','PASS','FAIL'))
+    stats = ''.join(f'<div><strong>{count}</strong><span>{label}</span></div>' for label,count in [('Total',sum(totals.values())),('PASS',totals['PASS']),('FAIL',totals['FAIL']),('CP',totals['CP']),('Block',totals['Block']),('NR',totals['NR']),('Running',totals['Running'])] if count or label in ('Total','PASS','FAIL'))
     template = (Path(__file__).parent/'templates'/'standalone_report.html').read_text(encoding='utf-8')
     # Replace once: user-controlled values must never become template instructions.
     import re

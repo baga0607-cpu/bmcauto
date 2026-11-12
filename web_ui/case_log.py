@@ -1,5 +1,6 @@
 """Per-execution readable logs. Sections describe evidence, never execution steps."""
 from datetime import datetime, timezone
+from result_policy import validate_method, validate_case_cp
 import json
 import re
 from pathlib import Path
@@ -136,7 +137,7 @@ class CaseLog:
                     **({"step_number": self.method_step_number} if getattr(self, "method_step_number", None) else {}),
                     **({"step_id": self.method_step_id} if getattr(self, "method_step_id", None) else {}))
 
-    def check(self, label, passed, expected=None, actual=None):
+    def check(self, label, passed, expected=None, actual=None, note=None):
         status = 'PASS' if passed else 'FAIL'
         self.section_checks += 1
         lines = [f'{status} | {label}']
@@ -144,24 +145,27 @@ class CaseLog:
             lines.append('Expected: ' + json.dumps(expected, ensure_ascii=False))
         if actual is not None:
             lines.append('Actual: ' + json.dumps(actual, ensure_ascii=False))
+        if note:
+            lines.append('Note: ' + str(note))
         self._write('check', 'Validation result', lines, label=label, passed=bool(passed),
-                    expected=expected, actual=actual)
+                    expected=expected, actual=actual, **({'note': str(note)} if note else {}))
 
-    def step(self, step, criteria=None, result=None):
+    def step(self, step, criteria=None, result=None, note=None):
         """One report row: action, acceptance criteria, observed result (JSON values).
 
         This records evidence only. Use assertions / case_result for case outcome.
         Record each completed or failed action immediately; unperformed steps have
         no invented result. None / empty values render as an em dash in reports.
         """
-        for value in (step, criteria, result):
+        for value in (step, criteria, result, note):
             json.dumps(value, ensure_ascii=False, allow_nan=False)
         self.section_checks += 1
         self._write('step', 'Report step', [
             'Step: '+('—' if step is None or step == '' else json.dumps(step, ensure_ascii=False)),
             'Criteria: '+('—' if criteria is None or criteria == '' else json.dumps(criteria, ensure_ascii=False)),
             'Result: '+('—' if result is None or result == '' else json.dumps(result, ensure_ascii=False)),
-        ], step=step, criteria=criteria, result=result)
+        ] + (['Note: '+str(note)] if note else []), step=step, criteria=criteria, result=result,
+                    **({'note': str(note)} if note else {}))
 
     def method_item(self, item, result):
         """Write a numbered Command/Action, Checkpoint or Record; accept old IDs.
@@ -180,13 +184,7 @@ class CaseLog:
             raise ValueError("Invalid method item ID or Step association")
         if item_type == "Step" and match[3]:
             raise ValueError("Step IDs cannot have suffixes")
-        allowed = {
-            "Step": {"COMPLETED", "FAILED", "ERROR", "NOT_RUN"},
-            "Checkpoint": {"PASS", "FAIL", "NOT_EVALUATED"},
-            "Record": {"RECORDED", "NOT_RECORDED"},
-        }
-        if result.get("status") not in allowed[item_type]:
-            raise ValueError("Invalid status for method item type")
+        result = validate_method("Action" if item_type == "Step" else item_type, result)
         if any(result.get(key) != item[key] for key in ("id", "type", "step_id")):
             raise ValueError("Method result association does not match its definition")
         json.dumps([item, result], ensure_ascii=False, allow_nan=False)
@@ -199,22 +197,18 @@ class CaseLog:
             lines.append("Actual: " + json.dumps(result["actual"], ensure_ascii=False))
         if result.get("reason"):
             lines.append("Reason: " + result["reason"])
+        if result.get("note"):
+            lines.append("Note: " + result["note"])
         self._write("step", item_id + " | " + item_type, lines,
                     step=item["step"], criteria=None, result=result,
                     method_id=item_id, method_type=item_type, step_id=step_id)
 
     def _numbered_method(self, item, result):
         number, kind = item.get('step_number'), item.get('type')
-        allowed = {
-            'Command': {'COMPLETED', 'FAILED', 'ERROR', 'NOT_RUN'},
-            'Action': {'COMPLETED', 'FAILED', 'ERROR', 'NOT_RUN'},
-            'Checkpoint': {'PASS', 'FAIL', 'NOT_EVALUATED'},
-            'Record': {'RECORDED', 'NOT_RECORDED'},
-        }
-        if type(number) is not int or number < 1 or kind not in allowed:
+        kinds = ('Command', 'Action', 'Checkpoint', 'Record')
+        if type(number) is not int or number < 1 or kind not in kinds:
             raise ValueError('Invalid Step number or Type')
-        if result.get('status') not in allowed[kind]:
-            raise ValueError('Invalid status for method item type')
+        result = validate_method(kind, result)
         if any(result.get(key) != item[key] for key in ('type', 'step_number')):
             raise ValueError('Method result association does not match its definition')
         index = result.get('method_index')
@@ -223,25 +217,27 @@ class CaseLog:
         json.dumps([item, result], ensure_ascii=False, allow_nan=False)
         self.section_checks += 1
         lines = ['Description: ' + item['step']]
-        if kind == 'Record' and result['status'] == 'NOT_RECORDED':
-            lines.append('Result: Not recorded')
         for key in ('expected', 'actual'):
-            if key in result and not (key == 'actual' and result['status'] in ('NOT_RUN', 'NOT_EVALUATED', 'NOT_RECORDED') and result[key] is None):
+            if key in result and not (key == 'actual' and result['status'] in ('Skip',) and result[key] is None):
                 lines.append(key.capitalize() + ': ' + json.dumps(result[key], ensure_ascii=False))
         if result.get('reason'):
             lines.append('Reason: ' + result['reason'])
-        lines.append('Judgement: ' + ('—' if kind == 'Record' else result['status']))
+        if result.get('note'):
+            lines.append('Note: ' + result['note'])
+        lines.append('Judgement: ' + result['status'])
         self._write('step', f'Step {number} | {kind}', lines,
                     step=item['step'], criteria=None, result=result,
                     method_type=kind, step_number=number, method_index=index)
 
-    def finish(self, status, reason):
+    def finish(self, status, reason, note=None):
         if self.finished:
             return
+        validate_case_cp(status, {'log_records': self.records}, note)
         self._close_section()
         self.finished = True
-        self._write('finish', 'Final result', [f'Result: {status}', f'Reason: {reason}'],
-                    status=status, reason=reason)
+        self._write('finish', 'Final result', [f'Result: {status}', f'Reason: {reason}'] +
+                    ([f'Note: {note}'] if note else []), status=status, reason=reason,
+                    **({'note': str(note)} if note else {}))
 
 
 class PrintLogWriter:
@@ -272,3 +268,23 @@ class PrintLogWriter:
             self._line(line)
         if not self.result_file.closed:
             self.result_file.flush()
+
+
+def result_note(result):
+    """Return explicit execution notes, preserving order and legacy compatibility."""
+    if not isinstance(result, dict):
+        return ''
+    if isinstance(result.get('note'), str):
+        return result['note'].strip()
+    records = result.get('log_records')
+    if not isinstance(records, list):
+        return ''
+    final = next((r for r in reversed(records) if isinstance(r, dict) and r.get('kind') == 'finish'), {})
+    if isinstance(final.get('note'), str):
+        return final['note'].strip()
+    notes = []
+    for record in records:
+        note = record.get('note') if isinstance(record, dict) else None
+        if isinstance(note, str) and note.strip() and note.strip() not in notes:
+            notes.append(note.strip())
+    return '\n'.join(notes)

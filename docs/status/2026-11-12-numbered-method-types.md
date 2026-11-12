@@ -1,3 +1,5 @@
+2026-11-12 amendment: Record success is COMPLETED; NOT_RUN / NOT_EVALUATED / NOT_RECORDED display as Skip with Reason. Only Checkpoint and final Case accept CP, with mandatory Note. Notes appear in Result cells; the separate report Note field is removed. Final report eligible states include CP. This supersedes earlier Record dash / old status instructions below. See 2026-11-12-rf008-conditional-pass.md.
+
 # Numbered steps and four method types — 2026-11-12
 
 ## Approved contract

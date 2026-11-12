@@ -1,3 +1,5 @@
+2026-11-12 amendment: Record success is COMPLETED; NOT_RUN / NOT_EVALUATED / NOT_RECORDED display as Skip with Reason. Only Checkpoint and final Case accept CP, with mandatory Note. Notes appear in Result cells; the separate report Note field is removed. Final report eligible states include CP. This supersedes earlier Record dash / old status instructions below. See ../status/2026-11-12-rf008-conditional-pass.md.
+
 2026-11-12 latest: use numbered Command/Action groups with Checkpoint/Record children, not S/C/R IDs. Five report columns separate Result from Judgement; Record has no judgement. The previous dated amendments below are historical. See ../status/2026-11-12-numbered-method-types.md.
 
 2026-11-12: Reports now render typed method IDs, source-Step relationships and recorded results in a compact table. Legacy evidence remains readable. See ../status/2026-11-12-report-method-results.md for precedence, missing-result and excerpt rules.

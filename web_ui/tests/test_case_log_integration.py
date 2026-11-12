@@ -98,7 +98,7 @@ class CaseLogIntegrationTest(unittest.TestCase):
                     self.assertEqual([r['method_index'] for r in steps], list(range(len(authored['test_method']))))
                     for record, definition in zip(steps, authored['test_method']):
                         self.assertEqual(record['step_number'], definition['step_number'])
-                        self.assertEqual(record['result']['status'], {'Command':'COMPLETED','Action':'COMPLETED','Checkpoint':'PASS','Record':'RECORDED'}[definition['type']])
+                        self.assertEqual(record['result']['status'], {'Command':'COMPLETED','Action':'COMPLETED','Checkpoint':'PASS','Record':'COMPLETED'}[definition['type']])
                         self.assertIsNone(record['criteria'])
                     if number == 2:
                         self.assertEqual(steps[-1]['result']['actual'], 'Not present')
@@ -126,7 +126,7 @@ class CaseLogIntegrationTest(unittest.TestCase):
         items = {r['method_index']: r['result'] for r in row['result']['log_records'] if r['kind'] == 'step'}
         self.assertEqual(items[7]['status'], 'FAIL')
         self.assertEqual(items[10]['status'], 'FAIL')
-        self.assertEqual(items[12]['status'], 'RECORDED')
+        self.assertEqual(items[12]['status'], 'COMPLETED')
         self.assertEqual(items[12]['actual'], 123)
         self.assertEqual(items[12]['step_number'], 5)
 
@@ -137,8 +137,8 @@ class CaseLogIntegrationTest(unittest.TestCase):
         items = {r['method_index']: r['result'] for r in records if r['kind'] == 'step'}
         self.assertEqual(items[2]['status'], 'FAILED')
         self.assertEqual(items[3]['status'], 'FAIL')
-        self.assertEqual(items[4]['status'], 'NOT_EVALUATED')
-        self.assertEqual(items[6]['status'], 'NOT_EVALUATED')
+        self.assertEqual(items[4]['status'], 'Skip')
+        self.assertEqual(items[6]['status'], 'Skip')
         self.assertEqual(next(r for r in records if r['kind'] == 'http')['step_number'], 1)
 
     def test_same_task_case_rerun_keeps_previous_disk_evidence(self):

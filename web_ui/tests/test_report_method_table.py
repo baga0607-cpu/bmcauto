@@ -28,18 +28,18 @@ class MethodTableTest(unittest.TestCase):
         rows = method_table_rows({'log_records': records}, {})
         self.assertEqual(rows[0], ('2', 'Action', 'Parse JSON.', 'Reason: Invalid JSON', 'FAILED'))
         self.assertEqual(rows[1], ('', 'Checkpoint', 'Verify JSON.', 'Expected: True\nActual: False', 'FAIL'))
-        self.assertEqual(rows[2][4], 'NOT_EVALUATED')
+        self.assertEqual(rows[2][4], 'Skip')
         self.assertNotIn('NOT_EVALUATED', rows[2][3])
-        self.assertEqual(rows[3], ('', 'Record', 'Record version.', 'Actual: null', '—'))
+        self.assertEqual(rows[3], ('', 'Record', 'Record version.', 'Actual: null', 'COMPLETED'))
         for value, rendered in ((0, '0'), (False, 'False'), ('', '""'), ('Not present', 'Not present')):
             records[-1]['result']['actual'] = value
             row = method_table_rows({'log_records': records}, {})[-1]
             self.assertEqual(row[3], 'Actual: '+rendered)
-            self.assertEqual(row[4], '—')
+            self.assertEqual(row[4], 'COMPLETED')
         records[-1]['result'].update(status='NOT_RECORDED', actual=None, reason='No response')
         row = method_table_rows({'log_records': records}, {})[-1]
-        self.assertEqual(row[3], 'Not recorded\nReason: No response')
-        self.assertEqual(row[4], '—')
+        self.assertEqual(row[3], 'Reason: No response')
+        self.assertEqual(row[4], 'Skip')
 
     def test_saved_definition_orders_partial_results_without_inference(self):
         methods = [{'step_number': 1, 'type': 'Command', 'step': 'Send request'},
@@ -64,7 +64,7 @@ class MethodTableTest(unittest.TestCase):
         before = json.dumps(records)
         rows = method_table_rows({'log_records': records}, {})
         self.assertEqual(rows[0][:3], ('1', 'Action', 'Send request'))
-        self.assertEqual(rows[1], ('', 'Record', 'Version', 'Actual: 0', '—'))
+        self.assertEqual(rows[1], ('', 'Record', 'Version', 'Actual: 0', 'COMPLETED'))
         self.assertEqual(json.dumps(records), before)
         rows = method_table_rows({'log_records': [{'kind': 'step', 'step': 'Legacy action', 'criteria': 'Zero', 'result': 0}]}, {})
         self.assertEqual(rows[0], ('1', 'Action', 'Legacy action\nCriteria: Zero', '0', '—'))

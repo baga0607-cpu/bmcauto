@@ -3,7 +3,8 @@
 Every write starts with SQLite BEGIN IMMEDIATE before reading lock state. A Plan
 is locked by a Task row, so independent processes observe the same lock.
 """
-from case_log import test_log_text
+from result_policy import validate_case_cp
+from case_log import test_log_text, result_note
 import json
 import case_order as co
 import task_environment as te
@@ -174,8 +175,9 @@ def set_manual_status(session,task_id,tc_id,data):
     task,row,tc=live_task_case(session,task_id,tc_id)
     unlocked(session,task.plan_id)
     status=data.get('status'); reason=data.get('reason','')
-    if status not in ('TBD','Passed','Failed','Block'): raise StateError('Manual status must be TBD, Passed, Failed, or Block')
+    if status not in ('TBD','Passed','Failed','Block','CP'): raise StateError('Manual status must be TBD, Passed, Failed, Block, or CP')
     if not isinstance(reason,str): raise StateError('Manual reason must be text')
+    if status == 'CP' and not reason.strip(): raise StateError('CP requires a Note in Reason')
     row.status=status
     row.manual_override_json=json.dumps(dict(status=status,reason=reason.strip(),modified_at=datetime.now(timezone.utc).isoformat()),ensure_ascii=False)
     session.flush()
@@ -185,13 +187,13 @@ def set_manual_status(session,task_id,tc_id,data):
 def summary(session,task_id,root=None):
     from task_management import display_setup
     task=require(session,Task,task_id)
-    cases=[]; counts={'Passed':0,'Failed':0,'Block':0,'TBD':0}
+    cases=[]; counts={'Passed':0,'Failed':0,'Block':0,'CP':0,'TBD':0}
     for row,tc in session.query(TaskTestCase,TestCase).join(TestCase,TaskTestCase.testcase_id==TestCase.system_id).filter(TaskTestCase.task_id==task_id,TestCase.plan_id==task.plan_id).order_by(TaskTestCase.position):
         case=task_case_dict(row,tc)
         import single_case
         case['automation']=single_case.automation_for_case(root,tc)
         case['source_created_at']=single_case.creation_time_for_case(root,tc)
-        cases.append(case); counts[row.status if row.status in ('Passed','Failed','Block') else 'TBD']+=1
+        cases.append(case); counts[row.status if row.status in ('Passed','Failed','Block','CP') else 'TBD']+=1
     return dict(id=task.id,task_id=task.id,name=task.name,plan_id=task.plan_id,execution_active=bool(task.execution_active),setup=display_setup(task.task_metadata),connection_configured=bool(te.normalize(task.environment_config)["host"]),testcases=co.arrange(session,'plan:'+task.plan_id,cases),counts=counts)
 
 def start_execution(session,task_id,ids):
@@ -208,7 +210,7 @@ def start_execution(session,task_id,ids):
 
 def canonical_status(status):
     value=str(status or '').casefold()
-    return {'pass':'Passed','passed':'Passed','fail':'Failed','failed':'Failed','block':'Block','blocked':'Block','running':'Running','tbd':'TBD','pending':'TBD','tdb':'TBD','interrupted':'TBD'}.get(value,'Failed')
+    return {'pass':'Passed','passed':'Passed','cp':'CP','fail':'Failed','failed':'Failed','block':'Block','blocked':'Block','running':'Running','tbd':'TBD','pending':'TBD','tdb':'TBD','interrupted':'TBD'}.get(value,'Failed')
 
 def check_execution_token(task, token):
     if not task.execution_active or not token or token != task.execution_token: raise StateError('Stale or inactive execution',409)
@@ -221,10 +223,15 @@ def save_result(session,task_id,data):
     if not task.execution_active: raise StateError('Task execution is not active',409)
     if row.testcase_id not in json.loads(task.execution_selection or '[]'): raise StateError('Testcase is not selected for this execution')
     row.status=canonical_status(data.get('status'))
-    row.result_json=json.dumps(data.get('result',data),ensure_ascii=False)
+    result = dict(data.get('result',data))
+    note = result_note(result)
+    try: validate_case_cp(row.status, result, note)
+    except ValueError as error: raise StateError(str(error))
+    result['note'] = note
+    row.result_json=json.dumps(result,ensure_ascii=False)
     row.log_text=data.get('log_text',data.get('log','')); row.api_log_text=data.get('api_log_text','')
     row.executed_at=data.get('executed_at'); row.bug_id=data.get('bug_id',row.bug_id)
-    if row.status in ('Passed','Failed'):
+    if row.status in ('Passed','Failed','CP'):
         row.needs_retest=False
     session.flush()
 
@@ -323,10 +330,10 @@ def delete_content(session,main_program_dir,data,folder=None,testcases=None,fold
 def migrate_block_status(conn):
     """Expand the old SQLite CHECK while preserving every row, index and trigger."""
     ddl=conn.exec_driver_sql("SELECT sql FROM sqlite_master WHERE type='table' AND name='task_testcases'").scalar()
-    if not ddl or 'ck_task_status' not in ddl or "'Block'" in ddl:
+    if not ddl or 'ck_task_status' not in ddl or "'CP'" in ddl:
         return
     import re
-    updated=re.sub(r"status IN \([^)]*\)", "status IN ('TBD','Running','Passed','Failed','Block')", ddl, count=1, flags=re.I)
+    updated=re.sub(r"status IN \([^)]*\)", "status IN ('TBD','Running','Passed','Failed','Block','CP')", ddl, count=1, flags=re.I)
     if updated==ddl: raise ValueError('Unrecognized Task status constraint')
     updated=re.sub(r'CREATE TABLE\s+task_testcases', 'CREATE TABLE task_testcases_block_migration', updated, count=1, flags=re.I)
     if updated==ddl or 'CREATE TABLE task_testcases_block_migration' not in updated: raise ValueError('Unrecognized Task table schema')

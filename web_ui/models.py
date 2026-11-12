@@ -186,7 +186,7 @@ class Task(Base):
 class TaskTestCase(Base):
     __tablename__ = 'task_testcases'
     __table_args__ = (UniqueConstraint('task_id', 'testcase_id', name='uq_task_scope'),
-                      CheckConstraint("status IN ('TBD','Running','Passed','Failed','Block')", name='ck_task_status'))
+                      CheckConstraint("status IN ('TBD','Running','Passed','Failed','Block','CP')", name='ck_task_status'))
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     task_id = Column("task_id", String(100), ForeignKey('tasks.id', ondelete='CASCADE'), nullable=False)
 
