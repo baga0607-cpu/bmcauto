@@ -2,6 +2,7 @@ import io
 import json
 import os
 import unittest
+import zipfile
 from pathlib import Path
 from unittest.mock import patch
 import pypdf
@@ -12,6 +13,20 @@ from plan_state import StateError
 
 class ReportExportsTest(unittest.TestCase):
     setUp = fixtures.SingleCaseRepositoryTest.setUp
+
+    def test_logs_zip_matches_selected_pdf_attachments(self):
+        self.prepare()
+        selection={'report_area':[{'kind':'plan','id':'a'}], 'reference_area':[{'kind':'task','id':'task-b'}]}
+        pdf=self.export(**selection)
+        response=self.client.post('/api/projects/project/reports/logs',json=selection)
+        self.assertEqual(response.status_code,200)
+        self.assertEqual(response.mimetype,'application/zip')
+        expected=[item for items in pypdf.PdfReader(io.BytesIO(pdf.data)).attachments.values() for item in items]
+        with zipfile.ZipFile(io.BytesIO(response.data)) as archive:
+            self.assertEqual(sorted(archive.read(name) for name in archive.namelist()),sorted(expected))
+            self.assertTrue(all('/' not in name and '\\' not in name for name in archive.namelist()))
+        self.assertEqual(self.client.post('/api/projects/project/reports/logs',json={'task_ids':['task-b']}).status_code,404)
+        self.assertEqual(self.client.post('/api/projects/project/reports/logs',json={'task_ids':['missing']}).status_code,400)
 
     def prepare(self):
         with self.Session() as s:
@@ -36,7 +51,7 @@ class ReportExportsTest(unittest.TestCase):
             s.commit()
 
     def export(self, **selection):
-        return self.client.post('/api/projects/project/reports',json=selection)
+        return self.client.post('/api/projects/project/reports?format=pdf',json=selection)
 
     def test_grouping_order_final_and_single_task(self):
         self.prepare()
@@ -84,10 +99,10 @@ class ReportExportsTest(unittest.TestCase):
             reader=pypdf.PdfReader(io.BytesIO(response.data))
             text=' '.join(page.extract_text() or '' for page in reader.pages)
             self.assertNotIn('NEVER-EXPORT-THIS-PASSWORD',text)
-            self.assertIn('Case Name: Case <0> & QA',text)
+            self.assertIn('Case <0> & QA',text)
             self.assertIn('BMC Final Report' if kind=='final' else 'BMC Test Report',text)
             if kind=='final':
-                self.assertIn('Task Name:',text);self.assertIn('Task Two',text)
+                self.assertIn('Task Name',text);self.assertIn('Task Two',text)
                 attachments=b''.join(content for items in reader.attachments.values() for content in items)
                 self.assertIn(b'winning-pass',attachments);self.assertIn(b'winning-fail',attachments);self.assertIn(b'winning-block',attachments)
                 self.assertNotIn(b'ignored-running',attachments);self.assertNotIn(b'ignored-tbd',attachments)
@@ -192,5 +207,5 @@ class ReportExportsTest(unittest.TestCase):
         self.assertEqual(response.status_code,200,response.get_json(silent=True))
         text=' '.join(p.extract_text() or '' for p in pypdf.PdfReader(io.BytesIO(response.data)).pages)
         formal,reference=text.split('Reference Reports',1)
-        self.assertIn('Task Name: Task One',formal);self.assertNotIn('Task Name: Task Two',formal)
+        self.assertIn('Task Name\nTask One',formal);self.assertNotIn('Task Name\nTask Two',formal)
         self.assertIn('Task Two',reference)

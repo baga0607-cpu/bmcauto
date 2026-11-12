@@ -946,15 +946,23 @@ def handle_task(task_id, entity_label="Task"):
 
 
 @app.route('/api/projects/<project_id>/reports', methods=['POST'])
+@app.route('/api/projects/<project_id>/reports/logs', methods=['POST'])
 def generate_selected_reports(project_id):
     from flask import send_file
     from io import BytesIO
-    from report_exports import generate_selection
+    from report_exports import generate_selection, generate_log_archive
     try:
         with DbSession() as session:
             db_path = session.get_bind().url.database
-        content, filename = generate_selection(db_path, project_id, request.get_json(silent=True))
-        return send_file(BytesIO(content), mimetype='application/pdf', as_attachment=True, download_name=filename)
+        logs = request.path.endswith('/reports/logs')
+        output_format = request.args.get('format', 'html')
+        if output_format not in ('html', 'pdf'):
+            raise ps.StateError('Choose HTML or PDF report format.')
+        if logs:
+            content, filename = generate_log_archive(db_path, project_id, request.get_json(silent=True))
+        else:
+            content, filename = generate_selection(db_path, project_id, request.get_json(silent=True), output_format=output_format)
+        return send_file(BytesIO(content), mimetype='application/zip' if logs or output_format == 'html' else 'application/pdf', as_attachment=True, download_name=filename)
     except Exception as exc:
         code = getattr(exc, 'code', 500)
         return jsonify(error=str(exc)), code if isinstance(code, int) and 400 <= code < 600 else 500

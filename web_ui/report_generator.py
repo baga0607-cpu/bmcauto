@@ -23,7 +23,9 @@ import glob
 import io
 import re
 import unicodedata
-from report_case import method_rows, description, display, firmware
+from report_case import result_summary, description, display, firmware, execution_date, method_table_rows
+from report_presentation import note_text, specification_reference
+from report_fonts import case_title_markup
 from xml.sax.saxutils import escape as _xml_escape
 
 from reportlab.lib.pagesizes import A4
@@ -161,7 +163,9 @@ def _build_styles():
             textColor=C_NAVY, spaceBefore=14, spaceAfter=6),
         'tc_title': S('TcTitle',
             fontName=_CJK_FONT_BOLD, fontSize=12, leading=16,
-            textColor=C_NAVY, spaceBefore=10, spaceAfter=4),
+            textColor=C_NAVY, spaceBefore=6, spaceAfter=3),
+        'case_name': S('CaseName', fontName=_CJK_FONT_BOLD, fontSize=16.5, leading=23,
+            textColor=colors.HexColor('#243447')),
         'tbl_hdr': S('TblHdr',
             fontName=_CJK_FONT_BOLD, fontSize=9, leading=12,
             textColor=C_WHITE),
@@ -535,52 +539,64 @@ def generate_task_pdf_report(task_id, output_path, db_path=None, log_dir=None, r
                     attachments_to_add.append((name, content.encode('utf-8')))
                     attach_names.append(name)
 
-            # Worksheet 1: identity/result, description, method rows, Task context.
+            # Compact case block; steps/results are shown below; full logs stay attached.
             def cell(value, style='tbl_cell'):
                 return Paragraph(_xml_escape(display(value)).replace('\n', '<br/>'), styles[style])
             case_header = Table([[
-                cell('Case Name: '+str(tc_name), 'tbl_cell_bold'),
-                cell('Result: '+({'Passed':'PASS','Failed':'FAIL','TBD':'NR','Block':'Block'}.get(status, display(status))), 'tbl_cell_bold'),
-            ]], colWidths=[COL_W*.76, COL_W*.24])
+                Paragraph(case_title_markup(tc_name, _CJK_FONT_BOLD), styles['case_name']),
+                cell({'Passed':'PASS','Failed':'FAIL','TBD':'NR','Block':'Block'}.get(status, display(status)),
+                     'status_pass' if status == 'Passed' else 'status_fail' if status == 'Failed' else 'status_tbd'),
+            ]], colWidths=[COL_W-65, 65])
             case_header.setStyle(TableStyle([
-                ('BACKGROUND',(0,0),(-1,-1),C_LIGHT_BLUE),
-                ('GRID',(0,0),(-1,-1),.5,C_BORDER),
-                ('VALIGN',(0,0),(-1,-1),'TOP'),
-                ('TOPPADDING',(0,0),(-1,-1),7),('BOTTOMPADDING',(0,0),(-1,-1),7),
+                ('VALIGN',(0,0),(-1,-1),'MIDDLE'),
+                ('LEFTPADDING',(0,0),(-1,-1),0),
+                ('TOPPADDING',(0,0),(-1,-1),5),('BOTTOMPADDING',(0,0),(-1,-1),5),
             ]))
-            story.append(CondPageBreak(160))
-            case_header.keepWithNext = False
+            story.append(CondPageBreak(100))
+            case_header.keepWithNext = True
             story.append(case_header)
-            desc = cell('Description: '+description(result_data, metadata), 'body')
-            desc.keepWithNext = False
-            story.append(desc)
-            method_title = Paragraph('Detail Test Method', styles['tc_title'])
-            method_title.keepWithNext = False
-            story.append(method_title)
-            table_rows = [[cell(label,'tbl_hdr') for label in ('Step','Criteria','Result')]]
-            table_rows.extend([cell(value) for value in row] for row in method_rows(result_data, metadata))
-            methods = Table(table_rows, colWidths=[COL_W*.34,COL_W*.33,COL_W*.33], repeatRows=1, splitByRow=0, splitInRow=1)
+            def field(label, value):
+                table = Table([[cell(label, 'tbl_cell_bold'), cell(value, 'body')]],
+                              colWidths=[118.5, COL_W-118.5], splitInRow=1)
+                table.setStyle(TableStyle([
+                    ('VALIGN',(0,0),(-1,-1),'TOP'),
+                    ('LEFTPADDING',(0,0),(-1,-1),0),
+                    ('RIGHTPADDING',(0,0),(0,0),16.5),
+                    ('TOPPADDING',(0,0),(-1,-1),2),
+                    ('BOTTOMPADDING',(0,0),(-1,-1),3),
+                ]))
+                story.append(table)
+            story.append(Paragraph('Test Data', styles['tc_title']))
+            field('Description', description(result_data, metadata))
+            field('Result Summary', result_summary(result_data, manual))
+            field('Note', note_text(result_data))
+            reference = specification_reference(result_data, metadata, cat_name)
+            if reference is not None:
+                field('Spec Ref.', reference)
+            field('Log', 'Full Test log attachments: '+', '.join(attach_names) if attach_names else 'No attachment available.')
+            if attach_names:
+                story.append(cell('Open or save the embedded .log attachment for full test steps, criteria and evidence. Use a PDF reader that supports attachments.','note'))
+            story.append(Paragraph('Test Steps &amp; Results', styles['tc_title']))
+            table_rows = [[cell(label, 'tbl_cell_bold') for label in ('ID', 'Type', 'Description', 'Result')]]
+            table_rows.extend([cell(value) for value in row] for row in method_table_rows(result_data, metadata))
+            methods = Table(table_rows, colWidths=[COL_W*.07, COL_W*.15, COL_W*.44, COL_W*.34],
+                            repeatRows=1, splitByRow=1, splitInRow=1)
             methods.setStyle(TableStyle([
-                ('BACKGROUND',(0,0),(-1,0),C_BLUE_HEADER),
-                ('GRID',(0,0),(-1,-1),.4,C_BORDER),('VALIGN',(0,0),(-1,-1),'TOP'),
-                ('LEFTPADDING',(0,0),(-1,-1),6),('RIGHTPADDING',(0,0),(-1,-1),6),
-                ('TOPPADDING',(0,0),(-1,-1),6),('BOTTOMPADDING',(0,0),(-1,-1),6),
+                ('BACKGROUND',(0,0),(-1,0),C_LIGHT_BLUE),
+                ('GRID',(0,0),(-1,-1),.4,C_BORDER), ('VALIGN',(0,0),(-1,-1),'TOP'),
+                ('LEFTPADDING',(0,0),(-1,-1),4), ('RIGHTPADDING',(0,0),(-1,-1),4),
+                ('TOPPADDING',(0,0),(-1,-1),2), ('BOTTOMPADDING',(0,0),(-1,-1),2),
             ]))
             story.append(methods)
-            story.append(Spacer(1,6))
-            for value in [
-                'Task Name: '+display(detail.get('name')),
-                'FW Package: '+firmware(setup),
-                'DUT Configuration:',
-                'Tester: '+display(setup.get('owner')),
-                'Execution Date: '+display(r['executed_at']),
-            ]:
-                story.append(cell(value,'body'))
             for note in notes:
                 story.append(cell(note,'note'))
-            if attach_names:
-                story.append(cell('Full Test log attachments: '+', '.join(attach_names),'note'))
-            story.append(Spacer(1,20))
+            story.append(Paragraph('Test Information', styles['tc_title']))
+            for label, value in [('Task Name', detail.get('name')), ('Tester', setup.get('owner')),
+                                 ('Execution Time', execution_date(r['executed_at'])),
+                                 ('FW Package', firmware(setup)), ('DUT Configuration', ' ')]:
+                field(label, value)
+            story.append(Spacer(1,5))
+            story.append(HRFlowable(width=COL_W, thickness=.5, color=C_BORDER))
 
         story.append(PageBreak())
 

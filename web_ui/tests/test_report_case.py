@@ -1,15 +1,23 @@
 import io
 import json
 import os
+import time
 import unittest
 from pathlib import Path
 import pypdf
-from report_case import method_rows, description, firmware
+from report_case import method_rows, description, firmware, result_summary, execution_date
 from case_log import CaseLog
 import test_report_exports as export_fixtures
 
 
 class ReportCaseFieldsTest(unittest.TestCase):
+    def test_execution_date_is_readable_taiwan_time(self):
+        self.assertEqual(execution_date('2026-10-30T07:27:04.323336+00:00'),'2026/10/30 15:27:04 (UTC+08:00)')
+        self.assertEqual(execution_date('2026-10-30T23:59:59Z'),'2026/10/31 07:59:59 (UTC+08:00)')
+        self.assertEqual(execution_date('2026-10-30T15:27:04+08:00'),'2026/10/30 15:27:04 (UTC+08:00)')
+        self.assertEqual(execution_date(None),'—')
+        self.assertIn('timezone not recorded',execution_date('2026-10-30T15:27:04'))
+        self.assertEqual(execution_date('unknown'),'unknown')
     def test_explicit_rows_preserve_false_zero_and_missing_fields(self):
         output=io.StringIO();log=CaseLog(output,lambda event:None)
         log.section('Measurements')
@@ -51,13 +59,14 @@ class WorksheetReportTest(unittest.TestCase):
             for task,index,result in [('task1',0,'ZERO observed'),('task2',1,'FAILED observation')]:
                 row=s.query(TaskTestCase).filter_by(task_id=task,testcase_id='case-'+str(index)).one()
                 row.result_json=json.dumps({'report_definition':{'description':'Description at execution <safe>'},'log_records':[
-                    {'kind':'step','step':'Send request <root>','criteria':'Exactly zero & healthy','result':result}]})
+                    {'kind':'step','step':'Send request <root>','criteria':'Exactly zero & healthy','result':result}, {'kind':'finish','reason':result}]})
             s.commit()
         response=self.export(plan_ids=['a']);self.assertEqual(response.status_code,200,response.get_json(silent=True))
         reader=pypdf.PdfReader(io.BytesIO(response.data));text=' '.join(p.extract_text() or '' for p in reader.pages)
-        first=text[text.index('Case Name: Case <0>'):text.index('Case Name: Case <1>')]
-        second=text[text.index('Case Name: Case <1>'):text.index('Case Name: Case <2>')]
-        for label in ['Case Name:','Result:','Description:','Detail Test Method','Step','Criteria','Task Name:','FW Package:','DUT Configuration:','Tester:','Execution Date:']:
+        text=text[text.index('Test Suite :'):]
+        first=text[text.index('Case <0>'):text.index('Case <1>')]
+        second=text[text.index('Case <1>'):text.index('Case <2>')]
+        for label in ['Test Data','Description','Result Summary','Note','Log','Test Information','Task Name','FW Package','DUT Configuration','Tester','Execution Time']:
             self.assertIn(label,text)
         for value in ['Task One','Engineer One','1BMC: 1.0','ZERO observed','Description at execution <safe>']:self.assertIn(value,first)
         for value in ['Task Two','Engineer Two','1BMC: 2.0','FAILED observation']:self.assertIn(value,second)
@@ -68,18 +77,39 @@ class WorksheetReportTest(unittest.TestCase):
         target=os.environ.get('BMC_REPORT_QA_DIR')
         if target:(Path(target)/'worksheet-final.pdf').write_bytes(response.data)
 
-    def test_long_steps_and_unicode_can_split_across_pages(self):
+    def test_large_step_results_are_excerpted_with_full_log_attachment(self):
         self.prepare()
         from models import TaskTestCase
+        evidence = ('RAW_STEP_EVIDENCE 中文 <&>\n' * 100000) + 'COMPLETE_END'
         with self.Session() as s:
             row=s.query(TaskTestCase).filter_by(task_id='task1',testcase_id='case-0').one()
+            row.log_text=evidence
             row.result_json=json.dumps({'report_definition':{'description':'中文說明'},'log_records':[
-                {'kind':'step','step':'讀取系統 '+str(i),'criteria':'狀態正確','result':('Evidence <&> '+str(i)+'\n')*150} for i in range(12)]})
+                {'kind':'step','step':'讀取系統','criteria':'狀態正確','result':evidence},
+                {'kind':'finish','reason':'Explicit final reason <&> 中文 '+('x'*2000)}]})
             s.commit()
-        response=self.export(task_ids=['task1']);self.assertEqual(response.status_code,200,response.get_json(silent=True))
+        start=time.perf_counter()
+        response=self.export(task_ids=['task1'])
+        self.assertLess(time.perf_counter()-start,10)
+        self.assertEqual(response.status_code,200,response.get_json(silent=True))
         reader=pypdf.PdfReader(io.BytesIO(response.data));text=' '.join(p.extract_text() or '' for p in reader.pages)
-        self.assertIn('讀取系統 11',text);self.assertIn('Evidence <&> 11',text);self.assertIn('中文說明',text)
-        self.assertGreater(len(reader.pages),10)
-        self.assertIn('Evidence',reader.pages[3].extract_text())
+        self.assertNotIn('Detail Test Method',text)
+        self.assertIn('RAW_STEP_EVIDENCE',text)
+        self.assertNotIn('COMPLETE_END',text)
+        self.assertIn('Test Steps & Results',text)
+        self.assertIn('Explicit final reason <&> 中文',text)
+        self.assertIn('Excerpt',text)
+        self.assertIn('中文說明',text)
+        self.assertLess(len(reader.pages),10)
+        self.assertEqual(reader.attachments['test_case-0.log'],[evidence.encode('utf-8')])
         target=os.environ.get('BMC_REPORT_QA_DIR')
-        if target:(Path(target)/'worksheet-long.pdf').write_bytes(response.data)
+        if target:(Path(target)/'compact-large.pdf').write_bytes(response.data)
+
+    def test_summary_uses_final_reason_or_manual_reason_without_guessing(self):
+        result={'log_records':[{'kind':'step','result':'Not a final reason'},
+            {'kind':'finish','reason':'Recorded final reason'}]}
+        self.assertEqual(result_summary(result),'Recorded final reason')
+        self.assertEqual(result_summary(result,{'reason':'Operator decision'}),'Manual result: Operator decision')
+        self.assertIn('No recorded summary',result_summary(result,{'reason':''}))
+        self.assertIn('No recorded summary',result_summary({'log_records':[{'kind':'step','result':'No inference'}]}))
+        self.assertLessEqual(len(result_summary({'reason':'x'*2000000})),600)

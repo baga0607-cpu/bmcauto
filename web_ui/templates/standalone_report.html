@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer"><title>BMC Test Report</title>
+<style>
+:root{color-scheme:light;--ink:#243447;--muted:#5c6877;--line:#d8dee5;--surface:#fff;--blue:#2358b8}
+*{box-sizing:border-box}body{margin:0;background:#f4f5f7;color:var(--ink);font:15px/1.65 "Segoe UI",system-ui,"Microsoft JhengHei",sans-serif}main{max-width:1000px;margin:32px auto;padding:48px 62px 56px;background:var(--surface)}button,summary{font:inherit}button{cursor:pointer;border:1px solid var(--line);background:white;color:var(--ink);padding:8px 12px;border-radius:3px;font-size:12px}button:hover{background:#f4f5f7}button:focus-visible,summary:focus-visible,a:focus-visible{outline:3px solid #8aadea;outline-offset:3px}::selection{background:#dbe7fa;color:#172536}
+.report-header{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;padding-bottom:24px;border-bottom:3px solid var(--ink)}.eyebrow{font-size:10px;font-weight:600;letter-spacing:1.8px;text-transform:uppercase;color:var(--muted);margin:0 0 10px}h1{font:38px/1.2 Georgia,"Microsoft JhengHei",serif;letter-spacing:-.5px;margin:0 0 14px}h2{font-size:21px;line-height:1.35;margin:0 0 4px;font-weight:600}.generated,.muted{font-size:12px;color:var(--muted)}.generated{margin:0}.stats{display:flex;gap:30px;flex-wrap:wrap;padding:16px 0;border-bottom:1px solid var(--line)}.stats div{display:flex;gap:8px;align-items:baseline}.stats strong{font-size:22px;font-weight:500;font-variant-numeric:tabular-nums}.stats span{font-size:11px;color:var(--muted)}.report-group{margin-top:34px}.group-heading{padding-bottom:14px;border-bottom:1px solid var(--line)}.group-heading p:last-child{margin:4px 0}
+.case{padding:7px 0;border-bottom:1px solid var(--line);scroll-margin-top:24px}.case-heading{display:flex;align-items:center;gap:12px;list-style:none;padding:0}.case-heading::-webkit-details-marker{display:none}.case-title{font:600 22px/1.4 Bahnschrift,"Segoe UI",sans-serif;overflow-wrap:anywhere;min-width:0}.case-chevron{flex:none;color:var(--muted)}.case-disclosure[open]>.case-heading>.case-chevron{transform:rotate(90deg)}summary{cursor:pointer;font-size:14px;font-weight:600;padding:6px 0}.case-heading:hover .case-title{color:#526171}.case-expanded{padding:6px 0 0 28px}.test-information{border-top:1px solid #e8ecf0}.status{flex-shrink:0;margin-left:auto;min-width:58px;text-align:center;font-size:12px;font-weight:750;letter-spacing:.5px;line-height:1.5;padding:4px 11px;border-radius:3px;background:#edf1f6;color:var(--muted)}.status.pass{background:#eaf5ed;color:#176341}.status.fail{background:#fceef0;color:#a32632}.status.block{background:#fff4d9;color:#77520a}
+dl{margin:0}dl.data-fields,.detail-content dl>div{display:grid;grid-template-columns:136px minmax(0,1fr);gap:6px 18px;align-items:baseline}.data-fields,.detail-content{padding:2px 0 10px 18px}.detail-content dl{display:grid;gap:6px}dt{font-size:12px;font-weight:600;color:var(--muted);line-height:1.45}dd{font-size:14px;line-height:1.45;margin:0;white-space:pre-wrap;overflow-wrap:anywhere;min-width:0}.case-actions{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}.attachment-link{font-size:12px;text-decoration:none;color:var(--blue)}.attachment-link:hover{text-decoration:underline;text-underline-offset:3px}.notice{font-size:12px;background:#fff4d9;color:#77520a;padding:10px 12px;overflow-wrap:anywhere}.footer{font-size:11px;color:var(--muted);padding-top:22px;margin-top:20px}.print-note{display:none}
+.method-table{width:100%;table-layout:fixed;border-collapse:collapse;margin:2px 0 12px;font-size:12px;line-height:1.4}.method-table caption{text-align:left;font-size:14px;font-weight:600;padding:4px 0 6px}.method-id{width:7%}.method-type{width:15%}.method-result{width:34%}.method-table th{text-align:left;background:#edf1f6;font-weight:600}.method-table th,.method-table td{padding:4px 6px;border:1px solid var(--line);vertical-align:top;white-space:pre-wrap;overflow-wrap:anywhere}.method-table td:first-child{font-weight:600}.method-table thead{display:table-header-group}
+@media(max-width:650px){main{margin:0;padding:26px 20px}.report-header{display:block}.report-header button{margin-top:16px}h1{font-size:30px}.stats{gap:18px}.case-expanded{padding-left:0}dl.data-fields,.detail-content dl>div{grid-template-columns:110px minmax(0,1fr);gap:12px}.data-fields,.detail-content{padding-left:0}}
+@media print{@page{size:A4;margin:15mm}body{background:white;font-size:10pt}main{margin:0;padding:0;max-width:none}.report-header button{display:none}.report-header{padding-bottom:14px}h1{font-size:26pt}h2{font-size:14pt}.stats{padding:10px 0}.stats strong{font-size:16pt}.report-group{margin-top:20px}.case{padding:5pt 0}.case-heading{break-after:avoid}.case-title{font-size:16.5pt}.case-chevron{display:none}.case-expanded{padding-left:0}.status{font-size:9pt}.print-note{display:block;font-size:8pt;color:var(--muted)}summary{list-style:none;font-size:10pt;padding:4pt 0;break-after:avoid}dt{font-size:9pt}dd{font-size:10pt}.data-fields,.detail-content{padding:2pt 0 6pt}dl.data-fields,.detail-content dl>div{grid-template-columns:102pt minmax(0,1fr);gap:4pt 12pt}.method-table{font-size:8.5pt;line-height:1.35}.method-table th,.method-table td{padding:2pt 4pt}.method-table caption{font-size:10pt;break-after:avoid}.method-table tr{break-inside:avoid}.footer{font-size:8pt}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+</style></head><body><main>
+<header class="report-header"><div><p class="eyebrow">BMC Agent / Quality assurance</p><h1>BMC Test Report</h1><p class="generated">Generated {{GENERATED}}</p></div><button class="primary" id="print-report">Print / Save PDF</button></header>
+<div class="stats" aria-label="Formal report results">{{STATS}}</div>
+<p class="print-note">Full logs are separate attachments in the original report package. Browser-printed PDFs do not embed these files.</p>
+{{SECTIONS}}
+<footer class="footer">Confidential · Test logs are separate attachments. Keep the logs folder with this HTML report. Print / Save PDF includes test information; retain the report package for complete evidence.</footer>
+</main>
+<script>
+(()=>{'use strict';
+let printState=null;
+// Explicit activation avoids asynchronous toggle events racing with print restore.
+document.querySelectorAll('.case-disclosure>.case-heading').forEach(heading=>{
+heading.addEventListener('click',event=>{
+event.preventDefault();const block=heading.parentElement;const opening=!block.open;
+block.open=opening;block.querySelectorAll('details').forEach(child=>child.open=false);
+if(opening)block.querySelector('.test-data').open=true;
+});
+});
+function preparePrint(){if(printState)return;printState=[...document.querySelectorAll('details')].map(el=>[el,el.open]);for(const [el] of printState)el.open=true;}
+window.addEventListener('beforeprint',preparePrint);
+window.addEventListener('afterprint',()=>{for(const [el,open] of printState||[])el.open=open;printState=null;});
+document.getElementById('print-report').onclick=()=>{preparePrint();window.print();};
+})();
+</script></body></html>

@@ -1,3 +1,5 @@
+2026-11-12 report update supersedes earlier omission of method tables: HTML/PDF include compact ID / Type / Description / Result rows for Step, Checkpoint and Record, with explicit source-step links and recorded statuses. Cases remain initially collapsed; opening shows Test Data. See docs/status/2026-11-12-report-method-results.md.
+
 # BMC Agent Test Management
 
 This context defines the language used to organize reusable test cases and execute test work in BMC Agent.

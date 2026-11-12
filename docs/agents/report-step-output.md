@@ -1,3 +1,5 @@
+2026-11-12: Reports now render typed method IDs, source-Step relationships and recorded results in a compact table. Legacy evidence remains readable. See ../status/2026-11-12-report-method-results.md for precedence, missing-result and excerpt rules.
+
 ## 2026-11-11 Step / Checkpoint / Record amendment
 
 RF-01-001/002 now use independent typed test_method entries with id/type/step_id and readable step labels, without embedded criteria. CaseLog.method_item writes their associated execution results while retaining kind=step for persistence compatibility. Record is informational, not an intermediate evidence-storage step and never a PASS/FAIL check. This supersedes the one-Step/one-Criteria authoring convention for these two cases. Other cases retain the existing contract. See [implementation and verification](../status/2026-11-11-rf01-method-items.md).

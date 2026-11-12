@@ -4,6 +4,7 @@ import json
 import sqlite3
 import tempfile
 import uuid
+import zipfile
 from contextlib import closing
 from datetime import datetime
 from pathlib import Path
@@ -200,7 +201,7 @@ def merge_reports(parts):
     return output.getvalue()
 
 
-def generate_selection(db_path, project_id, data):
+def generate_selection(db_path, project_id, data, output_format='pdf'):
     from report_generator import generate_task_pdf_report
     with tempfile.TemporaryDirectory(prefix='bmca-report-') as temp:
         copied = Path(temp) / 'export.db'
@@ -214,6 +215,9 @@ def generate_selection(db_path, project_id, data):
                 groups = report_groups(session, project_id, data)
                 reports = [(area, prepare_report(session, plan, tasks, final)) for area, plan, tasks, final in groups]
                 session.commit()
+            if output_format == 'html':
+                from report_html import generate_html_bundle
+                return generate_html_bundle(str(copied), reports), 'BMC_HTML_Report.zip'
             parts = []
             for index, (area, report) in enumerate(reports):
                 output = Path(temp) / f'report-{index}.pdf'
@@ -226,3 +230,22 @@ def generate_selection(db_path, project_id, data):
             return merge_reports(parts), 'BMC_Reports.pdf'
         finally:
             engine.dispose()
+
+
+def generate_log_archive(db_path, project_id, data):
+    """Export exactly the attachments selected by the PDF's Final/Reference rules."""
+    import pypdf
+    content, filename = generate_selection(db_path, project_id, data)
+    reader = pypdf.PdfReader(io.BytesIO(content))
+    output = io.BytesIO()
+    count = 0
+    with zipfile.ZipFile(output, 'w', compression=zipfile.ZIP_DEFLATED) as archive:
+        for name, attachments in reader.attachments.items():
+            # A numeric prefix guarantees distinct portable entries even after sanitizing.
+            safe = ''.join('_' if c in '<>:"/\\|?*' or ord(c) < 32 else c for c in name).rstrip('. ')[:180] or 'test.log'
+            for attachment in attachments:
+                count += 1
+                archive.writestr(f'{count:03d}_{safe}', attachment)
+    if not count:
+        raise StateError('No Test log attachments are available for this selection.', 404)
+    return output.getvalue(), Path(filename).stem+'_Logs.zip'
