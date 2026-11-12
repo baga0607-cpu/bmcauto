@@ -20,3 +20,16 @@ class BlockMigrationTest(unittest.TestCase):
             self.assertTrue(conn.exec_driver_sql("SELECT name FROM sqlite_master WHERE name='evidence_idx'").scalar())
             self.assertEqual(list(conn.exec_driver_sql('PRAGMA foreign_key_check')),[])
         engine.dispose()
+
+    def test_quoted_table_from_previous_block_migration(self):
+        engine = create_engine('sqlite://')
+        with engine.begin() as conn:
+            conn.exec_driver_sql("""CREATE TABLE "task_testcases" (id TEXT PRIMARY KEY, status TEXT, log_text TEXT, CONSTRAINT ck_task_status CHECK (status IN ('TBD','Running','Passed','Failed','Block')))""")
+            conn.exec_driver_sql("INSERT INTO task_testcases VALUES ('case','Failed','original evidence')")
+            migrate_block_status(conn)
+            migrate_block_status(conn)
+            self.assertEqual(tuple(conn.exec_driver_sql('SELECT * FROM task_testcases').one()), ('case','Failed','original evidence'))
+            conn.exec_driver_sql("UPDATE task_testcases SET status='CP'")
+            self.assertEqual(conn.exec_driver_sql('PRAGMA integrity_check').scalar(), 'ok')
+            self.assertEqual(list(conn.exec_driver_sql('PRAGMA foreign_key_check')), [])
+        engine.dispose()

@@ -1,3 +1,5 @@
+2026-11-12 latest deployment: Desktop launcher now offers Restart service and recognizes the Windows Python parent/child chain. Formal service restarted at 15:40; CP migration enabled, all 21 tables preserved. Existing saved FAIL results remain unchanged. See [restart handoff](docs/status/2026-11-12-desktop-restart-cp.md).
+
 2026-11-12 latest: RF-01-008 and shared Log / Execution / preview / HTML / PDF now support CP + mandatory Note, Skip + Reason, and Record COMPLETED. Standalone report Note removed; historical notes retained in table. Formal service restart / independent Plan source update pending. See [docs/status/2026-11-12-rf008-conditional-pass.md](docs/status/2026-11-12-rf008-conditional-pass.md).
 
 2026-11-12 Execution report preview: read-only single-Case modal reuses the production HTML renderer, with refresh and no export or data writes. See docs/status/2026-11-12-execution-report-preview.md for UI integration and publication-baseline differences.

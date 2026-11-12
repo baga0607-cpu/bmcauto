@@ -1,3 +1,5 @@
+2026-11-12 latest deployment: Desktop launcher now offers Restart service and recognizes the Windows Python parent/child chain. Formal service restarted at 15:40; CP migration enabled, all 21 tables preserved. Existing saved FAIL results remain unchanged. See [restart handoff](2026-11-12-desktop-restart-cp.md).
+
 2026-11-12 latest: RF-01-008 and shared Log / Execution / preview / HTML / PDF now support CP + mandatory Note, Skip + Reason, and Record COMPLETED. Standalone report Note removed; historical notes retained in table. Formal service restart / independent Plan source update pending. See [2026-11-12-rf008-conditional-pass.md](2026-11-12-rf008-conditional-pass.md).
 
 **最新功能（2026-11-12）**：Execution 新增單一 Test Case 報告預覽；本機按鈕在 Log 右側，彈窗共用正式報告渲染並支援 Refresh。驗證、遠端舊版接點與精確本機 patch 見 [報告預覽交接](2026-11-12-execution-report-preview.md)。

@@ -1,3 +1,5 @@
+2026-11-12 deployment update: Formal service restarted at 15:40; CP schema enabled. Desktop restart and quoted-table migration fix: [handoff](2026-11-12-desktop-restart-cp.md). The pending deployment notes below describe the earlier state.
+
 # RF-01-008：CP、Skip、Record 與報告 Note — 2026-11-12
 
 ## 已確認並實作的規則

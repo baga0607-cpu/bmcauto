@@ -335,7 +335,7 @@ def migrate_block_status(conn):
     import re
     updated=re.sub(r"status IN \([^)]*\)", "status IN ('TBD','Running','Passed','Failed','Block','CP')", ddl, count=1, flags=re.I)
     if updated==ddl: raise ValueError('Unrecognized Task status constraint')
-    updated=re.sub(r'CREATE TABLE\s+task_testcases', 'CREATE TABLE task_testcases_block_migration', updated, count=1, flags=re.I)
+    updated=re.sub(r'CREATE TABLE\s+(?:"task_testcases"|task_testcases)(?=\s*\()', 'CREATE TABLE task_testcases_block_migration', updated, count=1, flags=re.I)
     if updated==ddl or 'CREATE TABLE task_testcases_block_migration' not in updated: raise ValueError('Unrecognized Task table schema')
     extra=list(conn.exec_driver_sql("SELECT sql FROM sqlite_master WHERE tbl_name='task_testcases' AND type IN ('index','trigger') AND sql IS NOT NULL"))
     columns=[row[1] for row in conn.exec_driver_sql('PRAGMA table_info(task_testcases)')]
