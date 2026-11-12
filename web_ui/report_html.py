@@ -77,9 +77,9 @@ def generate_html_report(db_path, reports):
                 method_body = ''.join('<tr>'+''.join('<td>'+escape(value)+'</td>' for value in method)+'</tr>'
                                       for method in method_table_rows(result, metadata))
                 methods = ('<table class="method-table"><caption>Test Steps &amp; Results</caption>'
-                           '<colgroup><col class="method-id"><col class="method-type"><col><col class="method-result"></colgroup>'
-                           '<thead><tr><th scope="col">ID</th><th scope="col">Type</th>'
-                           '<th scope="col">Description</th><th scope="col">Result</th></tr></thead>'
+                           '<colgroup><col class="method-step"><col class="method-type"><col><col class="method-result"><col class="method-judgement"></colgroup>'
+                           '<thead><tr><th scope="col">Step</th><th scope="col">Type</th>'
+                           '<th scope="col">Description</th><th scope="col">Result</th><th scope="col">Judgement</th></tr></thead>'
                            '<tbody>'+method_body+'</tbody></table>')
                 cards.append(f'''<article class="case" id="{key}" data-status="{status}">
 <details class="case-disclosure"><summary class="case-heading"><svg class="case-chevron" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="m6 3 5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="case-title">{escape(row['display_name'] or row['testcase_id'])}</span><span class="status {status.lower()}">{status}</span></summary>

@@ -1,3 +1,5 @@
+Superseded presentation/schema: see [Numbered steps and four types](2026-11-12-numbered-method-types.md). The following records the earlier implementation.
+
 # Compact report with test steps and results — 2026-11-12
 
 ## Delivered

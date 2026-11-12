@@ -96,81 +96,111 @@ def description(result, metadata):
 
 
 def method_table_rows(result, metadata):
-    """ID/type/description/result from explicit evidence, without inferred verdicts.
+    """Step / Type / Description / Result / Judgement; never infer a verdict.
 
-    Saved definitions may fill missing observations by ID. Current source is only
-    a fallback when no historical definition or method evidence exists.
+    Numbered definitions join observations by captured method position. Historical
+    S/C/R evidence is adapted for display only; saved records are never rewritten.
     """
-    def observation(value):
-        if not isinstance(value, dict):
-            text = display(value)
-        else:
-            parts = []
-            if value.get('status'):
-                parts.append(str(value['status']))
-            for key in ('expected', 'actual', 'reason'):
-                if key in value:
-                    raw = value[key]
-                    rendered = 'null' if raw is None else display(raw)
-                    parts.append(key.capitalize() + ': ' + rendered)
-            text = '\n'.join(parts) if parts else display(value)
-        if len(text) > 1200:
-            text = text[:1100].rstrip() + '\n[Excerpt; see full value in saved execution evidence / Test log.]'
-        return text
+    def bounded(text):
+        return text if len(text) <= 1200 else text[:1100].rstrip() + '\n[Excerpt; see full value in saved execution evidence / Test log.]'
 
-    def typed_row(item, value=None):
-        identity = item.get('method_id') or item.get('id') or value.get('id')
-        kind = item.get('method_type') or item.get('type') or value.get('type')
+    def observation(value, kind):
+        if not isinstance(value, dict):
+            return bounded(display(value)), MISSING
+        if 'status' not in value:
+            return bounded(display(value)), MISSING
+        status, parts = value['status'], []
+        if kind == 'Record' and status == 'NOT_RECORDED':
+            parts.append('Not recorded')
+        for key in ('expected', 'actual', 'reason'):
+            if key not in value:
+                continue
+            raw = value[key]
+            if key == 'actual' and raw is None and status in ('NOT_RUN', 'NOT_EVALUATED', 'NOT_RECORDED'):
+                continue
+            rendered = 'null' if raw is None else '""' if raw == '' else display(raw)
+            parts.append(key.capitalize() + ': ' + rendered)
+        text = '\n'.join(parts) or ('Recorded' if kind == 'Record' and status == 'RECORDED' else MISSING)
+        return bounded(text), MISSING if kind == 'Record' else display(status)
+
+    def typed(item, value=None):
+        detail = value if isinstance(value, dict) else {}
+        kind = item.get('method_type') or item.get('type') or detail.get('type')
+        identity = item.get('method_id') or item.get('id') or detail.get('id')
         label = display(item.get('step'))
-        prefix = f'{identity} | {kind} | '
-        if label.startswith(prefix):
-            label = label[len(prefix):]
-        parent = item.get('step_id') or value.get('step_id')
-        if parent and kind != 'Step':
-            label += '\nSource: ' + str(parent)
-        return (display(identity), display(kind), label,
-                observation(value) if value else 'No recorded result')
+        label = label.removeprefix(f'{identity} | {kind} | ')
+        number = item.get('step_number', detail.get('step_number'))
+        if number is None:
+            parent = item.get('step_id') or detail.get('step_id')
+            if isinstance(parent, str) and parent.startswith('S') and parent[1:].isdigit():
+                number = int(parent[1:])
+        # Old Step did not distinguish commands from other actions.
+        kind = 'Action' if kind == 'Step' else kind
+        content, judgement = observation(value, kind) if value is not None else ('No recorded result', MISSING)
+        return (display(number) if kind in ('Command', 'Action') else '',
+                display(kind), label, content, judgement)
+
+    def detail_of(item):
+        return item.get('result') if isinstance(item.get('result'), dict) else {}
+
+    def is_typed(item):
+        detail = item.get('result') if isinstance(item.get('result'), dict) else {}
+        kind = item.get('method_type') or item.get('type') or detail.get('type')
+        return kind in ('Command', 'Action', 'Checkpoint', 'Record', 'Step')
+
+    def legacy(item, number, value=None):
+        label = item.get('step', next((v for k, v in item.items() if k.startswith('step_')), None))
+        label = display(label)
+        if item.get('criteria') is not None:
+            label += '\nCriteria: ' + display(item['criteria'])
+        content, judgement = observation(value, 'Action') if value is not None else ('No recorded result', MISSING)
+        return (str(number), 'Action', label, content, judgement)
 
     records = result.get('log_records')
     records = records if isinstance(records, list) else []
     explicit = [r for r in records if isinstance(r, dict) and r.get('kind') == 'step']
-    rows, observed = [], set()
-    for record in explicit:
-        value = record.get('result')
-        detail = value if isinstance(value, dict) else {}
-        if record.get('method_id') or detail.get('id'):
-            rows.append(typed_row(record, detail))
-            observed.add(record.get('method_id') or detail.get('id'))
-        else:
-            label = display(record.get('step'))
-            if record.get('criteria') is not None:
-                label += '\nCriteria: ' + display(record['criteria'])
-            rows.append((MISSING, 'Legacy', label, observation(value)))
     definition = result.get('report_definition')
-    if rows:
-        # Only the captured definition is safe to join to historical evidence.
-        methods = definition.get('test_method', []) if isinstance(definition, dict) else []
-        for item in methods if isinstance(methods, list) else []:
-            if isinstance(item, dict) and item.get('id') and item['id'] not in observed:
-                rows.append(typed_row(item, {}))
+    methods = definition.get('test_method', []) if isinstance(definition, dict) else []
+    methods = methods if isinstance(methods, list) else []
+    rows = []
+    if explicit:
+        remaining = list(enumerate(explicit))
+        # Only a saved definition may supply missing rows; never join current source.
+        for index, item in enumerate(methods):
+            if not isinstance(item, dict) or not is_typed(item):
+                continue
+            match = next(((position, r) for position, r in remaining
+                          if detail_of(r).get('method_index') == index
+                          or item.get('id') and (r.get('method_id') or detail_of(r).get('id')) == item['id']), None)
+            if match:
+                remaining.remove(match)
+                rows.append(typed(match[1], match[1].get('result')))
+            else:
+                rows.append(typed(item))
+        for number, (_, record) in enumerate(remaining, 1):
+            rows.append(typed(record, record.get('result')) if is_typed(record)
+                        else legacy(record, number, record.get('result')))
         return rows
     if any(isinstance(r, dict) and r.get('kind') in ('section', 'check') for r in records):
-        return [(MISSING, 'Legacy', step + ('\nCriteria: '+criteria if criteria != MISSING else ''), observation(value))
-                for step, criteria, value in method_rows(result, metadata)]
+        number = 0
+        for record in records:
+            if not isinstance(record, dict):
+                continue
+            if record.get('kind') == 'section':
+                number += 1
+                rows.append((str(number), 'Action', display(record.get('title')), MISSING, MISSING))
+            elif record.get('kind') == 'check':
+                value = {k: record[k] for k in ('expected', 'actual') if k in record}
+                value['status'] = 'PASS' if record.get('passed') is True else 'FAIL' if record.get('passed') is False else MISSING
+                content, judgement = observation(value, 'Checkpoint')
+                rows.append(('', 'Checkpoint', display(record.get('label')), content, judgement))
+        return rows
     definition = definition if isinstance(definition, dict) else metadata
     methods = definition.get('test_method', [])
-    for item in methods if isinstance(methods, list) else []:
-        if not isinstance(item, dict):
-            continue
-        if item.get('id'):
-            rows.append(typed_row(item, {}))
-        else:
-            step = item.get('step', next((v for k, v in item.items() if k.startswith('step_')), None))
-            label = display(step)
-            if item.get('criteria') is not None:
-                label += '\nCriteria: ' + display(item['criteria'])
-            rows.append((MISSING, 'Legacy', label, 'No recorded result'))
-    return rows or [(MISSING, MISSING, 'No test steps recorded', 'No recorded result')]
+    for index, item in enumerate(methods if isinstance(methods, list) else []):
+        if isinstance(item, dict):
+            rows.append(typed(item) if is_typed(item) else legacy(item, index + 1))
+    return rows or [('', MISSING, 'No test steps recorded', 'No recorded result', MISSING)]
 
 
 def firmware(setup):

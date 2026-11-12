@@ -1,3 +1,5 @@
+Superseded presentation/schema: see [Numbered steps and four types](2026-11-12-numbered-method-types.md). The following records the earlier implementation.
+
 # RF-01-001/002 Step, Checkpoint and Record — 2026-11-11
 
 ## Delivered

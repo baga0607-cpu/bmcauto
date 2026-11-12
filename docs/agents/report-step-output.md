@@ -1,3 +1,5 @@
+2026-11-12 latest: use numbered Command/Action groups with Checkpoint/Record children, not S/C/R IDs. Five report columns separate Result from Judgement; Record has no judgement. The previous dated amendments below are historical. See ../status/2026-11-12-numbered-method-types.md.
+
 2026-11-12: Reports now render typed method IDs, source-Step relationships and recorded results in a compact table. Legacy evidence remains readable. See ../status/2026-11-12-report-method-results.md for precedence, missing-result and excerpt rules.
 
 ## 2026-11-11 Step / Checkpoint / Record amendment

@@ -109,6 +109,8 @@ class CaseLog:
     def section(self, title):
         match = re.match(r'^(S[1-9][0-9]*) \| Step \| ', str(title))
         self.method_step_id = match[1] if match else None
+        numbered = re.match(r'^Step ([1-9][0-9]*) \| (?:Command|Action) \| ', str(title))
+        self.method_step_number = int(numbered[1]) if numbered else None
         self._close_section()
         self.section_number += 1
         self.section_checks = 0
@@ -131,6 +133,7 @@ class CaseLog:
         self._write('http', f'HTTP evidence #{self.http_number}', lines,
                     method=method, uri=uri, status=status, headers=headers,
                     request_headers=request_headers, body=raw_body,
+                    **({"step_number": self.method_step_number} if getattr(self, "method_step_number", None) else {}),
                     **({"step_id": self.method_step_id} if getattr(self, "method_step_id", None) else {}))
 
     def check(self, label, passed, expected=None, actual=None):
@@ -161,11 +164,14 @@ class CaseLog:
         ], step=step, criteria=criteria, result=result)
 
     def method_item(self, item, result):
-        """Write an independently identified Step, Checkpoint or Record.
+        """Write a numbered Command/Action, Checkpoint or Record; accept old IDs.
 
         kind=step remains the persistence/report adapter; criteria is unused.
         Record is informational and never receives a PASS/FAIL verdict.
         """
+        if "step_number" in item:
+            return self._numbered_method(item, result)
+        # Retain compatibility with independently imported older Plan sources.
         item_id, item_type, step_id = item["id"], item["type"], item["step_id"]
         prefixes = {"Step": "S", "Checkpoint": "C", "Record": "R"}
         prefix = prefixes.get(item_type)
@@ -196,6 +202,38 @@ class CaseLog:
         self._write("step", item_id + " | " + item_type, lines,
                     step=item["step"], criteria=None, result=result,
                     method_id=item_id, method_type=item_type, step_id=step_id)
+
+    def _numbered_method(self, item, result):
+        number, kind = item.get('step_number'), item.get('type')
+        allowed = {
+            'Command': {'COMPLETED', 'FAILED', 'ERROR', 'NOT_RUN'},
+            'Action': {'COMPLETED', 'FAILED', 'ERROR', 'NOT_RUN'},
+            'Checkpoint': {'PASS', 'FAIL', 'NOT_EVALUATED'},
+            'Record': {'RECORDED', 'NOT_RECORDED'},
+        }
+        if type(number) is not int or number < 1 or kind not in allowed:
+            raise ValueError('Invalid Step number or Type')
+        if result.get('status') not in allowed[kind]:
+            raise ValueError('Invalid status for method item type')
+        if any(result.get(key) != item[key] for key in ('type', 'step_number')):
+            raise ValueError('Method result association does not match its definition')
+        index = result.get('method_index')
+        if type(index) is not int or index < 0:
+            raise ValueError('Invalid method position')
+        json.dumps([item, result], ensure_ascii=False, allow_nan=False)
+        self.section_checks += 1
+        lines = ['Description: ' + item['step']]
+        if kind == 'Record' and result['status'] == 'NOT_RECORDED':
+            lines.append('Result: Not recorded')
+        for key in ('expected', 'actual'):
+            if key in result and not (key == 'actual' and result['status'] in ('NOT_RUN', 'NOT_EVALUATED', 'NOT_RECORDED') and result[key] is None):
+                lines.append(key.capitalize() + ': ' + json.dumps(result[key], ensure_ascii=False))
+        if result.get('reason'):
+            lines.append('Reason: ' + result['reason'])
+        lines.append('Judgement: ' + ('—' if kind == 'Record' else result['status']))
+        self._write('step', f'Step {number} | {kind}', lines,
+                    step=item['step'], criteria=None, result=result,
+                    method_type=kind, step_number=number, method_index=index)
 
     def finish(self, status, reason):
         if self.finished:

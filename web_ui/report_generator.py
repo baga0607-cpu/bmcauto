@@ -577,9 +577,9 @@ def generate_task_pdf_report(task_id, output_path, db_path=None, log_dir=None, r
             if attach_names:
                 story.append(cell('Open or save the embedded .log attachment for full test steps, criteria and evidence. Use a PDF reader that supports attachments.','note'))
             story.append(Paragraph('Test Steps &amp; Results', styles['tc_title']))
-            table_rows = [[cell(label, 'tbl_cell_bold') for label in ('ID', 'Type', 'Description', 'Result')]]
-            table_rows.extend([cell(value) for value in row] for row in method_table_rows(result_data, metadata))
-            methods = Table(table_rows, colWidths=[COL_W*.07, COL_W*.15, COL_W*.44, COL_W*.34],
+            table_rows = [[cell(label, 'tbl_cell_bold') for label in ('Step', 'Type', 'Description', 'Result', 'Judgement')]]
+            table_rows.extend([cell(value if value != '' else ' ') for value in row] for row in method_table_rows(result_data, metadata))
+            methods = Table(table_rows, colWidths=[COL_W*.06, COL_W*.13, COL_W*.39, COL_W*.25, COL_W*.17],
                             repeatRows=1, splitByRow=1, splitInRow=1)
             methods.setStyle(TableStyle([
                 ('BACKGROUND',(0,0),(-1,0),C_LIGHT_BLUE),

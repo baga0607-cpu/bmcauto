@@ -69,11 +69,11 @@ class MethodItemsTest(unittest.TestCase):
         self.assertEqual(context["case_result"]["status"], expected)
         rows = [r for r in logger.records if r["kind"] == "step"]
         declared = module.TEST_CASE["test_method"]
-        self.assertEqual([r["result"]["id"] for r in rows], [d["id"] for d in declared])
+        self.assertEqual([r["result"]["method_index"] for r in rows], list(range(len(declared))))
         self.assertEqual(len([r for r in logger.records if r["kind"] == "finish"]), 1)
         self.assertEqual(len(method_rows({"log_records": logger.records}, {})), len(declared))
         for row, definition in zip(rows, declared):
-            self.assertEqual(row["result"]["step_id"], definition["step_id"])
+            self.assertEqual(row["result"]["step_number"], definition["step_number"])
             self.assertEqual(row["result"]["type"], definition["type"])
             self.assertIsNone(row["criteria"])
             if definition["type"] == "Record":
@@ -86,7 +86,8 @@ class MethodItemsTest(unittest.TestCase):
                                      "verify": True, "timeout": 15, "allow_redirects": False})
             self.assertFalse(trust_env)
             self.assertEqual(auth, ("synthetic", "test"))
-        return {r["result"]["id"]: r["result"] for r in rows}, context, output.getvalue(), calls
+        aliases = [["S1","C1","S2","C2a","C2b","S3","C3a","C3b","C3c"],["S1","C1","S2","C2a","C2b","S3","C3a","C3b","S4","C4a","C4b","S5","R5"]]
+        return dict(zip(aliases[index], [r["result"] for r in rows])), context, output.getvalue(), calls
 
     def test_literal_metadata_and_report_fallback(self):
         for module in CASES:
@@ -99,15 +100,20 @@ class MethodItemsTest(unittest.TestCase):
             self.assertEqual(len(method_rows({}, meta)), len(meta["test_method"]))
             for item in meta["test_method"]:
                 self.assertNotIn("criteria", item)
-                self.assertTrue(item["step"].startswith(item["id"] + " | " + item["type"]))
-            self.assertIn("can be parsed as JSON", next(d["step"] for d in meta["test_method"] if d["id"] == "C2a"))
+                self.assertNotIn("id", item)
+                self.assertNotIn("step_id", item)
+                self.assertIn(item["type"], ("Command", "Action", "Checkpoint", "Record"))
+                self.assertIsInstance(item["step_number"], int)
+            self.assertIn("can be parsed as JSON", meta["test_method"][3]["step"])
 
     def test_pass_and_no_001_record(self):
         for i in range(2):
             rows, _, log, _ = self.run_case(i, [response(GOOD[i])])
             self.assertEqual(rows["S1"]["status"], "COMPLETED")
             self.assertEqual(rows["C2a"]["status"], "PASS")
-            self.assertIn("C2a | Checkpoint", log)
+            self.assertIn("Step 2 | Checkpoint", log)
+            self.assertNotIn("C2a", log)
+            self.assertIn("Judgement: PASS", log)
             self.assertNotIn("Criteria:", log)
         self.assertFalse(any(r["type"] == "Record" for r in CASES[0].TEST_CASE["test_method"]))
 
@@ -116,7 +122,7 @@ class MethodItemsTest(unittest.TestCase):
         self.assertEqual(rows["C3a"]["status"], "FAIL")
         for key in ("C3b", "C3c"):
             self.assertEqual(rows[key]["status"], "NOT_EVALUATED")
-            self.assertIn("C3a", rows[key]["reason"])
+            self.assertIn("v1 is missing", rows[key]["reason"])
 
     def test_v1_type_and_value_have_separate_attribution(self):
         for value, failed in [(123, "C3b"), ("/redfish/v1", "C3c")]:
@@ -145,8 +151,8 @@ class MethodItemsTest(unittest.TestCase):
         self.assertEqual(rows["C4b"]["status"], "FAIL")
         self.assertEqual(rows["R5"]["status"], "RECORDED")
         self.assertEqual(rows["R5"]["actual"], 123)
-        self.assertIn("C3b", ctx["case_result"]["reason"])
-        self.assertIn("C4b", ctx["case_result"]["reason"])
+        self.assertIn("Step 3", ctx["case_result"]["reason"])
+        self.assertIn("Step 4", ctx["case_result"]["reason"])
         rows, _, _, _ = self.run_case(1, [response({})], "Fail")
         for key in ("C3a", "C4a"):
             self.assertEqual(rows[key]["status"], "FAIL")
@@ -199,7 +205,7 @@ class MethodItemsTest(unittest.TestCase):
                 "Authorization": "private-auth", "Set-Cookie": "private-cookie",
                 "X-Auth-Token": "private-token", "Content-Type": "application/json"})])
             self.assertNotIn("private-", log)
-            self.assertEqual(context["case_result"]["evidence"][0]["source_step"], "S1")
+            self.assertEqual(context["case_result"]["evidence"][0]["source_step"], 1)
 
     def test_legacy_log_adapter(self):
         for i in range(2):
@@ -207,18 +213,14 @@ class MethodItemsTest(unittest.TestCase):
 
     def test_invalid_log_associations_and_record_verdict_rejected(self):
         logger = CaseLog(io.StringIO(), lambda event: None)
-        item = {"id": "R5", "type": "Record", "step_id": "S5", "step": "R5 | Record | Version"}
-        result = {"id": "R5", "type": "Record", "step_id": "S5", "status": "PASS"}
+        item = {"type": "Record", "step_number": 5, "step": "Version"}
+        result = {"method_index": 12, "type": "Record", "step_number": 5, "status": "PASS"}
         with self.assertRaises(ValueError):
             logger.method_item(item, result)
         result["status"] = "RECORDED"
-        result["step_id"] = "S4"
+        result["step_number"] = 4
         with self.assertRaises(ValueError):
             logger.method_item(item, result)
-        item["step_id"] = "S4"
+        result["step_number"] = item["step_number"] = 0
         with self.assertRaises(ValueError):
             logger.method_item(item, result)
-
-
-if __name__ == "__main__":
-    unittest.main()

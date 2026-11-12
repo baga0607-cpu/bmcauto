@@ -95,10 +95,10 @@ class CaseLogIntegrationTest(unittest.TestCase):
                 steps=[r for r in records if r['kind']=='step']
                 self.assertEqual(len(steps),len(authored['test_method']))
                 if number <= 2:
-                    self.assertEqual([r['method_id'] for r in steps], [m['id'] for m in authored['test_method']])
+                    self.assertEqual([r['method_index'] for r in steps], list(range(len(authored['test_method']))))
                     for record, definition in zip(steps, authored['test_method']):
-                        self.assertEqual(record['step_id'], definition['step_id'])
-                        self.assertEqual(record['result']['status'], {'Step':'COMPLETED','Checkpoint':'PASS','Record':'RECORDED'}[definition['type']])
+                        self.assertEqual(record['step_number'], definition['step_number'])
+                        self.assertEqual(record['result']['status'], {'Command':'COMPLETED','Action':'COMPLETED','Checkpoint':'PASS','Record':'RECORDED'}[definition['type']])
                         self.assertIsNone(record['criteria'])
                     if number == 2:
                         self.assertEqual(steps[-1]['result']['actual'], 'Not present')
@@ -123,23 +123,23 @@ class CaseLogIntegrationTest(unittest.TestCase):
     def test_scr_failure_retains_independent_checks_and_record(self):
         source = next((Path(__file__).resolve().parents[2] / 'test_assets/redfish').glob('rf_01_002_*.py')).read_text(encoding='utf-8')
         row = self.run_source(source, {'@odata.type': '#Wrong.Type', '@odata.id': '/wrong', 'RedfishVersion': 123}, expected='Failed')
-        items = {r['method_id']: r['result'] for r in row['result']['log_records'] if r['kind'] == 'step'}
-        self.assertEqual(items['C3b']['status'], 'FAIL')
-        self.assertEqual(items['C4b']['status'], 'FAIL')
-        self.assertEqual(items['R5']['status'], 'RECORDED')
-        self.assertEqual(items['R5']['actual'], 123)
-        self.assertEqual(items['R5']['step_id'], 'S5')
+        items = {r['method_index']: r['result'] for r in row['result']['log_records'] if r['kind'] == 'step'}
+        self.assertEqual(items[7]['status'], 'FAIL')
+        self.assertEqual(items[10]['status'], 'FAIL')
+        self.assertEqual(items[12]['status'], 'RECORDED')
+        self.assertEqual(items[12]['actual'], 123)
+        self.assertEqual(items[12]['step_number'], 5)
 
     def test_scr_parse_failure_is_not_a_cascade_of_failed_checks(self):
         source = next((Path(__file__).resolve().parents[2] / 'test_assets/redfish').glob('rf_01_001_*.py')).read_text(encoding='utf-8')
         row = self.run_source(source, 'not JSON', expected='Failed')
         records = row['result']['log_records']
-        items = {r['method_id']: r['result'] for r in records if r['kind'] == 'step'}
-        self.assertEqual(items['S2']['status'], 'FAILED')
-        self.assertEqual(items['C2a']['status'], 'FAIL')
-        self.assertEqual(items['C2b']['status'], 'NOT_EVALUATED')
-        self.assertEqual(items['C3a']['status'], 'NOT_EVALUATED')
-        self.assertEqual(next(r for r in records if r['kind'] == 'http')['step_id'], 'S1')
+        items = {r['method_index']: r['result'] for r in records if r['kind'] == 'step'}
+        self.assertEqual(items[2]['status'], 'FAILED')
+        self.assertEqual(items[3]['status'], 'FAIL')
+        self.assertEqual(items[4]['status'], 'NOT_EVALUATED')
+        self.assertEqual(items[6]['status'], 'NOT_EVALUATED')
+        self.assertEqual(next(r for r in records if r['kind'] == 'http')['step_number'], 1)
 
     def test_same_task_case_rerun_keeps_previous_disk_evidence(self):
         source = next((Path(__file__).resolve().parents[2] / 'test_assets/redfish').glob('rf_01_001_*.py')).read_text(encoding='utf-8')
