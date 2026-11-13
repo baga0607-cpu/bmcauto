@@ -1,3 +1,5 @@
+2026-11-13: Reports omit Case-level Note fallback rows; step notes and saved evidence remain unchanged. RF-01-011 schema retrieval revision is tracked; deployment and installed Repository/Plan synchronization remain pending. See docs/status/2026-11-13-cross-chat-integration.md.
+
 2026-11-12 latest report: Case Name is the only disclosure; Test Data and Test Information expand together. Result Summary and standalone Note removed, method table retained under Test Data. Formal service updated at 16:17. See [report hierarchy](docs/status/2026-11-12-report-hierarchy.md).
 
 2026-11-12 latest deployment: Desktop launcher now offers Restart service and recognizes the Windows Python parent/child chain. Formal service restarted at 15:40; CP migration enabled, all 21 tables preserved. Existing saved FAIL results remain unchanged. See [restart handoff](docs/status/2026-11-12-desktop-restart-cp.md).

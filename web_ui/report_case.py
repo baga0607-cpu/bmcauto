@@ -2,7 +2,6 @@
 import re
 
 from result_policy import method_status
-from case_log import result_note
 import json
 from datetime import datetime, timezone, timedelta
 
@@ -228,11 +227,5 @@ def firmware(setup):
 
 
 def method_table_rows(result, metadata):
-    rows = _method_table_rows(result, metadata)
-    # Retain unassociated historical case notes without inventing a step link,
-    # a new Record, or retroactively changing PASS to CP.
-    note = result_note(result)
-    if note and not any(note in row[3] for row in rows):
-        rows.append(('', MISSING, 'Case-level note (no recorded step association)',
-                     'Note: ' + note, MISSING))
-    return rows
+    # Case-only notes remain in saved evidence; reports show step-associated notes.
+    return _method_table_rows(result, metadata)

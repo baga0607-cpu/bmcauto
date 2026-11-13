@@ -3,10 +3,11 @@ import re
 from collections import deque
 from urllib.parse import urljoin, urlsplit, urlunsplit, unquote
 
-TEST_CASE = {'modified_at': "2026-11-12T09:19:33.038611+00:00",
+TEST_CASE = {'modified_at': '2026-11-13T03:41:05.431099+00:00',
  'test_type': 'compliance',
  'spec_ref': ['DSP0266 v1.25.0 section 6.1 (fragment references); sections 9.5.7 and 9.6.2 (reference '
  'properties and resource identity).',
+ 'DSP0266 v1.25.0 sections 8.2 and 10.5 (schema discovery and repository access).',
  'RFC 6901 sections 3, 4 and 6 (JSON Pointer syntax, evaluation and URI fragment representation).'],
  'created_at': '2026-10-30T06:23:36.474763+00:00',
  'name': 'RF-01-011 URI Fragment References',
@@ -28,7 +29,7 @@ TEST_CASE = {'modified_at': "2026-11-12T09:19:33.038611+00:00",
                  {'step_number': 3,
                   'type': 'Action',
                   'step': 'Resolve each fragment as a JSON Pointer and classify its target using advertised '
-                          'local schemas.'},
+                          'schemas with per-run caching.'},
                  {'step_number': 3,
                   'type': 'Checkpoint',
                   'step': "Verify that at least one applicable local fragment reference was found.\n\nProject coverage policy: no applicable references means FAIL for this check."},
@@ -206,9 +207,12 @@ def _reject_json_constant(value):
     raise ValueError("Non-finite JSON constant: " + value)
 
 
-def _fetch(session, url, conf, origin, context, evidence, cache):
+def _fetch(session, url, conf, origin, context, evidence, cache, schema_guard=None, revalidate=False):
     chain = []
     current = url
+    request_headers = {"Accept": "application/json"}
+    if revalidate:
+        request_headers["Cache-Control"] = "no-cache"
     try:
         for hop in range(6):
             if current in chain:
@@ -221,7 +225,7 @@ def _fetch(session, url, conf, origin, context, evidence, cache):
                     cache[alias] = result
                 return result
             chain.append(current)
-            response = session.get(current, headers={"Accept": "application/json"},
+            response = session.get(current, headers=request_headers,
                                    verify=conf.get("verify_ssl", False), timeout=15,
                                    allow_redirects=False)
             headers = {k: v for k, v in response.headers.items()
@@ -229,7 +233,7 @@ def _fetch(session, url, conf, origin, context, evidence, cache):
             evidence.append({"uri": current, "status": response.status_code,
                              "headers": headers, "body": response.text})
             _log(context, "http", "GET", current, response.status_code, headers,
-                 response.text, request_headers={"Accept": "application/json"})
+                 response.text, request_headers=request_headers)
             if response.status_code in (301, 302, 307, 308):
                 location = response.headers.get("Location")
                 if not location:
@@ -238,7 +242,9 @@ def _fetch(session, url, conf, origin, context, evidence, cache):
                     target = _url(location, current)
                 except ValueError:
                     raise CaseFailure("Redirect URL is invalid") from None
-                if _origin(target) != origin:
+                if schema_guard:
+                    target = schema_guard(target)
+                elif _origin(target) != origin:
                     raise CaseFailure("Redirect leaves Task origin; credentials were not forwarded")
                 if "/Actions/" in urlsplit(target).path or urlsplit(target).path.endswith("/Actions"):
                     raise CaseFailure("Redirect to an Action endpoint was not followed")
@@ -365,9 +371,32 @@ def _schema_link(header):
     return matches[0]
 
 
+def _trusted_schema_url(uri):
+    uri = _url(uri, uri)
+    parts = urlsplit(uri)
+    if (parts.hostname != "redfish.dmtf.org" or
+            _origin(uri)[2] != (443 if parts.scheme == "https" else 80) or
+            not parts.path.startswith("/schemas/") or
+            not parts.path.endswith(".json") or parts.query or
+            "%" in parts.path or "\\" in parts.path or
+            any(p in (".", "..") for p in parts.path.split("/"))):
+        raise CaseFailure("Schema source is not trusted: " + uri)
+    return urlunsplit(("https", parts.hostname, parts.path, "", ""))
+
+
 def _schema_kind(schema_uri, path, instance, get_document):
     """Resolve a conservative JSON Schema subset; unsupported branches fail closed."""
     documents = {}
+    declared = instance.get("@odata.type", "")
+    declared = declared if isinstance(declared, str) else ""
+    type_match = re.fullmatch(r"#([A-Za-z0-9_]+)\.(v[0-9]+_[0-9]+_[0-9]+)\.([A-Za-z0-9_]+)", declared)
+
+    def check_version(uri):
+        match = re.search(r"/([^/]+)\.(v[0-9]+_[0-9]+_[0-9]+)\.json$", urlsplit(uri).path)
+        if match and (not type_match or match.groups() != type_match.groups()[:2]):
+            raise CaseFailure("Schema version does not match BMC @odata.type: " + declared + "; schema=" + uri)
+
+    check_version(schema_uri)
 
     def load(uri):
         if uri in documents:
@@ -376,10 +405,14 @@ def _schema_kind(schema_uri, path, instance, get_document):
         if physical in documents:
             documents[uri] = documents[physical]
             return documents[physical]
+        if not documents:
+            check_version(physical)
         logical = physical
         identifier = document.get("$id", document.get("id"))
         if identifier is not None:
             logical = _url(identifier, physical)
+            if not documents:
+                check_version(logical)
             if urlsplit(identifier).fragment:
                 raise CaseFailure("Schema document identifier contains an unsupported anchor")
         # A declared canonical ID can name this already-fetched local document.
@@ -398,6 +431,8 @@ def _schema_kind(schema_uri, path, instance, get_document):
             raise CaseFailure("Unsupported schema composition or base-URI keyword")
         if "$ref" in node:
             target = urljoin(base, node["$ref"])
+            if value is instance and type_match and urlsplit(target).path.rsplit("/", 1)[-1].startswith(type_match[1] + ".v"):
+                check_version(target)
             if target in seen or len(seen) >= 64:
                 raise CaseFailure("Cyclic or excessive schema reference chain")
             document_uri = _url(target, base)
@@ -406,17 +441,29 @@ def _schema_kind(schema_uri, path, instance, get_document):
             return expand(resolved, final, value, seen + (target,))
         for keyword in ("anyOf", "oneOf"):
             if keyword in node:
+                branches = node[keyword]
+                if value is instance and type_match:
+                    expected = type_match[1] + "." + type_match[2] + ".json"
+                    selected = [b for b in branches if isinstance(b, dict) and
+                                urlsplit(b.get("$ref", "")).path.rsplit("/", 1)[-1] == expected and
+                                urlsplit(b.get("$ref", "")).fragment == "/definitions/" + type_match[3]]
+                    if selected:
+                        if len(selected) != 1:
+                            raise CaseFailure("Multiple schema branches match BMC @odata.type")
+                        return expand(selected[0], base, value, seen)
+                    if any(isinstance(b, dict) and re.search(r"\.v[0-9]+_[0-9]+_[0-9]+\.json", b.get("$ref", "")) for b in branches):
+                        raise CaseFailure("Advertised schema has no branch for BMC @odata.type: " + declared)
                 candidates = []
-                for branch in node[keyword]:
+                for branch in branches:
                     try:
                         resolved, location = expand(branch, base, value, seen)
                     except CaseFailure:
                         raise
-                    declared = resolved.get("type")
+                    branch_type = resolved.get("type")
                     actual = ("null" if value is None else "boolean" if isinstance(value, bool) else
                               "object" if isinstance(value, dict) else "array" if isinstance(value, list)
                               else "string" if isinstance(value, str) else "number")
-                    types = declared if isinstance(declared, list) else [declared]
+                    types = branch_type if isinstance(branch_type, list) else [branch_type]
                     if actual in types or (actual == "number" and "integer" in types):
                         candidates.append((resolved, location))
                 if len(candidates) != 1:
@@ -496,7 +543,11 @@ def execute(client, context=None, preset=None):
 
     _log(context, "section", "Resource and fragment discovery", report_step=2)
     try:
-        with requests.Session() as session:
+        with requests.Session() as session, requests.Session() as schema_session:
+            schema_session.trust_env = False
+            schema_session.auth = None
+            schema_cache = {}
+            observations["schema_requests"] = []
             session.trust_env = False
             session.auth = (conf.get("username", ""), conf.get("password", ""))
 
@@ -509,6 +560,28 @@ def execute(client, context=None, preset=None):
                     return _fetch(session, uri, conf, origin, context, evidence, cache)
                 except requests.RequestException as error:
                     raise CaseFailure("HTTP request could not complete (" + type(error).__name__ + ")") from None
+
+            def get_schema(uri):
+                requested = uri
+                item = {"requested_uri": requested, "cache": "per-run"}
+                observations["schema_requests"].append(item)
+                try:
+                    local = _origin(uri) == origin
+                    if not local:
+                        uri = _trusted_schema_url(uri)
+                    item.update(fetch_uri=uri, cache_hit=uri in schema_cache,
+                                freshness="per-run retrieval; unversioned documents revalidated")
+                    result = _fetch(session if local else schema_session, uri,
+                                    conf if local else {"verify_ssl": True},
+                                    origin, context, evidence, schema_cache,
+                                    schema_guard=_trusted_schema_url if not local else None,
+                                    revalidate=not bool(re.search(r"\.v[0-9]+_[0-9]+_[0-9]+\.json$", urlsplit(uri).path)))
+                    item["resolved_uri"] = result[0]
+                    return result
+                except (CaseFailure, ValueError, requests.RequestException) as error:
+                    item["reason"] = str(error)
+                    raise CaseFailure("Schema evidence unavailable; schema=" + requested +
+                                      "; cause=" + str(error)) from None
 
             while queue:
                 requested = queue.popleft()
@@ -559,6 +632,7 @@ def execute(client, context=None, preset=None):
                  expected="At least one applicable local reference", actual=len(observations["references"]))
             for ref in observations["references"]:
                 result = {"source": ref["source"], "field": ref["field"], "uri": ref["uri"]}
+                stage = "pointer"
                 try:
                     final, document = get_document(ref["target"])
                     target_value = _resolve_pointer(document, ref["fragment"])
@@ -567,10 +641,14 @@ def execute(client, context=None, preset=None):
                     source_http = next(item for item in evidence if item["uri"] == ref["source"]
                                        and item["status"] == 200)
                     header = next((v for k, v in source_http["headers"].items() if k.lower() == "link"), "")
+                    stage = "schema"
+                    result["declared_type"] = bodies[ref["source"]].get("@odata.type")
                     schema_uri = _url(_schema_link(header), ref["source"])
-                    kind = _schema_kind(schema_uri, tuple(ref["path"]), bodies[ref["source"]], get_document)
+                    result["schema"] = schema_uri
+                    kind = _schema_kind(schema_uri, tuple(ref["path"]), bodies[ref["source"]], get_schema)
                     result["schema"] = schema_uri
                     result["property_kind"] = kind
+                    stage = "identity"
                     if kind == "resource":
                         identifier = target_value.get("@odata.id") if isinstance(target_value, dict) else None
                         if not isinstance(identifier, str) or not identifier:
@@ -583,7 +661,8 @@ def execute(client, context=None, preset=None):
                         _resolve_pointer(identity_doc, identity_fragment)
                     result["passed"] = True
                 except (CaseFailure, ValueError, TypeError) as error:
-                    result.update(passed=False, reason=str(error))
+                    result.update(passed=False, reason=str(error), failure_stage=stage,
+                                  failure_category="schema_evidence" if stage == "schema" else "reference_validation")
                     failures.append(result)
                 observations["results"].append(result)
                 _log(context, "check", "Fragment reference validation", result["passed"],

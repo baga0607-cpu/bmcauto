@@ -87,7 +87,7 @@ class ConditionalCaseTest(unittest.TestCase):
             'note':'Unassociated case note'}
         rows = method_table_rows(old,{})
         self.assertTrue(any('Legacy acceptance' in row[3] for row in rows))
-        self.assertTrue(any('Unassociated case note' in row[3] for row in rows))
+        self.assertFalse(any('Unassociated case note' in row[3] for row in rows))
         self.assertNotIn('C-PASS', [r[4] for r in rows])
 
     def test_cp_migration_from_block_schema_preserves_evidence(self):

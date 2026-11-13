@@ -22,9 +22,9 @@ Character restrictions, including the separate prohibition on non-query percent 
 
 ## Schema evidence and limitations
 
-Use the source response's single unambiguous Link rel=describedby JSON Schema URI, as described in [DSP0266 1.23.0 section 8.2](https://www.dmtf.org/sites/default/files/standards/documents/DSP0266_1.23.0.html). Do not guess schema filenames from resource types.
+Use the source response's single unambiguous Link rel=describedby JSON Schema URI, as described in [DSP0266 1.25.0 sections 8.2 and 10.5](https://www.dmtf.org/sites/default/files/standards/documents/DSP0266_1.25.0.html). Do not guess schema filenames from resource types.
 
-Supported classification: explicit properties, homogeneous items, local/document $ref, one unambiguous type-matching anyOf/oneOf branch, nullable string URI types, and top-level canonical $id/id. A canonical ID can name an already fetched local schema; it does not authorize remote retrieval. Resource reference objects must have a schema-declared string @odata.id; scalar references require string type and uri/uri-reference format.
+Supported classification: explicit properties, homogeneous items, local/document $ref, one unambiguous type-matching anyOf/oneOf branch, nullable string URI types, and top-level canonical $id/id. A canonical ID can name an already fetched local schema; remote dependencies remain subject to the schema source allowlist. Resource reference objects must have a schema-declared string @odata.id; scalar references require string type and uri/uri-reference format.
 
 This is a conservative classifier, not a complete JSON Schema validator. Missing/ambiguous schema links, unknown properties, unavailable external dependencies, allOf/conditional/dynamic constructs, nested schema base IDs, ambiguous union branches, boolean schemas and cyclic/excessive reference chains produce Fail for insufficient evidence. Unversioned schemas with several object alternatives can therefore need further schema support. The test does not claim full schema compliance or coverage of undiscovered/custom string references.
 
@@ -43,3 +43,15 @@ Command: BMCAgent/.venv/Scripts/python.exe -W error bmca-runtime/verification/rf
 Fifteen offline unittest groups passed using actual CaseLog and blocked network access. Tests cover pointer escaping/UTF-8/object/array behavior, nullable values, duplicate JSON keys, resource target identity, no applicable references, exclusions, fragment-free cached requests, schema classification/canonical IDs/ambiguity/external dependencies, pages and incomplete scope, redirects and HTTP errors, metadata/birth time and report row attribution.
 
 No platform changes, formal Repository/Plan import, physical BMC execution or GitHub publication.
+
+## 2026-11-13 schema retrieval revision
+
+Resource traversal remains restricted to the Task origin. Schema retrieval now accepts same-origin documents and exact host redfish.dmtf.org under /schemas/ with JSON filenames and standard HTTP(S) ports. Public HTTP identifiers are retrieved over HTTPS; every external redirect is checked again. External schemas use a separate session without BMC authentication, with TLS verification enabled. Local schema redirects remain same-origin.
+
+There is no persistent schema cache and no filesystem schema write. Each execution has its own in-memory schema cache, including fetch failures. Unversioned schema retrieval sends Cache-Control: no-cache to request upstream revalidation on first retrieval in that execution; no ETag or Last-Modified state is retained between runs. Versioned schemas are fetched once per run as needed. This is fresh retrieval, not a comparison against a prior downloaded file.
+
+Versioned root schema filenames/canonical identifiers are checked against the source resource @odata.type. Unversioned anyOf/oneOf dispatch selects the exact advertised type/version branch, not the latest branch, and rejects missing/duplicate matches. Dependencies retain their explicitly referenced versions. No schema filenames are guessed. Existing conservative schema-composition limitations still apply.
+
+Fragment results preserve pointer_resolved and record declared_type, schema, failure_stage and failure_category. Schema request evidence records requested/fetch/resolved URIs, per-run cache hits and failure causes. Schema evidence failures remain Fail under project policy and do not establish a DUT fragment violation.
+
+Validation: 20 offline unittest groups passed using mocked HTTP sessions and blocked socket access, including trusted sources, credential separation, HTTP-to-HTTPS retrieval, redirect rejection, exact version selection and mismatch, independent runs, per-run reuse, missing dependencies, offline transport and invalid JSON. Updated legacy report assertions to the current method-results contract. No physical DUT execution or Repository/Plan synchronization performed.

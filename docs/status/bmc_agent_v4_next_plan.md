@@ -178,3 +178,5 @@ Latest delivery: [Edit Task mandatory History](2026-10-22-edit-task-history.md).
 2026-11-13: Spec Ref. citation spacing corrected in preview and exported reports; see [handoff](2026-11-13-spec-ref-spacing.md).
 
 2026-11-13: Approved report spacing refinements deployed; see [handoff](2026-11-13-report-spacing.md).
+
+2026-11-13: Cross-chat Note/RF-01-011 changes integrated; deployment and installed-case synchronization remain pending. See [handoff](2026-11-13-cross-chat-integration.md).
