@@ -34,7 +34,7 @@ const {chromium}=require(process.env.BMC_PLAYWRIGHT_MODULE||'playwright');
   assert.equal(rows[1][0],'');assert.equal(rows[1][4],'PASS');
   assert.equal(rows[12][1],'Record');assert.equal(rows[12][4],'COMPLETED');
   assert.ok(!rows.flat().some(t=>/C2a|Source: S|RECORDED/.test(t)));
-  assert.equal(await page.locator('.method-table td').first().evaluate(el=>getComputedStyle(el).paddingTop),'4px');
+  assert.equal(await page.locator('.method-table td').first().evaluate(el=>getComputedStyle(el).paddingTop),'3px');
   assert.equal(await page.locator('dl.data-fields').first().evaluate(el=>getComputedStyle(el).rowGap),'6px');
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
   const font=await page.locator('.case-title').first().evaluate(el=>{const s=getComputedStyle(el);return [s.fontSize,s.fontWeight,s.fontFamily];});

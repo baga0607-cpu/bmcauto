@@ -176,3 +176,5 @@ Latest delivery: [Edit Task mandatory History](2026-10-22-edit-task-history.md).
 2026-10-27 local refinement: [metadata double-click and firmware summary](2026-10-27-task-meta-interaction.md), not published.
 
 2026-11-13: Spec Ref. citation spacing corrected in preview and exported reports; see [handoff](2026-11-13-spec-ref-spacing.md).
+
+2026-11-13: Approved report spacing refinements deployed; see [handoff](2026-11-13-report-spacing.md).

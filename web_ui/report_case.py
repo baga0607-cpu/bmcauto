@@ -1,4 +1,6 @@
 """Report fields from declared definitions and explicit execution evidence."""
+import re
+
 from result_policy import method_status
 from case_log import result_note
 import json
@@ -131,6 +133,9 @@ def _method_table_rows(result, metadata):
         identity = item.get('method_id') or item.get('id') or detail.get('id')
         label = display(item.get('step'))
         label = label.removeprefix(f'{identity} | {kind} | ')
+        if kind == 'Checkpoint':
+            # Compact descriptions only; preserve recorded observation formatting.
+            label = re.sub(r'\r?\n(?:[ \t]*\r?\n)+', '\n', label)
         number = item.get('step_number', detail.get('step_number'))
         if number is None:
             parent = item.get('step_id') or detail.get('step_id')

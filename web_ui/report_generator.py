@@ -163,7 +163,7 @@ def _build_styles():
             textColor=C_NAVY, spaceBefore=14, spaceAfter=6),
         'tc_title': S('TcTitle',
             fontName=_CJK_FONT_BOLD, fontSize=12, leading=16,
-            textColor=C_NAVY, spaceBefore=6, spaceAfter=3),
+            textColor=C_NAVY, spaceBefore=4, spaceAfter=2),
         'case_name': S('CaseName', fontName=_CJK_FONT_BOLD, fontSize=16.5, leading=23,
             textColor=colors.HexColor('#243447')),
         'tbl_hdr': S('TblHdr',
@@ -585,7 +585,7 @@ def generate_task_pdf_report(task_id, output_path, db_path=None, log_dir=None, r
             table_rows.extend([cell(value if value != '' else ' ') for value in row] for row in method_table_rows(result_data, metadata))
             if manual and manual.get('status') in ('CP', 'C-PASS'):
                 table_rows.append([cell(v) for v in (' ', '—', 'Manual case judgement', 'Note: '+display(manual.get('reason')), 'C-PASS')])
-            methods = Table(table_rows, colWidths=[COL_W*.06, COL_W*.13, COL_W*.39, COL_W*.25, COL_W*.17],
+            methods = Table(table_rows, colWidths=[COL_W*.06, COL_W*.13, COL_W*.39, COL_W*.30, COL_W*.12],
                             repeatRows=1, splitByRow=1, splitInRow=1)
             methods.setStyle(TableStyle([
                 ('BACKGROUND',(0,0),(-1,0),C_LIGHT_BLUE),
