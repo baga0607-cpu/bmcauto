@@ -1,3 +1,5 @@
+2026-11-13 新對話入口：[完整交接文件](2026-11-13-next-chat-handoff.md)。包含已推送內容、部署/同步待辦與尚待確認的 Checkpoint 摘要方案。
+
 2026-11-12 最新：其餘 RF-01 已依確認版本整理 11 支、26 個 Checkpoint；Result 與判定邏輯不變。Repository 11 筆、既有 Plan 的 002 已同步，設定與歷史證據保留。見 [全系列 Checkpoint 交接](2026-11-12-rf01-checkpoints.md)。
 
 2026-11-12 最新：RF-01-008 Checkpoint 已依確認版本分行條列，Result 與判定邏輯不變；正式 Repository／Plan 各一筆同步，設定與歷史證據保留。見 [Checkpoint 整理交接](2026-11-12-rf008-checkpoint.md)。
