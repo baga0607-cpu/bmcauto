@@ -36,7 +36,7 @@ def specification_reference(result, metadata, suite_path=''):
             refs.append(method['criteria'])
     texts = list(dict.fromkeys(display(ref) for ref in refs if ref))
     if texts:
-        return '\n\n'.join(texts)
+        return '\n'.join(texts)
     compliance_suite = any(part.strip().casefold() in ('compliance', 'compliance test', 'compliance tests')
                            for part in suite_path.split('/'))
     if definition.get('test_type') == 'compliance' or definition.get('compliance') is True or compliance_suite:
