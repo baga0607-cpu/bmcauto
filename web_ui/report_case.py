@@ -98,14 +98,27 @@ def description(result, metadata):
     return display((definition if isinstance(definition, dict) else metadata).get('description'))
 
 
+class MethodResult(str):
+    """Displayed result text with the recorded Note boundary, not a text guess."""
+    def __new__(cls, text, note_start=None):
+        instance = super().__new__(cls, text)
+        instance.note_start = note_start
+        return instance
+
+
 def _method_table_rows(result, metadata):
     """Step / Type / Description / Result / Judgement; never infer a verdict.
 
     Numbered definitions join observations by captured method position. Historical
     S/C/R evidence is adapted for display only; saved records are never rewritten.
     """
-    def bounded(text):
-        return text if len(text) <= 1200 else text[:1100].rstrip() + '\n[Excerpt; see full value in saved execution evidence / Test log.]'
+    def bounded(text, note_start=None):
+        if len(text) > 1200:
+            prefix = text[:1100].rstrip()
+            if note_start is not None and note_start >= len(prefix):
+                note_start = None
+            text = prefix + '\n[Excerpt; see full value in saved execution evidence / Test log.]'
+        return MethodResult(text, note_start)
 
     def observation(value, kind):
         if not isinstance(value, dict):
@@ -113,6 +126,7 @@ def _method_table_rows(result, metadata):
         if 'status' not in value:
             return bounded(display(value)), MISSING
         status, parts = method_status(value['status']), []
+        note_start = None
         if kind == 'Record' and status == 'NOT_RECORDED':
             parts.append('Not recorded')
         for key in ('expected', 'actual', 'reason', 'note'):
@@ -122,9 +136,11 @@ def _method_table_rows(result, metadata):
             if key == 'actual' and raw is None and status in ('Skip',):
                 continue
             rendered = 'null' if raw is None else '""' if raw == '' else display(raw)
+            if key == 'note':
+                note_start = len('\n'.join(parts)) + (1 if parts else 0)
             parts.append(key.capitalize() + ': ' + rendered)
         text = '\n'.join(parts) or ('Recorded' if kind == 'Record' and status == 'RECORDED' else MISSING)
-        return bounded(text), display(status)
+        return bounded(text, note_start), display(status)
 
     def typed(item, value=None):
         detail = value if isinstance(value, dict) else {}

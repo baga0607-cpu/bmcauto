@@ -23,9 +23,9 @@ import glob
 import io
 import re
 import unicodedata
-from report_case import result_summary, description, display, firmware, execution_date, method_table_rows
-from report_presentation import note_text, specification_reference
-from report_fonts import case_title_markup
+from report_case import result_summary, description, display, firmware, execution_date, method_table_rows, MethodResult
+from report_presentation import (note_text, specification_reference, result_parts, judgement_class,
+                                 REPORT_BLUE, REPORT_FAIL, REPORT_CONDITIONAL)
 from xml.sax.saxutils import escape as _xml_escape
 
 from reportlab.lib.pagesizes import A4
@@ -57,7 +57,9 @@ for _candidate in _CJK_FONT_CANDIDATES:
     if os.path.exists(_candidate):
         try:
             pdfmetrics.registerFont(TTFont('CJKFont',  _candidate, subfontIndex=0))
-            pdfmetrics.registerFont(TTFont('CJKFontB', _candidate, subfontIndex=0))
+            _bold_candidate = os.path.splitext(_candidate)[0] + 'bd.ttc'
+            pdfmetrics.registerFont(TTFont('CJKFontB', _bold_candidate if os.path.exists(_bold_candidate) else _candidate, subfontIndex=0))
+            pdfmetrics.registerFontFamily('CJKFont', normal='CJKFont', bold='CJKFontB', italic='CJKFont', boldItalic='CJKFontB')
             _CJK_FONT_NAME  = 'CJKFont'
             _CJK_FONT_BOLD  = 'CJKFontB'
             _CJK_FONT_ITALIC = 'CJKFont'   # TTC 通常無獨立斜體
@@ -162,10 +164,16 @@ def _build_styles():
             fontName=_CJK_FONT_BOLD, fontSize=15, leading=20,
             textColor=C_NAVY, spaceBefore=14, spaceAfter=6),
         'tc_title': S('TcTitle',
-            fontName=_CJK_FONT_BOLD, fontSize=12, leading=16,
-            textColor=C_NAVY, spaceBefore=4, spaceAfter=2),
-        'case_name': S('CaseName', fontName=_CJK_FONT_BOLD, fontSize=16.5, leading=23,
-            textColor=colors.HexColor('#243447')),
+            fontName=_CJK_FONT_BOLD, fontSize=10.5, leading=15,
+            textColor=colors.HexColor('#333333'), spaceBefore=3, spaceAfter=2),
+        'case_name': S('CaseName', fontName=_CJK_FONT_BOLD, fontSize=10.5, leading=15,
+            textColor=colors.white),
+        'method_fail': S('MethodFail', fontName=_CJK_FONT_BOLD, fontSize=8.5, leading=12,
+            textColor=colors.HexColor(REPORT_FAIL)),
+        'method_note': S('MethodNote', fontName=_CJK_FONT_BOLD, fontSize=8.5, leading=12,
+            textColor=colors.HexColor(REPORT_CONDITIONAL)),
+        'method_pass': S('MethodPass', fontName=_CJK_FONT_NAME, fontSize=8.5, leading=12,
+            textColor=colors.HexColor('#35634c')),
         'tbl_hdr': S('TblHdr',
             fontName=_CJK_FONT_BOLD, fontSize=9, leading=12,
             textColor=C_WHITE),
@@ -548,14 +556,15 @@ def generate_task_pdf_report(task_id, output_path, db_path=None, log_dir=None, r
             def cell(value, style='tbl_cell'):
                 return Paragraph(_xml_escape(display(value)).replace('\n', '<br/>'), styles[style])
             case_header = Table([[
-                Paragraph(case_title_markup(tc_name, _CJK_FONT_BOLD), styles['case_name']),
+                cell(tc_name, 'case_name'),
                 cell({'CP':'C-PASS','Passed':'PASS','Failed':'FAIL','TBD':'NR','Block':'Block'}.get(status, display(status)),
-                     'status_pass' if status == 'Passed' else 'status_fail' if status == 'Failed' else 'status_tbd'),
-            ]], colWidths=[COL_W-65, 65])
+                     'case_name'),
+            ]], colWidths=[COL_W*.88, COL_W*.12], cornerRadii=[4.5]*4)
             case_header.setStyle(TableStyle([
+                ('BACKGROUND',(0,0),(-1,-1),colors.HexColor(REPORT_FAIL if status == 'Failed' else REPORT_CONDITIONAL if status in ('CP','C-PASS') else REPORT_BLUE)),
                 ('VALIGN',(0,0),(-1,-1),'MIDDLE'),
-                ('LEFTPADDING',(0,0),(-1,-1),0),
-                ('TOPPADDING',(0,0),(-1,-1),5),('BOTTOMPADDING',(0,0),(-1,-1),5),
+                ('LEFTPADDING',(0,0),(-1,-1),4),
+                ('TOPPADDING',(0,0),(-1,-1),3.75),('BOTTOMPADDING',(0,0),(-1,-1),3.75),
             ]))
             story.append(CondPageBreak(100))
             case_header.keepWithNext = True
@@ -571,7 +580,14 @@ def generate_task_pdf_report(task_id, output_path, db_path=None, log_dir=None, r
                     ('BOTTOMPADDING',(0,0),(-1,-1),3),
                 ]))
                 story.append(table)
-            story.append(Paragraph('Test Data', styles['tc_title']))
+            def subsection(title):
+                if title != 'Test Data':
+                    story.append(CondPageBreak(80 if title == 'Test Steps &amp; Results' else 40))
+                heading = Paragraph(title, styles['tc_title'])
+                rule = HRFlowable(width=COL_W, thickness=.5, color=colors.HexColor('#cccccc'), dash=[1, 2], spaceAfter=2)
+                # Reserve room for the first row without grouping a whole table.
+                story.extend([heading, rule])
+            subsection('Test Data')
             field('Description', description(result_data, metadata))
 
             reference = specification_reference(result_data, metadata, cat_name)
@@ -580,23 +596,36 @@ def generate_task_pdf_report(task_id, output_path, db_path=None, log_dir=None, r
             field('Log', 'Full Test log attachments: '+', '.join(attach_names) if attach_names else 'No attachment available.')
             if attach_names:
                 story.append(cell('Open or save the embedded .log attachment for full test steps, criteria and evidence. Use a PDF reader that supports attachments.','note'))
-            story.append(Paragraph('Test Steps &amp; Results', styles['tc_title']))
+            subsection('Test Steps &amp; Results')
             table_rows = [[cell(label, 'tbl_cell_bold') for label in ('Step', 'Type', 'Description', 'Result', 'Judgement')]]
-            table_rows.extend([cell(value if value != '' else ' ') for value in row] for row in method_table_rows(result_data, metadata))
+            method_rows = method_table_rows(result_data, metadata)
             if manual and manual.get('status') in ('CP', 'C-PASS'):
-                table_rows.append([cell(v) for v in (' ', '—', 'Manual case judgement', 'Note: '+display(manual.get('reason')), 'C-PASS')])
+                method_rows.append((' ', '—', 'Manual case judgement', MethodResult('Note: '+display(manual.get('reason')), 0), 'C-PASS'))
+            for step, kind, label, observation, judgement in method_rows:
+                tone = judgement_class(judgement)
+                before, note = result_parts(observation)
+                result_cell = []
+                if before:
+                    result_cell.append(cell(before.rstrip('\n'), 'method_fail' if tone == 'fail' else 'tbl_cell'))
+                if note:
+                    if before:
+                        result_cell.append(Spacer(1, 4))
+                    result_cell.append(cell(note, 'method_fail' if tone == 'fail' or status == 'Failed' else 'method_note'))
+                table_rows.append([cell(step or ' '), cell(kind), cell(label), result_cell or cell(' '),
+                                   cell(judgement, {'fail':'method_fail', 'conditional':'method_note', 'pass':'method_pass'}.get(tone,'tbl_cell'))])
             methods = Table(table_rows, colWidths=[COL_W*.06, COL_W*.13, COL_W*.39, COL_W*.30, COL_W*.12],
                             repeatRows=1, splitByRow=1, splitInRow=1)
             methods.setStyle(TableStyle([
-                ('BACKGROUND',(0,0),(-1,0),C_LIGHT_BLUE),
-                ('GRID',(0,0),(-1,-1),.4,C_BORDER), ('VALIGN',(0,0),(-1,-1),'TOP'),
+                ('BACKGROUND',(0,0),(-1,0),colors.HexColor('#f5f5f5')),
+                ('BOX',(0,0),(-1,-1),.4,colors.HexColor('#dddddd')),
+                ('LINEBELOW',(0,0),(-1,-1),.4,colors.HexColor('#dddddd')), ('VALIGN',(0,0),(-1,-1),'TOP'),
                 ('LEFTPADDING',(0,0),(-1,-1),4), ('RIGHTPADDING',(0,0),(-1,-1),4),
                 ('TOPPADDING',(0,0),(-1,-1),2), ('BOTTOMPADDING',(0,0),(-1,-1),2),
             ]))
             story.append(methods)
             for note in notes:
                 story.append(cell(note,'note'))
-            story.append(Paragraph('Test Information', styles['tc_title']))
+            subsection('Test Information')
             for label, value in [('Task Name', detail.get('name')), ('Tester', setup.get('owner')),
                                  ('Execution Time', execution_date(r['executed_at'])),
                                  ('FW Package', firmware(setup)), ('Configuration', ' ')]:

@@ -12,6 +12,46 @@ dl{margin:0}dl.data-fields,.detail-content dl>div{display:grid;grid-template-col
 @media print{@page{size:A4;margin:15mm}body{background:white;font-size:10pt}main{margin:0;padding:0;max-width:none}.report-header button{display:none}.report-header{padding-bottom:14px}h1{font-size:26pt}h2{font-size:14pt}.stats{padding:10px 0}.stats strong{font-size:16pt}.report-group{margin-top:20px}.case{padding:5pt 0}.case-heading{break-after:avoid}.case-title{font-size:16.5pt}.case-chevron{display:none}.case-expanded{padding-left:0}.status{font-size:9pt}.print-note{display:block;font-size:8pt;color:var(--muted)}summary{list-style:none;font-size:10pt;padding:4pt 0;break-after:avoid}dt{font-size:9pt}dd{font-size:10pt}.data-fields,.detail-content{padding:2pt 0 6pt}dl.data-fields,.detail-content dl>div{grid-template-columns:102pt minmax(0,1fr);gap:4pt 12pt}.method-table{font-size:8.5pt;line-height:1.35}.method-table th,.method-table td{padding:2pt 4pt}.method-table caption{font-size:10pt;break-after:avoid}.method-table tr{break-inside:avoid}.footer{font-size:8pt}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
 .status.c-pass{color:#795000;background:#fff1cc}
 .test-data>h3,.test-information>h3{font-size:14px;font-weight:600;line-height:1.45;margin:0;padding:4px 0;break-after:avoid}
+
+/* Approved compact report presentation (2026-11-16). */
+body{background:#efefef;color:#333;font:13px/1.65 'Open Sans','Helvetica Neue','Segoe UI',Arial,sans-serif}
+main{max-width:1024px;padding:20px;border-top:3px solid #263746}
+.case{padding:0;border-bottom:0}.case + .case{margin-top:12px}
+.case-heading{display:grid;grid-template-columns:16px minmax(0,1fr) calc((100% - 28px)*.12);gap:12px;padding:5px 0;min-height:30px;background:#67ace1;border-radius:6px}
+.case[data-status="FAIL"]>.case-disclosure>.case-heading{background:#dd4b50}
+.case[data-status="C-PASS"]>.case-disclosure>.case-heading{background:#f18c43}
+.case-title{font:700 14px/20px 'Open Sans','Helvetica Neue','Segoe UI',Arial,sans-serif;color:#fff}
+.case-heading:hover .case-title{color:#fff}.case-chevron{color:#fff;margin-left:5px;width:12px}
+.case-heading .status{font-size:14px;line-height:20px;font-weight:750;padding:0 6px;min-width:0;border:0;margin-left:0;letter-spacing:0;text-align:left;color:#fff;background:transparent;border-radius:0}
+.case-expanded{padding:4px 0 0 28px}
+.test-data>h3,.test-information>h3{font-size:14px;font-weight:700;border-bottom:1px dotted #ccc;padding:4px 0;margin:0}
+.data-fields,.detail-content{padding:2px 0 6px}
+dl.data-fields,.detail-content dl>div{grid-template-columns:136px minmax(0,1fr);gap:6px 18px}
+dt{color:#666;font-size:12px}dd{color:#333;font-size:13px;line-height:1.45}
+.test-information{border-top:0;margin-top:0}
+.method-table{margin:2px 0 8px;font-size:12px;line-height:1.4}
+.method-table caption{font-size:14px;font-weight:700;border-bottom:1px dotted #ccc;padding:4px 0 6px;margin-bottom:0}
+.method-table th{background:#f5f5f5;color:#444;font-weight:700;padding:3px 6px;border-width:1px 0;border-color:#ddd}
+.method-table td{padding:3px 6px;border-width:0 0 1px;border-color:#ddd}
+.method-table tbody{border:1px solid #ddd}
+.method-table th:first-child{border-left:1px solid #ddd}.method-table th:last-child{border-right:1px solid #ddd}
+.judgement-text{color:#606b77}.method-pass .judgement-text{color:#35634c}
+.method-fail .result-text,.method-fail .judgement-text{color:#dd4b50;font-weight:700}
+.method-conditional .judgement-text{color:#f18c43;font-weight:700}
+.result-note{display:block;margin-top:6px;color:#f18c43;font-weight:700;line-height:1.4;background:transparent;border:0}
+.result-note strong{display:block;color:inherit;margin-bottom:3px}
+.case[data-status="FAIL"] .result-note,.method-fail .result-note{color:#dd4b50}
+@media print{
+ main{max-width:none;margin:0;padding:0}
+ .case-heading{grid-template-columns:minmax(0,1fr) 12%;gap:0;min-height:22.5pt;padding:3.75pt 0;border-radius:4.5pt}
+ .case-title{font-size:10.5pt;line-height:15pt;padding-left:4pt}.case-heading .status{font-size:10.5pt;line-height:15pt;padding:0 4pt}
+ .case-chevron{display:none}.case-expanded{padding-left:0}.case + .case{margin-top:9pt}
+ .test-data>h3,.test-information>h3,.method-table caption{font-size:10pt;padding:3pt 0}
+ dt{font-size:9pt}dd{font-size:10pt}.data-fields,.detail-content{padding:2pt 0 6pt}
+ dl.data-fields,.detail-content dl>div{grid-template-columns:102pt minmax(0,1fr);gap:4pt 12pt}
+ .method-table{font-size:8.5pt;line-height:1.35}.method-table th,.method-table td{padding:2pt 4pt}
+ .result-note{margin-top:4pt}
+}
 </style></head><body><main>
 <header class="report-header"><div><p class="eyebrow">BMC Agent / Quality assurance</p><h1>BMC Test Report</h1><p class="generated">Generated {{GENERATED}}</p></div><button class="primary" id="print-report">Print / Save PDF</button></header>
 <div class="stats" aria-label="Formal report results">{{STATS}}</div>

@@ -12,8 +12,21 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from case_log import test_log_text
-from report_case import description, display, execution_date, firmware, result_summary, method_table_rows
-from report_presentation import note_text, specification_reference
+from report_case import description, display, execution_date, firmware, result_summary, method_table_rows, MethodResult
+from report_presentation import note_text, specification_reference, result_parts, judgement_class
+
+
+def method_row_html(method):
+    step, kind, description_text, result, judgement = method
+    before, note = result_parts(result)
+    content = escape(before)
+    if note:
+        note_html = '<strong>Note: </strong>'+escape(note[6:]) if note.startswith('Note: ') else escape(note)
+        content += '<span class="result-note">'+note_html+'</span>'
+    return ('<tr class="method-'+judgement_class(judgement)+'">'
+            + ''.join('<td>'+escape(value)+'</td>' for value in (step, kind, description_text))
+            + '<td class="result-text">'+content+'</td>'
+            + '<td class="judgement-text">'+escape(judgement)+'</td></tr>')
 
 
 def object_value(raw):
@@ -91,10 +104,11 @@ def generate_html_report(db_path, reports, preview_case_id=None):
                     folder_id = folders[folder_id]['parent_id']
                 reference = specification_reference(result, metadata, '/'.join(reversed(folder_names)))
                 spec_field = '' if reference is None else f'<dt>Spec Ref.</dt><dd>{escape(reference)}</dd>'
-                method_body = ''.join('<tr>'+''.join('<td>'+escape(value)+'</td>' for value in method)+'</tr>'
+                method_body = ''.join(method_row_html(method)
                                       for method in method_table_rows(result, metadata))
                 if manual and manual.get('status') in ('CP', 'C-PASS'):
-                    method_body += '<tr><td></td><td>—</td><td>Manual case judgement</td><td>Note: '+escape(display(manual.get('reason')))+'</td><td>C-PASS</td></tr>'
+                    method_body += method_row_html(('', '—', 'Manual case judgement',
+                                                   MethodResult('Note: '+display(manual.get('reason')), 0), 'C-PASS'))
                 methods = ('<table class="method-table"><caption>Test Steps &amp; Results</caption>'
                            '<colgroup><col class="method-step"><col class="method-type"><col><col class="method-result"><col class="method-judgement"></colgroup>'
                            '<thead><tr><th scope="col">Step</th><th scope="col">Type</th>'
@@ -124,7 +138,7 @@ def generate_html_report(db_path, reports, preview_case_id=None):
                 '<meta name="viewport" content="width=device-width,initial-scale=1">'
                 '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'">'
                 '<title>Test Case report preview</title><style>'+styles+
-                'body{background:white}main{max-width:none;margin:0;padding:20px 24px}.case{border-bottom:0}'
+                'body{background:white}main{max-width:none;margin:0;padding:20px}.case{border-bottom:0}'
                 '</style></head><body><main>'+content+'</main></body></html>')
         return html.encode('utf-8'), {}
     values = {'GENERATED':escape(generated),'STATS':stats,'SECTIONS':''.join(sections)}

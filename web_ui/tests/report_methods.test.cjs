@@ -38,7 +38,7 @@ const {chromium}=require(process.env.BMC_PLAYWRIGHT_MODULE||'playwright');
   assert.equal(await page.locator('dl.data-fields').first().evaluate(el=>getComputedStyle(el).rowGap),'6px');
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
   const font=await page.locator('.case-title').first().evaluate(el=>{const s=getComputedStyle(el);return [s.fontSize,s.fontWeight,s.fontFamily];});
-  assert.equal(font[0],'22px');assert.equal(font[1],'600');assert.ok(font[2].includes('Bahnschrift'));
+  assert.equal(font[0],'14px');assert.equal(font[1],'700');assert.ok(font[2].includes('Segoe UI'));
   const open=page.locator('a[target=_blank]').first(),href=await open.getAttribute('href');
   assert.ok(fs.readFileSync(fileURLToPath(new URL(href,page.url()))).length>0);
   const [popup]=await Promise.all([page.waitForEvent('popup'),open.click()]);await popup.waitForLoadState();

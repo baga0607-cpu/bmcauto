@@ -4,6 +4,22 @@ import re
 from report_case import display
 
 
+REPORT_BLUE = '#67ace1'
+REPORT_FAIL = '#dd4b50'
+REPORT_CONDITIONAL = '#f18c43'
+
+
+def result_parts(value):
+    """Return exact displayed text before and within an explicitly recorded Note."""
+    start = getattr(value, 'note_start', None)
+    return (str(value), '') if start is None else (value[:start], value[start:])
+
+
+def judgement_class(value):
+    return {'FAIL': 'fail', 'FAILED': 'fail', 'C-PASS': 'conditional',
+            'PASS': 'pass'}.get(value, 'neutral')
+
+
 def note_text(result):
     """Consume the execution pipeline's canonical note, without re-deriving it."""
     value = result.get('note')
