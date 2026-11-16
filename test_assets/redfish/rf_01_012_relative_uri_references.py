@@ -3,11 +3,11 @@ import re
 from collections import deque
 from urllib.parse import urljoin, urlsplit, urlunsplit
 
-TEST_CASE = {'modified_at': "2026-11-12T09:19:33.047925+00:00",
+TEST_CASE = {'modified_at': '2026-11-16T03:41:57.257218+00:00',
  'test_type': 'compliance',
  'spec_ref': ['DSP0266 v1.25.0 sections 6.1 and 6.7 (relative references in response bodies and HTTP headers).',
  'RFC 3986 section 4.2 (relative-reference syntax); Redfish section 6.7 imposes narrower allowed '
- 'forms.'],
+ 'forms.', 'RFC 8288 section 3 (Link parameter syntax) and Appendix B.3 (compatible parsing).'],
  'created_at': '2026-10-30T07:19:35.437164+00:00',
  'name': 'RF-01-012 Relative URI References',
  'description': 'Inspect discovered Body and GET-response header URI references for the Redfish '
@@ -25,6 +25,9 @@ TEST_CASE = {'modified_at': "2026-11-12T09:19:33.047925+00:00",
                  {'step_number': 2,
                   'type': 'Checkpoint',
                   'step': "Verify that traversal completed without:\n- Resources that could not be read.\n- Invalid links.\n- Pagination errors."},
+                 {'step_number': 2,
+                  'type': 'Checkpoint',
+                  'step': 'Verify Link header parameter syntax under RFC 8288 section 3. Values containing non-token characters must be quoted. Record syntax failures while continuing compatible parsing and subsequent URI checks.'},
                  {'step_number': 3,
                   'type': 'Action',
                   'step': 'Classify original Body and GET-response header URI references before resolution.'},
@@ -45,12 +48,12 @@ class CaseFailure(AssertionError):
     """Non-program failure with an actionable reason."""
 
 
-_METHOD_CHECKS = [('Task\\ origin\\ available', 1),
+_METHOD_CHECKS = [('Link header parameter syntax', 4), ('Task\\ origin\\ available', 1),
  ('Traversal\\ evidence\\ available', 3),
  ('Traversal\\ complete', 3),
- ('Original\\ URI\\ relative\\-reference\\ form', 5),
- ('Applicable\\ relative\\ references\\ found', 6),
- ('Scope\\ sufficient\\ for\\ Pass', 7)]
+ ('Original\\ URI\\ relative\\-reference\\ form', 6),
+ ('Applicable\\ relative\\ references\\ found', 7),
+ ('Scope\\ sufficient\\ for\\ Pass', 8)]
 
 
 def _method_emit(context, index, status, **detail):
@@ -219,7 +222,7 @@ def _classify(raw):
     return "relative", ["Relative reference must start with / or //authority"]
 
 
-def _link_references(header):
+def _link_references(header, syntax_issues=None):
     """Parse Link targets and anchor parameters with quoted/angle-bracket boundaries."""
     if not isinstance(header, str) or not header.strip():
         raise CaseFailure("Empty or non-string Link header")
@@ -249,7 +252,10 @@ def _link_references(header):
     values.append(header[start:].strip())
     results = []
     token = r"[!#$%&'*+.^_\x60|~0-9A-Za-z-]+"
-    parameter = re.compile(r"\s*;\s*(" + token + r')\s*(?:=\s*("(?:\\.|[^"\\])*"|' + token + r"))?")
+    # Accept unquoted URI-like values with unambiguous boundaries (RFC8288 B.3).
+    # Keep names token-only; reject whitespace, controls and broken delimiters.
+    unquoted = r'[^\s;,"<>\\\x00-\x1f\x7f]+'
+    parameter = re.compile(r"[ \t]*;[ \t]*(" + token + r')[ \t]*(?:=[ \t]*("(?:\\.|[^"\\])*"|' + unquoted + r"))?[ \t]*(?=;|$)")
     for index, value in enumerate(values):
         match = re.match(r"^<([^<>]*)>", value)
         if not match:
@@ -260,8 +266,12 @@ def _link_references(header):
         while value[offset:].strip():
             param = parameter.match(value, offset)
             if not param:
-                raise CaseFailure("Uninterpretable Link parameter")
+                raise CaseFailure(f"Uninterpretable Link parameter at Link[{index}], offset {offset}: {value[offset:offset + 120]!r}")
             name, text = param.groups()
+            if text is not None and not text.startswith('"') and not re.fullmatch(token, text):
+                if syntax_issues is not None:
+                    syntax_issues.append({"field": f"Link[{index}]/{name}", "parameter": name,
+                                          "value": text, "reason": "Parameter value contains non-token characters and requires double quotes"})
             if name.lower() == "anchor":
                 if anchor_seen or text is None:
                     raise CaseFailure("Missing or duplicate Link anchor value")
@@ -394,7 +404,7 @@ def execute(client, context=None, preset=None):
         raise RuntimeError("BMCAgent did not supply a dictionary execution context")
     evidence = []
     observations = {"resources": [], "uris": [], "violations": [], "excluded": [], "unread": [],
-                    "header_errors": [], "header_observations": [],
+                    "header_errors": [], "header_syntax_errors": [], "header_observations": [],
                     "scope": "Explicit Body URI fields and observed GET Location/Content-Location/Link headers"}
     _log(context, "section", "Task connection settings", report_step=1)
     conf = context.get("redfish")
@@ -443,13 +453,20 @@ def execute(client, context=None, preset=None):
                 if name == "location":
                     location_issues = issues
         if "link" in present:
+            syntax_issues = []
             try:
-                for field, reference in _link_references(present["link"]):
+                for field, reference in _link_references(present["link"], syntax_issues):
                     inspect_uri(reference, uri, "headers/" + field, "header")
             except CaseFailure as error:
                 item = {"source": uri, "header": "Link", "raw": present["link"], "reason": str(error)}
                 observations["header_errors"].append(item)
                 unread(uri, "Link header cannot be completely interpreted", item)
+                syntax_issues.append({"reason": str(error), "raw": present["link"]})
+            details = [dict(issue, source=uri, header="Link") for issue in syntax_issues]
+            observations["header_syntax_errors"].extend(details)
+            _log(context, "check", "Link header parameter syntax", not details,
+                 expected="RFC 8288 parameter values use token or quoted-string syntax",
+                 actual={"source": uri, "issues": details})
         return location_issues
 
     _log(context, "section", "Resource traversal and HTTP evidence", report_step=2)
@@ -541,11 +558,11 @@ def execute(client, context=None, preset=None):
         observations["pending"] = list(queue)
         return _finish(context, "Error", "Unexpected program error (" + type(error).__name__ + ")",
                        evidence, observations)
-    failed = bool(errors or observations["violations"] or relative_count == 0)
+    failed = bool(errors or observations["violations"] or observations["header_syntax_errors"] or relative_count == 0)
     if relative_count == 0:
         reason = "No applicable relative URI references were found"
     elif failed:
-        reason = f"Relative URI violations: {len(observations['violations'])}; traversal issues: {len(errors)}"
+        reason = f"Relative URI violations: {len(observations['violations'])}; Link syntax issues: {len(observations['header_syntax_errors'])}; traversal issues: {len(errors)}"
     else:
         reason = f"Validated {relative_count} relative references in the discovered Body and GET-header scope"
     return _finish(context, "Fail" if failed else "Pass", reason, evidence, observations)
