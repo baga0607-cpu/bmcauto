@@ -36,7 +36,7 @@ class ReportEmphasisTest(unittest.TestCase):
         self.assertIn('Actual: body\nNote: not a note\n<span', html)
         self.assertIn('&lt;tag&gt; &amp;', html)
         reader = TextReader(); reader.feed(html)
-        self.assertEqual(reader.text, ''.join(row))
+        self.assertEqual(reader.text, ''.join((row[0], row[2], row[4], row[3])))
 
     def test_unstructured_note_words_are_not_promoted(self):
         row = self.row(status='PASS', actual='Note: just an observation')
@@ -56,7 +56,7 @@ class ReportEmphasisTest(unittest.TestCase):
                     ('', '—', 'Manual case judgement', MethodResult('Note: Reviewed', 0), 'C-PASS'),
                     self.row(status='FAILED', reason='Request failed')]:
             reader = TextReader(); reader.feed(method_row_html(row))
-            self.assertEqual(reader.text, ''.join(row))
+            self.assertEqual(reader.text, ''.join((row[0], row[2], row[4], row[3])))
 
 
 if __name__ == '__main__':

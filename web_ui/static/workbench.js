@@ -3,7 +3,7 @@
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const icons = {sort:'M4 4v16m-3-3 3 3 3-3M10 5h4M10 11h7M10 17h10',folderPlus:'M3 7h7l2 2h9v11H3z M3 7V4h7l2 3 M12 12v6 M9 15h6',eye:'M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12 M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0',plus:'M12 5v14M5 12h14',folder:'M3 7h7l2 2h9v11H3z M3 7V4h7l2 3',plan:'M6 3h9l4 4v14H6z M14 3v5h5 M9 12h7 M9 16h7',task:'M8 4h12v17H4V4h4 M8 2h8v4H8z M8 11l2 2 5-5',chevron:'M9 5l7 7-7 7',trash:'M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7',menu:'M4 6h16M4 12h16M4 18h16',sun:'M12 3v2M12 19v2M3 12h2M19 12h2M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2 M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0'};
+const icons = {replace:'M3 8h16l-4-4m6 12H5l4 4',history:'M3 11a9 9 0 1 1 2 7M3 4v7h7 M12 7v5l4 2',edit:'M4 16l12-12 4 4L8 20H4z',close:'M5 5l14 14M19 5L5 19',checkAll:'M3 11l4 4 9-10M10 16l3 3 9-11',settings:'M4 7h16M4 17h16M8 4v6M16 14v6',sort:'M4 4v16m-3-3 3 3 3-3M10 5h4M10 11h7M10 17h10',folderPlus:'M3 7h7l2 2h9v11H3z M3 7V4h7l2 3 M12 12v6 M9 15h6',eye:'M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12 M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0',plus:'M12 5v14M5 12h14',folder:'M3 7h7l2 2h9v11H3z M3 7V4h7l2 3',plan:'M6 3h9l4 4v14H6z M14 3v5h5 M9 12h7 M9 16h7',task:'M8 4h12v17H4V4h4 M8 2h8v4H8z M8 11l2 2 5-5',chevron:'M9 5l7 7-7 7',trash:'M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7',menu:'M4 6h16M4 12h16M4 18h16',sun:'M12 3v2M12 19v2M3 12h2M19 12h2M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2 M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0'};
 const icon = name => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${icons[name] || icons.plan}"/></svg>`;
 const state = {projects:[], repository:[], route:[], tab:'cases', panel:null, caseId:null, definition:null, dirty:false, scope:new Set(), log:'', activeTask:null, generation:0};
 let confirmationPending=false;
@@ -363,9 +363,7 @@ function syncCaseSelections(){
    input.checked=items.length>0&&count===items.length;input.indeterminate=count>0&&count<items.length;input.setAttribute('aria-checked',input.indeterminate?'mixed':String(input.checked));
  }
  if(document.body.classList.contains('repository-page')){
-   const controls=$('.repository-page-controls');let del=$('[data-action=repository-batch-delete]');
-   if(state.repositorySelection?.size&&!del)controls?.insertAdjacentHTML('beforeend',button('Delete selected','repository-batch-delete','danger'));
-   else if(!state.repositorySelection?.size)del?.remove();
+   refreshRepoSelection();
  }
 }
 function folderExpansionScope(type){
@@ -496,15 +494,122 @@ function selectedRepositoryFolder(){return state.repositoryFolders.find(f=>f.id=
 function repositoryFolderOptions(selected) {
  return (state.repositoryFolders||[]).map(f=>`<option value="${escape(f.id)}" ${selected===f.id?'selected':''}>${escape(f.folder_path)}</option>`).join('');
 }
+function executionIconButton(label,action,name,kind='',extra=''){
+ return button(icon(name),action,'execution-icon-button '+kind,'title="'+escape(label)+'" aria-label="'+escape(label)+'" '+extra);
+}
+function repoIcon(label,action,glyph,extra=''){
+ return executionIconButton(label,action,glyph,glyph==='trash'?'danger':'',extra);
+}
+function repositoryTools(){
+ return '<div class="repository-page-controls actions repository-tools"><label><span class="sr-only">Find Test Case</span><input id="repository-search" type="search" placeholder="Find Test Case"></label>'+
+ repoIcon('New folder','repo-folder','folderPlus')+repoIcon('Add Test Case','repo-import','plus')+
+ repoIcon('Replace Test Case','repo-replace','replace')+repoIcon('Delete selected','repo-delete','trash')+
+ repoIcon('Select all','repo-all','checkAll')+repoIcon('Rename folder','repo-rename','edit')+
+ repoIcon('Sort Test Cases','repo-sort','sort')+repoIcon('History','repo-history','history')+'</div>';
+}
+function repoRows(){return Array.from(document.querySelectorAll('#repository-table tr[data-folder-node],#repository-table tr[data-repository-id]'));}
+function repoKey(row){return row.dataset.repositoryId?'case:'+row.dataset.repositoryId:'folder:'+row.dataset.folderNode;}
+function refreshRepoSelection(){
+ const selected=state.repositorySelection??=new Set(),{case_ids,folder_ids}=repositorySelectionData();
+ for(const row of repoRows()){
+  const active=selected.has(repoKey(row));
+  row.classList.toggle('repo-selected',active);
+  row.querySelector('.repository-folder-name')?.setAttribute('aria-pressed',String(active));
+ }
+ const root=state.repositoryFolders.find(f=>f.is_root)?.id;
+ for(const [action,disabled] of Object.entries({'repo-folder':selected.size>1,'repo-import':selected.size>1,'repo-delete':!selected.size||folder_ids.includes(root),'repo-replace':case_ids.length!==1||selected.size!==1,'repo-rename':folder_ids.length!==1||selected.size!==1||folder_ids.includes(root),'repo-sort':folder_ids.length!==1||selected.size!==1})){
+  const control=document.querySelector(`[data-action="${action}"]`);if(control)control.disabled=disabled;
+ }
+}
+function selectRepoRow(row,event){
+ const selected=state.repositorySelection??=new Set(),key=repoKey(row);
+ const keys=repoRows().filter(r=>!r.hidden).map(repoKey),start=keys.indexOf(state.repoAnchor),end=keys.indexOf(key);
+ if(event.shiftKey&&start>=0){
+  if(!event.ctrlKey&&!event.metaKey)selected.clear();
+  keys.slice(Math.min(start,end),Math.max(start,end)+1).forEach(k=>selected.add(k));
+ }else{
+  if(event.ctrlKey||event.metaKey){if(selected.has(key))selected.delete(key);else selected.add(key);}
+  else{selected.clear();selected.add(key);}
+  state.repoAnchor=key;
+ }
+ state.repositoryFolder=row.dataset.folderNode||state.repository.find(c=>c.id===row.dataset.repositoryId)?.folder_id;
+ refreshRepoSelection();row.focus({preventScroll:true});
+}
+function repoDialog(title,body,footer=''){
+ const dialog=document.createElement('dialog');dialog.className='repo-operation';dialog.setAttribute('aria-label',title);
+ if(footer){
+  dialog.classList.add('repo-footer-dialog');
+  dialog.innerHTML=`<h2>${escape(title)}</h2>${body}<p class="plan-create-error" role="alert"></p><div class="actions">${footer}</div>`;
+ }else{
+  dialog.classList.add('repo-view-dialog');
+  dialog.innerHTML=`<header><h2>${escape(title)}</h2>${repoIcon('Close','repo-close','close')}</header><div class="repo-view-content">${body}</div><p role="alert"></p>`;
+ }
+ document.body.append(dialog);dialog.addEventListener('close',()=>dialog.remove(),{once:true});
+ dialog.querySelector('[data-action=repo-close]').onclick=()=>dialog.close();
+ dialog.showModal();return dialog;
+}
+function repoConfirm(dialog,callback){
+ const btn=dialog.querySelector('[data-action=repo-confirm]');
+ btn.onclick=async()=>{btn.disabled=true;try{await callback();dialog.close();await draw();}catch(e){dialog.querySelector('[role=alert]').textContent=e.message;btn.disabled=false;}};
+}
+async function repositoryOperation(action){
+ const selection=repositorySelectionData(),folder=selection.folder_ids[0],current=state.repository.find(c=>c.id===selection.case_ids[0]);
+ const root=state.repositoryFolders.find(f=>f.is_root).id,parent=folder||current?.folder_id||root;
+ if(action==='repo-all'){
+  const query=$('#repository-search')?.value.trim();
+  state.repositorySelection=new Set(query?repoRows().filter(r=>!r.hidden&&r.dataset.folderNode!==root).map(repoKey):[...state.repositoryFolders.filter(f=>!f.is_root).map(f=>'folder:'+f.id),...state.repository.map(c=>'case:'+c.id)]);refreshRepoSelection();return;
+ }
+ const existing={'repo-folder':'new-repository-folder','repo-import':'new-repository-case','repo-sort':'resort-repository-folder'};
+ if(existing[action]){const control=document.querySelector(`[data-action="${action}"]`);control.dataset.id=parent;return doAction(existing[action],control);}
+ if(action==='repo-rename'){
+  const target=state.repositoryFolders.find(f=>f.id===folder);
+  if(!target||target.is_root)return;
+  const dialog=repoDialog('Rename folder',`<label class="field"><span>Folder name</span><input required maxlength="100" value="${escape(target.name)}"></label>`,
+   repoIcon('Confirm rename','repo-confirm','checkAll','disabled')+repoIcon('Cancel','repo-close','close'));
+  const input=dialog.querySelector('input'),confirm=dialog.querySelector('[data-action=repo-confirm]');
+  input.oninput=()=>{confirm.disabled=!input.value.trim()||input.value.trim()===target.name;};
+  input.onkeydown=e=>{if(e.key==='Enter'&&!e.isComposing){e.preventDefault();confirm.click();}};
+  repoConfirm(dialog,()=>api('/api/repository/folders/'+encodeURIComponent(target.id),'PATCH',{name:input.value.trim()}));
+  input.focus();input.select();return;
+ }
+ if(action==='repo-history'){
+  const entries=await api('/api/repository/history');
+  const describe=v=>v?Object.entries(v).map(([k,x])=>k+' = '+(Array.isArray(x)?x.join(', '):x)).join('\n'):'—';
+  repoDialog('History',`<table><thead><tr><th>Time</th><th>Operator</th><th>Item</th><th>Change</th></tr></thead><tbody>${entries.flatMap(e=>(e.changes.length?e.changes:[{}]).map(c=>`<tr><td>${escape(version(e.time))}</td><td>${escape(e.operator||'')}</td><td>${escape(c.after?.name||c.before?.name||c.after?.folder_path||c.before?.folder_path||c.item||'')}</td><td><strong>${escape(e.operation)}</strong><pre>${escape(describe(c.before))} → ${escape(describe(c.after))}</pre></td></tr>`)).join('')}</tbody></table>`);return;
+ }
+ if(action==='repo-delete'){
+  const dialog=repoDialog('Delete selected items?',`<p>${selection.folder_ids.length} folders · ${selection.case_ids.length} Test Cases</p>${folder?'<label class="field"><span>Test Cases inside selected folders</span><select><option value="keep">Move to parent folder</option><option value="delete">Delete with folders</option></select></label>':''}`,repoIcon('Confirm deletion','repo-confirm','trash')+repoIcon('Cancel','repo-close','close'));
+  repoConfirm(dialog,async()=>{await api('/api/repository/batch','POST',{...selection,action:'delete',confirm:true,keep_cases:dialog.querySelector('select')?.value==='keep'});state.repositorySelection.clear();state.repositoryDefinition=null;});return;
+ }
+ if(action==='repo-replace'&&current){
+  const dialog=repoDialog('Replace Test Case',`<h3>Current Test Case</h3><p>${escape(current.name)} · ${escape(version(current.metadata?.modified_at||current.source_created_at||current.source_version))}</p><h3>Replacement Test Case</h3><label class="field"><span>Python file</span><input type="file" accept=".py"></label><p data-candidate></p>`,repoIcon('Confirm replacement','repo-confirm','replace','disabled')+repoIcon('Cancel','repo-close','close'));
+  const input=dialog.querySelector('input'),preview=dialog.querySelector('[data-candidate]'),confirm=dialog.querySelector('[data-action=repo-confirm]');
+  let source=null,request=0;
+  input.onchange=async()=>{const n=++request;confirm.disabled=true;source=null;preview.textContent='';
+   try{const file=input.files[0];if(!file)return;if(!file.name.toLowerCase().endsWith('.py'))throw Error('Choose a .py file.');
+    const text=await file.text(),{metadata}=await api('/api/repository/inspect','POST',{source:text});if(n!==request)return;
+    preview.textContent=metadata.name+' · '+version(metadata.modified_at||metadata.created_at||new Date(file.lastModified).toISOString());source=text;confirm.disabled=false;
+   }catch(e){if(n===request)preview.textContent=e.message;}
+  };
+  repoConfirm(dialog,()=>api('/api/repository/testcases/'+current.id,'PUT',{source,previous_version:current.source_version}));
+ }
+}
+document.addEventListener('click',event=>{
+ if(!document.body.classList.contains('repository-page'))return;
+ const row=event.target.closest('#repository-table tr[data-folder-node],#repository-table tr[data-repository-id]');
+ if(!row||event.target.closest('input,select,button:not(.repository-folder-name)'))return;
+ event.stopImmediatePropagation();selectRepoRow(row,event);
+},true);
+
 function repositoryTable(add=false,plan=null) {
  state.repositoryCollapsed=savedFolderCollapse('repository',state.repositoryFolders);
  const selected=selectedRepositoryFolder();state.repositoryFolder=selected?.id;
  const folderCounts=new Map();
  const folderCount=id=>{if(!folderCounts.has(id))folderCounts.set(id,state.repository.filter(c=>c.folder_id===id).length+state.repositoryFolders.filter(f=>f.parent_id===id).reduce((n,f)=>n+folderCount(f.id),0));return folderCounts.get(id);};
  const caseRow=(c,depth)=>{const exists=plan?.testcases.some(t=>t.tc_name.toLowerCase()===c.name.toLowerCase());
- return `<tr tabindex="0" aria-haspopup="menu" title="Right-click for actions" data-repository-id="${escape(c.id)}" ${add?'':'draggable="true"'} data-search="${escape(c.name.toLowerCase())}" style="--depth:${depth}"><td><div class="case-selection-label">${repositoryCheck('case',c.id)}<strong>${automation(c.metadata.automation)}${escape(c.name)}</strong></div><p class="help">${escape(version(c.source_created_at))}</p></td><td>${add?button(exists?'Already in Plan':'Add to Plan','add-case',exists?'':'primary',`data-id="${escape(c.id)}" ${exists||plan.locked?'disabled':''}`):Object.keys(c.metadata.parameters||{}).length?button(`Parameters (${Object.keys(c.metadata.parameters||{}).length})`,'view-parameters','small-button',`data-id="${escape(c.id)}" aria-label="Parameters for ${escape(c.name)}"`):''}</td>${add?'':`<td><div class="actions">${button(icon('eye'),'view-standard','small-button icon-button',`data-id="${escape(c.id)}" title="View" aria-label="View ${escape(c.name)}"`)}${button(icon('trash'),'remove-standard','small-button icon-button danger',`data-id="${escape(c.id)}" title="Remove" aria-label="Remove ${escape(c.name)}"`)}</div></td>`}</tr>`;};
- const children=(parent,depth)=>state.repositoryFolders.filter(f=>f.parent_id===parent).sort((a,b)=>a.position-b.position).map(f=>`<tr tabindex="0" aria-haspopup="menu" title="Right-click for actions" class="repository-folder-row" data-folder-node="${escape(f.id)}" data-action="select-repository-folder" data-id="${escape(f.id)}" ${add||f.is_root?'':'draggable="true"'} style="--depth:${depth}"><td><div class="repository-folder-line">${f.is_root?'<input type="checkbox" disabled data-selection-root="repository" aria-label="BMC">':repositoryCheck('folder',f.id)}${button(state.repositoryCollapsed?.has(f.id)?'&#9656;':'&#9662;','toggle-repository-folder','folder-collapse',`data-id="${escape(f.id)}" aria-label="Toggle folder" aria-expanded="${!state.repositoryCollapsed?.has(f.id)}"`)}<button type="button" class="repository-folder-name" data-action="select-repository-folder" data-id="${escape(f.id)}" aria-pressed="${selected?.id===f.id}" title="${escape(f.folder_path)}">${icon('folder')}<strong>${escape(f.name)}</strong><span class="repository-folder-count">(${folderCount(f.id)})</span></button>${state.repositoryRename===f.id?`<input class="repository-rename" data-id="${escape(f.id)}" aria-label="Folder name" value="${escape(f.name)}" maxlength="100">`:''}</div></td>${add?'':'<td></td>'}<td><div class="actions">${add?button('Add folder to Plan','add-repository-folder','small-button',`data-id="${escape(f.id)}" ${plan.locked?'disabled':''}`):folderAction('Add Test Case','new-repository-case',f.id)+folderAction('New folder','new-repository-folder',f.id)+folderAction('Resorting','resort-repository-folder',f.id)+(f.is_root?'':folderAction('Remove folder','remove-repository-folder',f.id,'danger'))}</div></td></tr>${state.repositoryCollapsed?.has(f.id)?'':children(f.id,depth+1)+state.repository.filter(c=>c.folder_id===f.id).map(c=>caseRow(c,depth+1)).join('')}`).join('');
- const html=`${add?'<div class="toolbar"><label><span class="sr-only">Find Test Case</span><input id="repository-search" type="search" placeholder="Find Test Case"></label></div>':''}<div class="table-wrap repository-scroll"><table id="repository-table" class="repository-hierarchy"><thead><tr><th>${listSelectAll('repository')}Directory / Test Case</th><th>${add?'Plan action':'Parameters'}</th>${add?'':'<th>Actions</th>'}</tr></thead><tbody>${children(null,0)}</tbody></table></div>`;
+ return `<tr tabindex="0"  data-repository-id="${escape(c.id)}" ${add?'':'draggable="true"'} data-search="${escape(c.name.toLowerCase())}" style="--depth:${depth}"><td><div class="case-selection-label">${add?repositoryCheck('case',c.id):''}<strong>${automation(c.metadata.automation)}${escape(c.name)}</strong></div><p class="help">${escape(version(c.source_created_at))}</p></td><td>${add?button(exists?'Already in Plan':'Add to Plan','add-case',exists?'':'primary',`data-id="${escape(c.id)}" ${exists||plan.locked?'disabled':''}`):repoIcon('View Python source','view-standard','eye',`data-id="${escape(c.id)}"`)+(Object.keys(c.metadata.parameters||{}).length?repoIcon('Parameters for '+c.name,'view-parameters','settings',`data-id="${escape(c.id)}"`):'')}</td>${add?'':`<td><div class="actions">${button(icon('eye'),'view-standard','small-button icon-button',`data-id="${escape(c.id)}" title="View" aria-label="View ${escape(c.name)}"`)}${button(icon('trash'),'remove-standard','small-button icon-button danger',`data-id="${escape(c.id)}" title="Remove" aria-label="Remove ${escape(c.name)}"`)}</div></td>`}</tr>`;};
+ const children=(parent,depth)=>state.repositoryFolders.filter(f=>f.parent_id===parent).sort((a,b)=>a.position-b.position).map(f=>`<tr tabindex="0"  class="repository-folder-row" data-folder-node="${escape(f.id)}" data-action="select-repository-folder" data-id="${escape(f.id)}" ${add||f.is_root?'':'draggable="true"'} style="--depth:${depth}"><td><div class="repository-folder-line">${!add?'':f.is_root?'<input type="checkbox" disabled data-selection-root="repository" aria-label="BMC">':repositoryCheck('folder',f.id)}${button(state.repositoryCollapsed?.has(f.id)?'&#9656;':'&#9662;','toggle-repository-folder','folder-collapse',`data-id="${escape(f.id)}" aria-label="Toggle folder" aria-expanded="${!state.repositoryCollapsed?.has(f.id)}"`)}<button type="button" class="repository-folder-name" data-action="select-repository-folder" data-id="${escape(f.id)}" aria-pressed="${selected?.id===f.id}" title="${escape(f.folder_path)}">${icon('folder')}<strong>${escape(f.name)}</strong><span class="repository-folder-count">(${folderCount(f.id)})</span></button>${state.repositoryRename===f.id?`<input class="repository-rename" data-id="${escape(f.id)}" aria-label="Folder name" value="${escape(f.name)}" maxlength="100">`:''}</div></td>${add?'':'<td></td>'}<td><div class="actions">${add?button('Add folder to Plan','add-repository-folder','small-button',`data-id="${escape(f.id)}" ${plan.locked?'disabled':''}`):folderAction('Add Test Case','new-repository-case',f.id)+folderAction('New folder','new-repository-folder',f.id)+folderAction('Resorting','resort-repository-folder',f.id)+(f.is_root?'':folderAction('Remove folder','remove-repository-folder',f.id,'danger'))}</div></td></tr>${state.repositoryCollapsed?.has(f.id)?'':children(f.id,depth+1)+state.repository.filter(c=>c.folder_id===f.id).map(c=>caseRow(c,depth+1)).join('')}`).join('');
+ const html=`${add?'<div class="toolbar"><label><span class="sr-only">Find Test Case</span><input id="repository-search" type="search" placeholder="Find Test Case"></label></div>':''}<div class="table-wrap repository-scroll"><table id="repository-table" class="repository-hierarchy"><thead><tr><th>${add?listSelectAll('repository'):''}Directory / Test Case</th><th>${add?'Plan action':'<span class="sr-only">Case actions</span>'}</th>${add?'':'<th>Actions</th>'}</tr></thead><tbody>${children(null,0)}</tbody></table></div>`;
  return add?html:html.replace(/<td><div class="actions">[\s\S]*?<\/div><\/td>/g,'').replace('<th>Actions</th>','');
 }
 function repositoryWorkspace(add=false,plan=null){
@@ -517,10 +622,10 @@ function standardPreview(def){
 }
 async function repositoryPage() {
  state.repository=await api('/api/repository/testcases');state.repositoryFolders=await api('/api/repository/folders');
- if(state.repositorySelection)state.repositorySelection=new Set([...state.repositorySelection].filter(key=>key.startsWith('case:')?state.repository.some(c=>c.id===key.slice(5)):state.repositoryFolders.some(f=>!f.is_root&&f.id===key.slice(7))));
+ if(state.repositorySelection)state.repositorySelection=new Set([...state.repositorySelection].filter(key=>key.startsWith('case:')?state.repository.some(c=>c.id===key.slice(5)):state.repositoryFolders.some(f=>f.id===key.slice(7))));
  const selected=selectedRepositoryFolder(),editing=state.panel==='edit-repository-folder';
  const folderForm=['new-repository-folder','edit-repository-folder'].includes(state.panel)?`<form id="repository-folder-form" class="inline-form" data-id="${editing?escape(selected.id):''}"><h2>${editing?'Edit folder':'New folder'}</h2><p class="help">${escape(editing?selected.folder_path:selected.folder_path+'/')}</p><label class="field"><span>Name</span><input name="name" value="${editing?escape(selected.name):''}" required maxlength="100"></label><div class="form-actions"><button class="primary">${editing?'Save':'Create folder'}</button>${button('Cancel','close-panel')}</div></form>`:'';
- return `<div class="repository-page-controls actions"><label><span class="sr-only">Find Test Case</span><input id="repository-search" type="search" placeholder="Find Test Case"></label>${state.repositorySelection?.size?button('Delete selected','repository-batch-delete','danger'):''}</div>`+folderForm+(state.panel==='import-python'?`<form id="repository-form" class="inline-form"><h2>Add Test Case</h2><label class="field"><span>Python file</span><input type="file" name="file" accept=".py" required></label><label class="field"><span>Folder</span><select name="folder_id">${repositoryFolderOptions(selected.id)}</select></label><div class="form-actions"><button class="primary">Add to Repository</button>${button('Cancel','close-panel')}</div></form>`:'')+repositoryWorkspace();
+ return repositoryTools()+folderForm+(state.panel==='import-python'?`<form id="repository-form" class="inline-form"><h2>Add Test Case</h2><label class="field"><span>Python file</span><input type="file" name="file" accept=".py" required></label><label class="field"><span>Folder</span><select name="folder_id">${repositoryFolderOptions(selected.id)}</select></label><div class="form-actions"><button class="primary">Add to Repository</button>${button('Cancel','close-panel')}</div></form>`:'')+repositoryWorkspace();
 }
 const settingsGroups=[['BMC connection',[['host','BMC URL'],['username','Username'],['password','Password','password']]],['Console server (optional)',[['cs_host','Host'],['cs_port','Port','number'],['cs_protocol','Protocol'],['cs_username','Username'],['cs_password','Password','password']]],['DUT console commands (optional)',[['dut_connect_cmd','Connect command'],['dut_exit_cmd','Exit command'],['dut_force_connect_cmd','Force connect command']]],['DUT operating system (optional)',[['dut_os_type','OS type'],['dut_os_host_ip','Host IP'],['dut_os_username','Username'],['dut_os_password','Password','password'],['dut_os_prompt_regex','Prompt expression']]]];
 async function settingsPage(task, readOnly=false) {
@@ -712,6 +817,7 @@ function caseContextItems(row){
  return items;
 }
 function openCaseContextMenu(row,x,y){
+ if(document.body.classList.contains('repository-page'))return false;
  if(row.closest('[inert]'))return false;
  const items=caseContextItems(row);if(!items.length)return false;
  closeCaseContextMenu();caseContextRow=row;
@@ -734,7 +840,7 @@ function openCaseContextMenu(row,x,y){
 }
 const caseContextSelector='#repository-table [data-plan-case],#repository-table [data-plan-folder],#repository-table [data-repository-id],#repository-table [data-folder-node]';
 document.addEventListener('contextmenu',event=>{
- const row=event.target.closest(caseContextSelector);if(row&&openCaseContextMenu(row,event.clientX,event.clientY))event.preventDefault();
+ const row=event.target.closest(caseContextSelector);if(row&&document.body.classList.contains('repository-page')){event.preventDefault();return;}if(row&&openCaseContextMenu(row,event.clientX,event.clientY))event.preventDefault();
 });
 document.addEventListener('keydown',event=>{
  if(event.key!=='ContextMenu'&&!(event.shiftKey&&event.key==='F10'))return;
@@ -815,6 +921,7 @@ async function confirmDelete(title,message,itemName) {
 function download(name, content, type='text/plain') { const url=URL.createObjectURL(new Blob([content],{type})); const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000); }
 function currentSettings() { const form=$('#case-form'); return Object.fromEntries(Object.entries(state.definition.metadata.parameters||{}).map(([key,spec])=>{const field=form.elements.namedItem('p:'+key);return [key,spec.type==='boolean'?field.checked:['integer','number'].includes(spec.type)?Number(field.value):field.value];})); }
 async function doAction(action, element) {
+  if(action.startsWith('repo-'))return repositoryOperation(action);
   const {project,plan,task}=taskFormContext();
   if(!executionElementMatches(element))return;
   if(action==='execution-picker'){
@@ -984,7 +1091,7 @@ async function doAction(action, element) {
   }
   else if(action==='plan-import-case'){
     if(state.repositoryImporting||plan.locked||!discard())return;
-    state.dirty=false;const picker=$('#repository-file-picker');picker.dataset.planId=plan.id;picker.dataset.folderId=element.dataset.id||'';picker.value='';picker.click();
+    state.dirty=false;const picker=$('#repository-file-picker');picker.multiple=false;picker.dataset.planId=plan.id;picker.dataset.folderId=element.dataset.id||'';picker.value='';picker.click();
   }
   else if(action==='toggle-plan-folder'){state.planCollapsed??=new Set();const id=element.dataset.id;state.planCollapsed.has(id)?state.planCollapsed.delete(id):state.planCollapsed.add(id);saveFolderExpansions();$('#plan-case-list').innerHTML=planCaseTable(plan);syncCaseSelections();}
   else if(['plan-case-parameters','plan-case-source'].includes(action)){if(state.dirty&&!discard())return;const ref=planCaseReference(plan,element.dataset.id);state.dirty=false;if(state.importSource){state.importSource=null;await draw();}await CaseWindows.open(action==='plan-case-source'?'viewer':'parameters',ref);}
@@ -1005,15 +1112,15 @@ async function doAction(action, element) {
   else if(action==='plan-add-cases'){if(!discard())return;state.dirty=false;state.planTargetFolder=element.dataset.id||null;state.panel='add-repository';await draw();}
   else if(action==='new-plan-folder'){
     if(!discard())return;state.dirty=false;
-    const form=$('#repository-create-folder-form');form.reset();form.dataset.parentId=element.dataset.id||'';form.dataset.planId=plan.id;
+    const form=$('#repository-create-folder-form');form.reset();form.querySelector('[type=submit]').textContent='Create';form.querySelector('[data-action=cancel-repository-folder]').textContent='Cancel';form.querySelectorAll('.execution-icon-button').forEach(b=>b.classList.remove('execution-icon-button'));form.dataset.parentId=element.dataset.id||'';form.dataset.planId=plan.id;
     $('#repository-create-folder-error').textContent='';$('#repository-create-folder-dialog').showModal();$('#repository-create-folder-name').focus();
   }
   else if(action==='new-repository-case'){
     if(state.repositoryImporting)return;
-    const picker=$('#repository-file-picker');delete picker.dataset.planId;picker.dataset.folderId=element.dataset.id;picker.value='';picker.click();
+    const picker=$('#repository-file-picker');delete picker.dataset.planId;picker.multiple=true;picker.dataset.folderId=element.dataset.id;picker.value='';picker.click();
   }
   else if(action==='new-repository-folder'){
-    const form=$('#repository-create-folder-form');form.reset();delete form.dataset.planId;form.dataset.parentId=element.dataset.id;
+    const form=$('#repository-create-folder-form');form.reset();for(const [selector,label,glyph] of [['[type=submit]','Create folder','checkAll'],['[data-action=cancel-repository-folder]','Cancel','close']]){const b=form.querySelector(selector);b.innerHTML=icon(glyph);b.classList.add('execution-icon-button');b.title=label;b.setAttribute('aria-label',label);}delete form.dataset.planId;form.dataset.parentId=element.dataset.id;
     $('#repository-create-folder-error').textContent='';$('#repository-create-folder-dialog').showModal();$('#repository-create-folder-name').focus();
   }
   else if(action==='cancel-repository-folder'){if(!state.repositoryCreatingFolder){$('#repository-create-folder-dialog').close();state.dirty=false;}}
@@ -1029,7 +1136,14 @@ async function doAction(action, element) {
   else if(action==='stop'){const current=await api(`/api/tasks/${task.id}/execution`);await api(`/api/tasks/${task.id}/execution/stop`,'POST',{execution_token:current.execution_token});toast('Stop requested. Waiting for the running Test Case to finish.');}
   else if(action==='report'){element.disabled=true;try{const response=await fetch(`/api/tasks/${element.dataset.id}/report`);if(!response.ok){const err=await response.json();throw Error(err.error||'Report generation failed.');}const blob=await response.blob();const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`BMC_Test_Report_${element.dataset.id}.pdf`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);toast('Task report generated.');}finally{element.disabled=false;}}
   else if(action==='delete-folder'){const impact=await api(`/api/folders/${element.dataset.id}/impact`);if(!await confirmDelete('Delete folder and contents?',`${impact.testcase_count} Test Case(s), ${impact.descendant_folder_count} child folder(s) and evidence in ${impact.affected_task_count} Task(s) will be deleted.`))return;await api(`/api/folders/${element.dataset.id}`,'DELETE',{confirm:true,acknowledgement:true});state.dirty=false;await refresh();toast('Folder and contents deleted.');}
-  else if(['view-standard','view-parameters'].includes(action)){if(state.dirty&&!discard())return;state.dirty=false;await CaseWindows.open(action==='view-standard'?'viewer':'parameters',repositoryCaseReference(element.dataset.id));}
+  else if(['view-standard','view-parameters'].includes(action)){if(state.dirty&&!discard())return;state.dirty=false;const source=action==='view-standard';
+    const dialog=repoDialog(source?'View Python source':'Parameters','<div class="repo-definition" role="status">Loading…</div>');
+    const body=dialog.querySelector('.repo-definition');
+    try{
+      const def=await api('/api/repository/testcases/'+encodeURIComponent(element.dataset.id));
+      const settings=Object.fromEntries(Object.entries(def.metadata.parameters||{}).map(([key,spec])=>[key,spec.default]));
+      body.innerHTML='<h3>'+escape(def.name)+'</h3>'+(source?'<pre class="case-source-code" data-no-translate>'+escape(def.source)+'</pre>':'<fieldset disabled><div class="fields">'+parameterFields(def.metadata,settings,true)+'</div></fieldset>');
+    }catch(error){body.textContent=error.message;}}
   else if(action==='remove-standard'){
     if(!discard())return;const current=state.repository.find(c=>c.id===element.dataset.id);if(!current)return;
     if(!await confirmDelete(`Remove Test Case: ${current.name}?`,'Remove this Repository Test Case. Existing Plan copies, settings and Task evidence remain.'))return;
@@ -1116,7 +1230,7 @@ async function submit(form) {
      const planId=form.dataset.planId;
      const folder=await api(planId?`/api/plans/${planId}/folders`:'/api/repository/folders','POST',{name,parent_id:parent||null});
      if(planId){state.planCollapsed?.delete(parent);saveFolderExpansions();state.dirty=false;$('#repository-create-folder-dialog').close();await refresh();toast('Folder created.');return;}
-     state.repositoryCollapsed?.delete(parent);saveFolderExpansions();state.repositoryFolder=folder.id;state.dirty=false;
+     state.repositoryCollapsed?.delete(parent);saveFolderExpansions();state.repositoryFolder=folder.id;state.repositorySelection=new Set(['folder:'+folder.id]);state.dirty=false;
      $('#repository-create-folder-dialog').close();await draw();
      $(`[data-folder-node="${folder.id}"]`)?.scrollIntoView({block:'nearest'});toast('Folder created.');
    }finally{state.repositoryCreatingFolder=false;}
@@ -1569,18 +1683,36 @@ document.addEventListener('dragend',()=>{planDrag=null;repositoryDrag=null;clear
 
 $('#repository-create-folder-dialog').addEventListener('cancel',event=>{if(state.repositoryCreatingFolder)event.preventDefault();else state.dirty=false;});
 $('#repository-file-picker').addEventListener('change',async event=>{
-  const picker=event.target,file=picker.files[0],folder=picker.dataset.folderId,planId=picker.dataset.planId;
-  if(!file||state.repositoryImporting)return;
+  const picker=event.target,files=[...picker.files],folder=picker.dataset.folderId,planId=picker.dataset.planId;
+  if(!files.length||state.repositoryImporting)return;
   state.repositoryImporting=true;
+  const results=files.map(file=>({file,status:'Pending',detail:''}));
+  const dialog=document.createElement('dialog');dialog.id='repository-import-results';dialog.setAttribute('aria-labelledby','repository-import-results-title');
+  dialog.innerHTML='<h2 id="repository-import-results-title">Import Test Cases</h2><p data-import-progress role="status" aria-live="polite"></p><div class="table-wrap"><table><thead><tr><th>File</th><th>Result</th><th>Details</th></tr></thead><tbody></tbody></table></div><div class="actions"><button type="button" data-import-close class="execution-icon-button" title="Close" aria-label="Close" disabled>'+icon('close')+'</button></div>';
+  const close=()=>{if(state.repositoryImporting)return;dialog.close();dialog.remove();};
+  dialog.querySelector('[data-import-close]').onclick=close;dialog.addEventListener('cancel',e=>{e.preventDefault();close();});
+  const render=()=>{
+    const imported=results.filter(r=>r.status==='Imported').length,failed=results.filter(r=>r.status==='Failed').length;
+    dialog.querySelector('[data-import-progress]').textContent=(state.repositoryImporting?'Importing… ':'Complete. ')+imported+' imported, '+failed+' failed, '+files.length+' total.';
+    dialog.querySelector('tbody').innerHTML=results.map(r=>'<tr><td data-no-translate>'+escape(r.file.name)+'</td><td>'+escape(r.status)+'</td><td data-no-translate>'+escape(r.detail)+'</td></tr>').join('');
+  };
+  document.body.append(dialog);render();dialog.showModal();
   try{
-    if(!file.name.toLowerCase().endsWith('.py'))throw Error('Choose a .py file.');
-    await api(planId?`/api/plans/${planId}/testcases/import-python`:'/api/repository/testcases','POST',{source:await file.text(),folder_id:folder||null});
-    if(planId){state.planCollapsed?.delete(folder);saveFolderExpansions();await refresh();toast('Test Case added.');return;}
-    state.repositoryCollapsed?.delete(folder);saveFolderExpansions();state.repositoryFolder=folder;
-    if(state.route[0]==='repository')await draw();
-    toast('Standard Test Case imported with a new source timestamp.');
-  }catch(error){toast(error.message,true);}
-  finally{state.repositoryImporting=false;picker.value='';}
+    for(const result of results){
+      result.status='Importing';render();
+      try{
+        if(!result.file.name.toLowerCase().endsWith('.py'))throw Error('Choose a .py file.');
+        const saved=await api(planId?'/api/plans/'+planId+'/testcases/import-python':'/api/repository/testcases','POST',{source:await result.file.text(),folder_id:folder||null});
+        result.status='Imported';result.detail=saved.name||saved.tc_name||'';
+      }catch(error){result.status='Failed';result.detail=error.message;}
+      render();
+    }
+    if(results.some(r=>r.status==='Imported')){
+      if(planId){state.planCollapsed?.delete(folder);saveFolderExpansions();await refresh();}
+      else{state.repositoryCollapsed?.delete(folder);saveFolderExpansions();state.repositoryFolder=folder;if(state.route[0]==='repository')await draw();}
+    }
+  }catch(error){toast('Files processed, but the list could not refresh: '+error.message,true);}
+  finally{state.repositoryImporting=false;picker.value='';render();dialog.querySelector('[data-import-close]').disabled=false;}
 });
 $('#plan-create-dialog').addEventListener('cancel',event=>{if(state.creatingPlan)event.preventDefault();else state.dirty=false;});
 window.addEventListener('hashchange',()=>navigate().catch(e=>toast(e.message,true)));

@@ -58,6 +58,53 @@ class RepositoryTreeTest(unittest.TestCase):
   r=self.client.post('/api/repository/batch',json={**data,'action':'move','folder_id':target['id']});self.assertEqual(r.status_code,200,r.get_json());self.assertEqual(r.get_json()['moved_folders'],1)
   r=self.client.post('/api/repository/batch',json={**data,'action':'delete','confirm':True});self.assertEqual(r.status_code,200,r.get_json());self.assertEqual(r.get_json()['removed_cases'],1)
   self.assertEqual(self.client.get('/api/repository/testcases').get_json(),[])
+ def test_only_committed_repository_changes_enter_history(self):
+  f=self.create('Original')
+  history=lambda:self.client.get('/api/repository/history').get_json()
+  before=history()
+  self.client.post('/api/repository/activity',json={'operation':'Open history'})
+  self.client.get('/api/repository/testcases/'+self.repository['id'])
+  url='/api/repository/folders/'+f['id']
+  self.assertEqual(self.client.patch(url,json={'name':'Original'}).status_code,200)
+  self.assertEqual(self.client.patch(url,json={'name':''}).status_code,400)
+  self.assertEqual(history(),before)
+  self.assertEqual(self.client.patch(url,json={'name':'Renamed'}).status_code,200)
+  self.assertEqual(len(history()),len(before)+1)
+
+ def test_identical_replacement_preserves_version_and_history(self):
+  url='/api/repository/testcases/'+self.repository['id']
+  before=self.client.get(url).get_json()
+  history=self.client.get('/api/repository/history').get_json()
+  data={'previous_version':before['source_version'],'source':before['source']}
+  response=self.client.put(url,json=data)
+  self.assertEqual(response.status_code,409)
+  self.assertIn('identical',response.get_json()['error'])
+  self.assertEqual(self.client.get(url).get_json(),before)
+  self.assertEqual(self.client.get('/api/repository/history').get_json(),history)
+  self.assertEqual(self.client.put(url,json={**data,'source':data['source']+'\n'}).status_code,200)
+
+ def test_keep_descendant_cases_and_replacement_history(self):
+  parent=self.create('Parent');nested=self.create('Child',parent['id'])
+  identity=self.repository['id'];url='/api/repository/testcases/'+identity
+  self.client.put(url+'/folder',json={'folder_id':nested['id']})
+  copied=self.client.post('/api/plans/a/repository/testcases',json={'repository_id':identity}).get_json()['id']
+  old=self.client.get(url).get_json()
+  data={'source':old['source'].replace('Service entry','Updated entry'),'previous_version':old['source_version']}
+  self.assertEqual(self.client.put(url,json=data).status_code,200)
+  self.assertEqual(self.client.put(url,json=data).status_code,409)
+  result=self.client.post('/api/repository/batch',json={'action':'delete','confirm':True,'keep_cases':True,'folder_ids':[parent['id'],nested['id']]})
+  self.assertEqual(result.get_json()['removed_cases'],0)
+  case=self.client.get('/api/repository/testcases').get_json()[0]
+  self.assertEqual((case['id'],case['folder_id'],case['name']),(identity,rt.ROOT,'Updated entry'))
+  plan_case=self.client.get('/api/plans/a/testcases/'+copied+'/definition').get_json()
+  self.assertEqual(plan_case['source'],old['source'])
+  events=self.client.get('/api/repository/history').get_json()
+  replacements=[e for e in events if e['operation']=='replace']
+  self.assertEqual(len(replacements),1)
+  self.assertIsNone(replacements[0]['operator'])
+  self.assertEqual(replacements[0]['changes'][0]['before']['name'],'Service entry')
+  self.assertEqual(self.client.delete('/api/repository/history').status_code,405)
+
  def test_batch_move_collision_rolls_back(self):
   a=self.create('Same');other=self.create('Other');b=self.create('Same',other['id']);target=self.create('Target')
   before=self.rows()

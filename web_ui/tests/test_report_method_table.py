@@ -50,11 +50,37 @@ class MethodTableTest(unittest.TestCase):
         rows = method_table_rows(result, current)
         self.assertEqual(rows[0], ('1', 'Command', 'Send request', 'No recorded result', '—'))
         self.assertEqual(rows[1], ('', 'Checkpoint', 'Verify response', 'No recorded result', '—'))
+        from report_html import method_row_html
+        html_rows = [method_row_html(row) for row in method_table_rows(result, current, number_subitems=True)]
+        self.assertIn('<td>1a</td><td>Verify response</td><td class="result-text"></td>', html_rows[1])
+        self.assertIn('<td>1b</td>', html_rows[2])
         self.assertEqual(rows[2][4], 'PASS')
         self.assertNotIn('Changed source', str(rows))
         self.assertEqual(method_table_rows({'report_definition': {}}, current)[0][2], 'No test steps recorded')
         result['log_records'].append({'kind': 'step', 'step': 'Legacy', 'result': True})
         self.assertEqual(method_table_rows(result, current)[-1][3], 'True')
+
+    def test_snapshot_matches_by_step_and_id_and_keeps_full_observations(self):
+        from report_html import snapshot_method_body
+        methods = [{'step_number': 2, 'step': 'Read', 'checkpoints': {
+            'missing': {'expected': 'No evidence'}, 'links': {'expected': 'Links are valid'},
+            'optional': {'expected': 'Optional'}, 'blocked': {'expected': 'Dependent'}}}]
+        events = [
+            {'event': 'checkpoint_result', 'step_number': 1, 'checkpoint_id': 'missing', 'judgement': 'PASS'},
+            {'event': 'step_observation', 'step_number': 2, 'actual': False},
+            {'event': 'step_result', 'step_number': 2, 'status': 'COMPLETED'}]
+        for key, status, data in [('links', 'FAIL', {'actual': 'x' * 1500 + '<END>'}),
+                                  ('links', 'PASS', {'actual': 0}),
+                                  ('optional', 'Skip', {'reason': 'Optional endpoint absent'}),
+                                  ('blocked', 'NOT_EVALUATED', {'reason': 'No response'})]:
+            events.append(dict(event='checkpoint_result', step_number=2, checkpoint_id=key,
+                               judgement=status, **data))
+        html = snapshot_method_body(methods, events)
+        self.assertEqual(html.count('<td>2b</td>'), 1)
+        for text in ('No evidence</td><td class="result-text"></td>', 'Actual: false', 'Actual: 0',
+                     'x' * 1500 + '&lt;END&gt;', 'FAIL 1</span><details><summary>Detail', 'PASS 1</span><details><summary>Detail', '>Skip</span>Reason: Optional',
+                     '>Not executed</span>Reason: No response'):
+            self.assertIn(text, html)
 
     def test_old_ids_are_read_without_rewriting_or_displaying_them(self):
         records = [{'kind': 'step', 'method_id': 'S1', 'method_type': 'Step', 'step_id': 'S1',
@@ -100,7 +126,9 @@ class MethodExportTest(unittest.TestCase):
             html = archive.read('BMC_Report.html').decode()
             self.assertIn('Test Steps &amp; Results', html)
             self.assertIn('<th scope="col">Step</th>', html)
-            self.assertIn('<th scope="col">Judgement</th>', html)
+            self.assertNotIn('<th scope="col">Judgement</th>', html)
+            self.assertNotIn('<th scope="col">Type</th>', html)
+            self.assertIn('<td>1a</td>', html)
             self.assertNotIn('Source: S2', html)
             self.assertNotIn('C2a', html)
             self.assertNotIn('RECORDED', html)

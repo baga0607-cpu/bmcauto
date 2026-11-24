@@ -205,6 +205,15 @@ class TaskTestCase(Base):
     needs_retest = Column(Boolean, nullable=False, default=False)
 
 
+class RepositoryHistory(Base):
+    __tablename__ = 'repository_history'
+    id = Column(Integer, primary_key=True)
+    recorded_at = Column(String(50), nullable=False)
+    operator = Column(String(255))
+    operation = Column(String(80), nullable=False)
+    changes = Column(Text, nullable=False)
+
+
 class RepositoryCase(Base):
     __tablename__ = 'repository_cases'
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))

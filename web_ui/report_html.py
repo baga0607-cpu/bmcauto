@@ -4,7 +4,7 @@ import zipfile
 import json
 import os
 import sqlite3
-from collections import Counter
+from collections import Counter, defaultdict
 from contextlib import closing
 from datetime import datetime, timezone
 from html import escape
@@ -12,21 +12,142 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from case_log import test_log_text
-from report_case import description, display, execution_date, firmware, result_summary, method_table_rows, MethodResult
+from report_case import description, display, execution_date, firmware, result_summary, method_table_rows, MethodResult, MissingObservation
 from report_presentation import note_text, specification_reference, result_parts, judgement_class
 
 
 def method_row_html(method):
     step, kind, description_text, result, judgement = method
-    before, note = result_parts(result)
-    content = escape(before)
+    return table_row(step, description_text, evidence_html(result, judgement), judgement, checkpoint=kind == "Checkpoint")
+
+
+def evidence_html(result, judgement, *, fold_actual=True):
+    if isinstance(result, MissingObservation):
+        return ''
+    full = getattr(result, 'full', result)
+    span = getattr(full, 'actual_span', None)
+    if fold_actual and span and span[1] - span[0] - len('Actual: ') > 240:
+        before, note = result_parts(full)
+        start, end = span
+        content = (escape(before[:start]) + '<details><summary>Detail</summary>'
+                   + escape(before[start:end]) + '</details>' + escape(before[end:]))
+    else:
+        before, note = result_parts(result)
+        content = escape(before)
     if note:
         note_html = '<strong>Note: </strong>'+escape(note[6:]) if note.startswith('Note: ') else escape(note)
         content += '<span class="result-note">'+note_html+'</span>'
-    return ('<tr class="method-'+judgement_class(judgement)+'">'
-            + ''.join('<td>'+escape(value)+'</td>' for value in (step, kind, description_text))
-            + '<td class="result-text">'+content+'</td>'
-            + '<td class="judgement-text">'+escape(judgement)+'</td></tr>')
+    verdict = '<span class="judgement-text">'+escape(judgement)+'</span>' if judgement else ''
+    return verdict + content
+
+
+def table_row(step, description_text, content, judgement='', *, checkpoint=False):
+    row_class = 'method-' + judgement_class(judgement)
+    if checkpoint:
+        row_class += ' checkpoint-row'
+    elif step.isdecimal():
+        row_class += ' main-step-row'
+    return ('<tr class="'+row_class+'">'
+            + ''.join('<td>'+escape(value)+'</td>' for value in (step, description_text))
+            + '<td class="result-text">'+content+'</td></tr>')
+
+
+def observations_html(observations):
+    if len(observations) <= 1:
+        return ''.join(evidence_html(text, status) for text, status in observations)
+    groups = defaultdict(list)
+    for text, status in observations:
+        groups[status].append(getattr(text, 'full', text))
+    parts = []
+    for status, texts in groups.items():
+        items = ''.join('<li>'+evidence_html(text, '', fold_actual=False)+'</li>' for text in texts)
+        parts.append(f'<div data-judgement="{judgement_class(status)}">'
+                     f'<span class="judgement-text">{escape(status)} {len(texts)}</span>'
+                     f'<details><summary>Detail</summary><ol>{items}</ol></details></div>')
+    return ''.join(parts)
+
+
+def legacy_method_body(result, metadata):
+    rows = method_table_rows(result, metadata, number_subitems=True)
+    parents = {step for step, kind, *_ in rows if kind in ('Action', 'Command') and step.isdecimal()}
+    records = defaultdict(list)
+    checkpoints = defaultdict(list)
+    for step, kind, _, text, status in rows:
+        if kind == 'Record' and step in parents:
+            records[step].append(evidence_html(text, status))
+        elif kind == 'Checkpoint' and step and not isinstance(text, MissingObservation):
+            checkpoints[step].append((text, status))
+    parts = []
+    seen = set()
+    for row in rows:
+        step, kind, label, text, status = row
+        if kind == 'Record' and step in parents:
+            continue
+        if kind == 'Checkpoint' and step:
+            if step in seen:
+                continue
+            seen.add(step)
+            parts.append(table_row(step, label, observations_html(checkpoints[step]),
+                                   status if len(checkpoints[step]) == 1 else '', checkpoint=True))
+        elif kind in ('Action', 'Command') and step in records:
+            content = '<div>'+'</div><div>'.join([evidence_html(text, status), *records.pop(step)])+'</div>'
+            parts.append(table_row(step, label, content, status))
+        else:
+            parts.append(method_row_html(row))
+    return ''.join(parts)
+
+
+def event_evidence(event):
+    status = event.get('judgement') or event.get('status') or ''
+    if status in ('NOT_RUN', 'NOT_EVALUATED', 'NOT_RECORDED', 'BLOCKED', 'Block'):
+        status = 'Not executed'
+    parts = []
+    note_start = None
+    actual_span = None
+    for key in ('expected', 'actual', 'reason', 'note'):
+        if key in event:
+            value = event[key]
+            value = (value or '""') if isinstance(value, str) else json.dumps(value, ensure_ascii=False)
+            if key == 'actual':
+                start = sum(len(part) + 1 for part in parts)
+                actual_span = (start, start + len('Actual: ') + len(value))
+            if key == 'note':
+                note_start = sum(len(part) + 1 for part in parts)
+            parts.append(key.capitalize()+': '+value)
+    text = MethodResult('\n'.join(parts), note_start)
+    text.actual_span = actual_span
+    return text, status
+
+
+def snapshot_method_body(methods, events):
+    steps = defaultdict(list)
+    checkpoints = defaultdict(list)
+    for event in events:
+        if not isinstance(event, dict):
+            continue
+        number = event.get('step_number')
+        if event.get('event') == 'checkpoint_result':
+            checkpoints[number, event.get('checkpoint_id')].append(event_evidence(event))
+        elif event.get('event') in ('step_observation', 'step_result'):
+            steps[number].append(event_evidence(event))
+    rows = []
+    for method in methods:
+        number = method['step_number']
+        evidence = steps[number]
+        # Show the recorded completion status before the step's observation values.
+        step_content = ''.join('<div>'+evidence_html(text, status)+'</div>'
+                               for text, status in sorted(evidence, key=lambda item: not item[1]))
+        rows.append(table_row(str(number), method['step'], step_content))
+        for index, (key, declaration) in enumerate(method.get('checkpoints', {}).items(), 1):
+            suffix = ''
+            while index:
+                index, letter = divmod(index - 1, 26)
+                suffix = chr(ord('a') + letter) + suffix
+            observations = checkpoints[number, key]
+            status = observations[0][1] if len(observations) == 1 else ''
+            rows.append(table_row(str(number)+suffix, declaration['expected'],
+                                  observations_html(observations), status, checkpoint=True))
+    return ''.join(rows)
 
 
 def object_value(raw):
@@ -62,6 +183,13 @@ def generate_html_report(db_path, reports, preview_case_id=None):
             for index, row in enumerate(rows):
                 key = f'case-{group_index}-{index}'
                 result = object_value(row['result_json'])
+                events = result.get('events', result.get('log_records', []))
+                events = events if isinstance(events, list) else []
+                if not isinstance(result.get('report_definition'), dict):
+                    for event in events:
+                        if isinstance(event, dict) and event.get('event') == 'case_started' and isinstance(event.get('definition'), dict):
+                            result['report_definition'] = event['definition']
+                            break
                 manual = object_value(row['manual_override_json']) or None
                 metadata = {}
                 if not isinstance(result.get('report_definition'), dict) and row['script_kind'] == 'single':
@@ -104,15 +232,18 @@ def generate_html_report(db_path, reports, preview_case_id=None):
                     folder_id = folders[folder_id]['parent_id']
                 reference = specification_reference(result, metadata, '/'.join(reversed(folder_names)))
                 spec_field = '' if reference is None else f'<dt>Spec Ref.</dt><dd>{escape(reference)}</dd>'
-                method_body = ''.join(method_row_html(method)
-                                      for method in method_table_rows(result, metadata))
+                declared = result.get('report_definition', {}).get('test_method', []) if isinstance(result.get('report_definition'), dict) else []
+                is_snapshot = isinstance(declared, list) and declared and all(
+                    isinstance(item, dict) and 'step_number' in item and isinstance(item.get('step'), str)
+                    and 'type' not in item and 'method_type' not in item for item in declared)
+                method_body = snapshot_method_body(declared, events) if is_snapshot else legacy_method_body(result, metadata)
                 if manual and manual.get('status') in ('CP', 'C-PASS'):
                     method_body += method_row_html(('', '—', 'Manual case judgement',
                                                    MethodResult('Note: '+display(manual.get('reason')), 0), 'C-PASS'))
                 methods = ('<table class="method-table"><caption>Test Steps &amp; Results</caption>'
-                           '<colgroup><col class="method-step"><col class="method-type"><col><col class="method-result"><col class="method-judgement"></colgroup>'
-                           '<thead><tr><th scope="col">Step</th><th scope="col">Type</th>'
-                           '<th scope="col">Description</th><th scope="col">Result</th><th scope="col">Judgement</th></tr></thead>'
+                           '<colgroup><col class="method-step"><col><col class="method-result"></colgroup>'
+                           '<thead><tr><th scope="col">Step</th>'
+                           '<th scope="col">Description</th><th scope="col">Result</th></tr></thead>'
                            '<tbody>'+method_body+'</tbody></table>')
                 cards.append(f'''<article class="case" id="{key}" data-status="{status}">
 <details class="case-disclosure"><summary class="case-heading"><svg class="case-chevron" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="m6 3 5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="case-title">{escape(row['display_name'] or row['testcase_id'])}</span><span class="status {status.lower()}">{status}</span></summary>

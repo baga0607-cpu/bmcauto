@@ -95,6 +95,8 @@ def remove(s,identity,data):
  node=ps.require(s,Node,identity);parent=node.parent_id;ids=subtree(s,identity)
  if data.get('confirm') is not True:raise ps.StateError('Confirm deletion of the directory and all its Test Cases.')
  case_ids=[m.repository_id for m in s.query(Member).filter(Member.folder_id.in_(ids))]
+ if data.get('keep_cases') is True and case_ids:
+  move_cases(s,case_ids,{'folder_id':parent});case_ids=[]
  s.query(Member).filter(Member.folder_id.in_(ids)).delete(synchronize_session=False)
  s.query(RepositoryCase).filter(RepositoryCase.id.in_(case_ids)).delete(synchronize_session=False)
  for i in reversed(ids):
@@ -116,7 +118,7 @@ def batch(s,data):
  if action=='delete':
   if data.get('confirm') is not True:raise ps.StateError('Confirm deletion of all selected directories and Test Cases.')
   count=0
-  for identity in roots:count+=remove(s,identity,{'confirm':True})['removed_cases']
+  for identity in roots:count+=remove(s,identity,data)['removed_cases']
   for identity in direct:s.delete(ps.require(s,Member,identity));s.delete(ps.require(s,RepositoryCase,identity));count+=1
   return dict(status='ok',removed_cases=count,removed_folders=len(covered))
  if action=='move':

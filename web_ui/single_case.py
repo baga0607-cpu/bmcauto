@@ -10,7 +10,7 @@ from types import ModuleType
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from flask import jsonify, request
-from models import RepositoryCase, RepositoryFolder, RepositoryFolderCase, TestCase, TaskTestCase
+from models import CaseListOrder, RepositoryHistory, RepositoryCase, RepositoryFolder, RepositoryFolderCase, TestCase, TaskTestCase
 import plan_state as ps
 import repository_tree as rt
 import case_order as co
@@ -162,6 +162,18 @@ def execute_script(root, module_path, client, context, preset):
             sys.modules[module_path] = previous
 
 
+def repository_snapshot(session):
+    items = {}
+    for folder in rt.records(session):
+        items[folder['id']] = {key: folder[key] for key in ('folder_path', 'position')}
+    for row, folder in session.query(RepositoryCase, RepositoryFolderCase.folder_id).join(
+            RepositoryFolderCase, RepositoryFolderCase.repository_id == RepositoryCase.id):
+        items[row.id] = dict(name=row.name, folder=items[folder]['folder_path'], version=row.source_version)
+    for order in session.query(CaseListOrder).filter_by(scope='repository'):
+        items['order:'+order.folder] = dict(folder=items.get(order.folder, {}).get('folder_path'), order=json.loads(order.case_ids))
+    return items
+
+
 def register(app, runtime):
     def route(rule, methods):
         def decorate(fn):
@@ -170,7 +182,19 @@ def register(app, runtime):
                 try:
                     if fn.__name__.startswith('repository_'):
                         ps.begin_write(session);rt.ensure(session)
-                    result=fn(session, request.get_json(silent=True) or {}, **kwargs)
+                    data = request.get_json(silent=True) or {}
+                    audit = fn.__name__.startswith('repository_') and request.method != 'GET' and fn.__name__ not in ('repository_inspect', 'repository_activity')
+                    before = repository_snapshot(session) if audit else {}
+                    result=fn(session, data, **kwargs)
+                    if audit:
+                        session.flush()
+                        after = repository_snapshot(session)
+                        changes = [dict(item=i, before=before.get(i), after=after.get(i))
+                                   for i in sorted(before.keys() | after.keys()) if before.get(i) != after.get(i)]
+                        if changes:
+                            session.add(RepositoryHistory(recorded_at=datetime.now(timezone.utc).isoformat(),
+                                        operation=data.get('action') if fn.__name__ == 'repository_batch' else fn.__name__.removeprefix('repository_'),
+                                        changes=json.dumps(changes, ensure_ascii=False)))
                     session.commit()
                     return result
                 except (SyntaxError, UnicodeError) as error:
@@ -206,7 +230,7 @@ def register(app, runtime):
         s.add(row); s.flush()
         folder=ps.require(s,RepositoryFolder,data.get('folder_id') or rt.ROOT)
         s.add(RepositoryFolderCase(repository_id=row.id,folder_id=folder.id))
-        s.commit()
+        s.flush()
         return jsonify(id=row.id, name=row.name, source_version=row.source_version, source_created_at=meta.get('created_at')), 201
 
     @route('/api/repository/testcases/<repository_id>', ['GET'])
@@ -222,7 +246,7 @@ def register(app, runtime):
         # Plan files/settings are independent copies, not children of this row.
         s.query(RepositoryFolderCase).filter_by(repository_id=row.id).delete()
         s.delete(row)
-        s.commit()
+        s.flush()
         return jsonify(status='ok', id=repository_id)
 
     @route('/api/repository/inspect', ['POST'])
@@ -254,7 +278,35 @@ def register(app, runtime):
     @route('/api/repository/testcases/<repository_id>/folder', ['PUT'])
     def repository_case_move(s,data,repository_id):
         rt.move_cases(s,[repository_id],data)
-        s.commit();return jsonify(status='ok')
+        s.flush();return jsonify(status='ok')
+
+    @route('/api/repository/activity', ['POST'])
+    def repository_activity(s, data):
+        # Older open tabs may still send interaction notifications.
+        return jsonify(status='ok')
+
+    @route('/api/repository/history', ['GET'])
+    def repository_history(s, data):
+        rows = s.query(RepositoryHistory).order_by(RepositoryHistory.id.desc())
+        return jsonify([dict(time=r.recorded_at, operator=r.operator, operation=r.operation,
+                             changes=json.loads(r.changes)) for r in rows])
+
+    @route('/api/repository/testcases/<repository_id>', ['PUT'])
+    def repository_replace(s, data, repository_id):
+        row = ps.require(s, RepositoryCase, repository_id)
+        if data.get('previous_version') != row.source_version:
+            raise ps.StateError('The Test Case changed. Reopen the replacement dialog.', 409)
+        source = data.get('source')
+        if not isinstance(source, str):
+            raise ps.StateError('Choose a Python file.')
+        if source == row.source_text:
+            raise ps.StateError('Replacement rejected: the Python source is identical to the current Test Case.', 409)
+        meta = metadata(source)
+        version = datetime.now(timezone.utc)
+        while s.query(RepositoryCase).filter_by(source_version=version.isoformat()).first():
+            version += timedelta(microseconds=1)
+        row.name, row.source_text, row.source_version = meta['name'].strip(), source, version.isoformat()
+        return jsonify(id=row.id, name=row.name, source_version=row.source_version)
 
     def copy_case(s,row,plan_id,folder,paths):
         identity=str(uuid.uuid4());meta=metadata(row.source_text)

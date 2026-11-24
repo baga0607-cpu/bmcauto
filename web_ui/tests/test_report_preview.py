@@ -46,7 +46,7 @@ class ReportPreviewTest(unittest.TestCase):
         self.assertNotIn('<dt>Note</dt>', html)
         self.assertIn('<section class="test-data"><h3>Test Data</h3>', html)
         self.assertIn('<section class="test-information"><h3>Test Information</h3>', html)
-        for value in ('Command', 'Judgement', 'Actual: 1.20.0', 'Preview tester', 'BMC: 1.0', 'Case &lt;0&gt;'):
+        for value in ('<td>1a</td>', '<td class="result-text"><span class="judgement-text">', 'Actual: 1.20.0', 'Preview tester', 'BMC: 1.0', 'Case &lt;0&gt;'):
             self.assertIn(value, html)
         for value in ('Case &lt;1&gt;', 'Task Two', 'NEVER-EXPORT-THIS-PASSWORD', '<script', 'href="logs/', 'print-report'):
             self.assertNotIn(value, html)
@@ -82,7 +82,7 @@ class ReportPreviewTest(unittest.TestCase):
         self.prepare()
         response = self.get_preview(case='case-3')
         self.assertEqual(response.status_code, 200)
-        self.assertIn('No recorded result', response.get_json()['html'])
+        self.assertIn('<td class="result-text"></td>', response.get_json()['html'])
         for task, case in [('missing', 'case-0'), ('task-b', 'case-0'), ('task1', 'missing'), ('task1', 'case-4')]:
             self.assertEqual(self.get_preview(task, case).status_code, 404)
 
