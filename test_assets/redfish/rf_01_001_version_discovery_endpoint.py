@@ -4,7 +4,7 @@ import re
 from urllib.parse import urljoin, urlsplit
 
 TEST_CASE = {
-    "modified_at": "2026-11-12T08:48:00+00:00",
+    "modified_at": "2026-11-24T03:05:34.327403+00:00",
     "test_type": "compliance",
     "spec_ref": [
         "DSP0266 v1.25.0 section 6.6 (protocol/version discovery); section 6.7 Table 4 (/redfish)."
@@ -159,6 +159,12 @@ def _origin(url):
             value.port or (443 if value.scheme == "https" else 80))
 
 
+def _json_type_label(value):
+    names = {dict: "Object", list: "Array", str: "String", int: "Number",
+             float: "Number", bool: "Boolean", type(None): "Null"}
+    return f"JSON {names[type(value)]} ({type(value).__name__})"
+
+
 def execute(client, context=None, preset=None):
     """Use Task connection settings and keep typed method evidence in the Log."""
     if not isinstance(context, dict):
@@ -244,7 +250,7 @@ def execute(client, context=None, preset=None):
                     break
                 _done(context, 2, {"top_level_type": type(body).__name__})
                 _check(context, 3, True, "Response body can be parsed as JSON", "Parsed")
-                _check(context, 4, isinstance(body, dict), "object", type(body).__name__)
+                _check(context, 4, isinstance(body, dict), "JSON Object", _json_type_label(body))
                 if not isinstance(body, dict):
                     reason = "Step 2: Top-level JSON value is not an object"
                     break
