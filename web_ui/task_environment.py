@@ -49,6 +49,8 @@ def configuration(value, require_host=False):
 def save(task, value, session):
     from models import TaskTestCase
     from plan_state import StateError
+    if json.loads(task.task_metadata or '{}').get('task_status') == 'Deleted':
+        raise StateError('This Task is Deleted and cannot be edited.', 409)
     if task.execution_active: raise StateError('This Task is executing. Connection settings are locked.', 409)
     try: settings = normalize(value)
     except ValueError as error: raise StateError(str(error))

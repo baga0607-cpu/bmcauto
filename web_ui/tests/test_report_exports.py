@@ -5,7 +5,6 @@ import unittest
 import zipfile
 from pathlib import Path
 from unittest.mock import patch
-import pypdf
 import test_single_case_repository as fixtures
 from models import Project, ProjectPlan, Task, TestCase, TaskTestCase, PlanFolder
 from report_exports import selected_tasks, final_memberships, report_groups
@@ -14,14 +13,15 @@ from plan_state import StateError
 class ReportExportsTest(unittest.TestCase):
     setUp = fixtures.SingleCaseRepositoryTest.setUp
 
-    def test_logs_zip_matches_selected_pdf_attachments(self):
+    def test_logs_zip_matches_selected_html_attachments(self):
         self.prepare()
         selection={'report_area':[{'kind':'plan','id':'a'}], 'reference_area':[{'kind':'task','id':'task-b'}]}
-        pdf=self.export(**selection)
+        bundle=self.export(**selection)
         response=self.client.post('/api/projects/project/reports/logs',json=selection)
         self.assertEqual(response.status_code,200)
         self.assertEqual(response.mimetype,'application/zip')
-        expected=[item for items in pypdf.PdfReader(io.BytesIO(pdf.data)).attachments.values() for item in items]
+        with zipfile.ZipFile(io.BytesIO(bundle.data)) as package:
+            expected=[package.read(n) for n in package.namelist() if n.endswith('.log')]
         with zipfile.ZipFile(io.BytesIO(response.data)) as archive:
             self.assertEqual(sorted(archive.read(name) for name in archive.namelist()),sorted(expected))
             self.assertTrue(all('/' not in name and '\\' not in name for name in archive.namelist()))
@@ -51,7 +51,7 @@ class ReportExportsTest(unittest.TestCase):
             s.commit()
 
     def export(self, **selection):
-        return self.client.post('/api/projects/project/reports?format=pdf',json=selection)
+        return self.client.post('/api/projects/project/reports',json=selection)
 
     def test_grouping_order_final_and_single_task(self):
         self.prepare()
@@ -87,7 +87,7 @@ class ReportExportsTest(unittest.TestCase):
         self.assertEqual(self.export(task_ids=['task1']).status_code,409)
         self.assertEqual(self.export(task_ids=['task-b']).status_code,200)
 
-    def test_pdf_single_task_and_final_evidence_and_live_data_unchanged(self):
+    def test_html_single_task_and_final_evidence_and_live_data_unchanged(self):
         self.prepare()
         with self.engine.connect() as c:
             before=list(c.exec_driver_sql('SELECT * FROM tasks ORDER BY id'))
@@ -95,20 +95,10 @@ class ReportExportsTest(unittest.TestCase):
         for kind,selection in [('task',{'task_ids':['task1']}),('final',{'task_ids':['task1','task2']})]:
             response=self.export(**selection)
             self.assertEqual(response.status_code,200,response.get_json(silent=True))
-            self.assertEqual(response.mimetype,'application/pdf')
-            reader=pypdf.PdfReader(io.BytesIO(response.data))
-            text=' '.join(page.extract_text() or '' for page in reader.pages)
-            self.assertNotIn('NEVER-EXPORT-THIS-PASSWORD',text)
-            self.assertIn('Case <0> & QA',text)
-            self.assertIn('BMC Final Report' if kind=='final' else 'BMC Test Report',text)
-            if kind=='final':
-                self.assertIn('Task Name',text);self.assertIn('Task Two',text)
-                attachments=b''.join(content for items in reader.attachments.values() for content in items)
-                self.assertIn(b'winning-pass',attachments);self.assertIn(b'winning-fail',attachments);self.assertIn(b'winning-block',attachments)
-                self.assertNotIn(b'ignored-running',attachments);self.assertNotIn(b'ignored-tbd',attachments)
-            target=os.environ.get('BMC_REPORT_QA_DIR')
-            if target:
-                Path(target).mkdir(parents=True,exist_ok=True);(Path(target)/(kind+'.pdf')).write_bytes(response.data)
+            with zipfile.ZipFile(io.BytesIO(response.data)) as package:
+                html = package.read('BMC_Report.html').decode()
+                self.assertNotIn('NEVER-EXPORT-THIS-PASSWORD', html)
+                self.assertIn('Case &lt;0&gt;', html)
         with self.engine.connect() as c:
             self.assertEqual(list(c.exec_driver_sql('SELECT * FROM tasks ORDER BY id')),before)
             self.assertEqual(list(c.exec_driver_sql('SELECT * FROM task_testcases ORDER BY id')),before_cases)
@@ -118,7 +108,7 @@ class ReportExportsTest(unittest.TestCase):
         with self.Session() as s:
             s.add(ProjectPlan(id='empty',project_id='project',name='Empty Plan'));s.commit()
         self.assertEqual(self.export(plan_ids=['empty']).status_code,200)
-        with patch('report_generator.generate_task_pdf_report',side_effect=RuntimeError('render failed')):
+        with patch('report_html.generate_html_bundle',side_effect=RuntimeError('render failed')):
             self.assertEqual(self.export(plan_ids=['a']).status_code,500)
         with self.Session() as s:self.assertEqual(s.query(Task).count(),3)
 
@@ -158,40 +148,28 @@ class ReportExportsTest(unittest.TestCase):
             groups=report_groups(s,'project',{'report_area':[self.item('task','task2'),self.item('plan','a'),self.item('task','task1')]})
             self.assertEqual(len(groups),1);self.assertTrue(groups[0][3]);self.assertEqual([t.id for t in groups[0][2]],['task1','task2'])
 
-    def test_merged_pdf_orders_formal_then_reference_and_preserves_colliding_logs(self):
+    def test_merged_html_orders_formal_then_reference_and_preserves_colliding_logs(self):
         self.prepare()
         with self.engine.connect() as c:
             before={table:list(c.exec_driver_sql('SELECT * FROM '+table+' ORDER BY 1')) for table in ['tasks','task_testcases']}
         response=self.export(report_area=[self.item('task','task-b'),self.item('task','task1')], reference_area=[self.item('task','task2')])
         self.assertEqual(response.status_code,200,response.get_json(silent=True))
-        reader=pypdf.PdfReader(io.BytesIO(response.data))
-        text=' '.join(p.extract_text() or '' for p in reader.pages)
-        self.assertLess(text.index('Task B'),text.index('Task One'))
-        self.assertLess(text.index('Task One'),text.index('Reference Reports'))
-        self.assertLess(text.index('Reference Reports'),text.index('Task Two'))
-        attachments=b''.join(content for items in reader.attachments.values() for content in items)
-        self.assertIn(b'winning-pass',attachments);self.assertIn(b'ignored-running',attachments)
-        names=list(reader.attachments.keys())
-        self.assertTrue(any(n.startswith('02_Task_One') for n in names))
-        self.assertTrue(any(n.startswith('03_Task_Two') for n in names))
-        roots=[i['/Title'] for i in reader.outline if isinstance(i,dict)]
-        self.assertEqual(roots,['Report Area','Reference Reports'])
+        with zipfile.ZipFile(io.BytesIO(response.data)) as package:
+            names = [name for name in package.namelist() if name.endswith('.log')]
+            self.assertEqual(len(names), len(set(names)))
+            logs = [package.read(name) for name in names]
+            self.assertIn(b'winning-pass', logs)
+            self.assertIn(b'ignored-running', logs)
         with self.engine.connect() as c:
             for table,rows in before.items():self.assertEqual(list(c.exec_driver_sql('SELECT * FROM '+table+' ORDER BY 1')),rows)
-        target=os.environ.get('BMC_REPORT_QA_DIR')
-        if target:(Path(target)/'reference.pdf').write_bytes(response.data)
 
-    def test_multi_plan_pdf_aggregates_reference_tasks_by_matrix(self):
+    def test_multi_plan_html_aggregates_reference_tasks_by_matrix(self):
         self.prepare()
         response=self.export(report_area=[self.item('plan','b')],reference_area=[self.item('task','task2'),self.item('task','task1')])
         self.assertEqual(response.status_code,200,response.get_json(silent=True))
-        reader=pypdf.PdfReader(io.BytesIO(response.data));text=' '.join(p.extract_text() or '' for p in reader.pages)
-        self.assertEqual(text.count('BMC Final Report'),2)
-        attachments=b''.join(content for items in reader.attachments.values() for content in items)
-        self.assertIn(b'winning-pass',attachments);self.assertIn(b'winning-fail',attachments);self.assertIn(b'winning-block',attachments)
-        self.assertNotIn(b'ignored-running',attachments);self.assertNotIn(b'older-tie',attachments)
-        target=os.environ.get('BMC_REPORT_QA_DIR')
-        if target:(Path(target)/'reference-final.pdf').write_bytes(response.data)
+        with zipfile.ZipFile(io.BytesIO(response.data)) as package:
+            logs = [package.read(name) for name in package.namelist() if name.endswith('.log')]
+            self.assertCountEqual(logs,[b'winning-pass',b'winning-fail',b'winning-block'])
 
     def test_split_same_plan_keeps_each_area_results_separate(self):
         self.prepare()
@@ -205,7 +183,31 @@ class ReportExportsTest(unittest.TestCase):
             self.assertEqual(final_memberships(s,groups[1][1],groups[1][2])[1][1].status,'Failed')
         response=self.export(report_area=[self.item('task','task1'),self.item('task','task3')],reference_area=[self.item('task','task2')])
         self.assertEqual(response.status_code,200,response.get_json(silent=True))
-        text=' '.join(p.extract_text() or '' for p in pypdf.PdfReader(io.BytesIO(response.data)).pages)
-        formal,reference=text.split('Reference Reports',1)
-        self.assertIn('Task Name\nTask One',formal);self.assertNotIn('Task Name\nTask Two',formal)
-        self.assertIn('Task Two',reference)
+        with zipfile.ZipFile(io.BytesIO(response.data)) as package:
+            logs = [package.read(name) for name in package.namelist() if name.endswith('.log')]
+            self.assertIn(b'older-tie',logs)
+            self.assertIn(b'winning-fail',logs)
+
+    def test_same_log_name_in_both_areas(self):
+        self.prepare()
+        with self.Session() as session:
+            for tid in ['task1','task2']:
+                case=session.query(TaskTestCase).filter_by(task_id=tid,testcase_id='case-0').one()
+                case.result_json=json.dumps({'log_files':{'test':'shared.log'}})
+            session.commit()
+        response=self.client.post('/api/projects/project/reports/logs',json={
+            'report_area':[self.item('task','task1')], 'reference_area':[self.item('task','task2')]})
+        with zipfile.ZipFile(io.BytesIO(response.data)) as archive:
+            names=[name for name in archive.namelist() if name.endswith('_shared.log')]
+            self.assertEqual(len(set(names)),2)
+            self.assertCountEqual([archive.read(name) for name in names],[b'winning-pass',b'ignored-running'])
+
+    def test_task_download_and_retired_format(self):
+        self.prepare()
+        response=self.client.get('/api/tasks/task1/report')
+        self.assertEqual(response.mimetype,'application/zip')
+        with zipfile.ZipFile(io.BytesIO(response.data)) as package:
+            self.assertIn('Task One',package.read('BMC_Report.html').decode())
+        self.assertEqual(self.client.get('/api/tasks/missing/report').status_code,404)
+        self.assertEqual(self.client.get('/api/tasks/task1/report?format=pdf').status_code,400)
+        self.assertEqual(self.client.post('/api/projects/project/reports?format=pdf',json={'task_ids':['task1']}).status_code,400)

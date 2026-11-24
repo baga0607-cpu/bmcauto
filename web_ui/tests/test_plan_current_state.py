@@ -5,10 +5,12 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import app as api
+from worker_fixture import install_inline_worker
 from models import Base, Project, ProjectPlan, TestCase, Task, TaskTestCase
 
 class CurrentStateTest(unittest.TestCase):
     def setUp(self):
+        install_inline_worker(self, api)
         self.tmp = tempfile.TemporaryDirectory()
         self.engine = create_engine('sqlite:///' + self.tmp.name + '/test.db')
         Base.metadata.create_all(self.engine)
@@ -90,7 +92,7 @@ class CurrentStateTest(unittest.TestCase):
             self.assertFalse(api.run_sessions[session_id]['thread'].is_alive())
             self.client.post('/api/tasks/t/execution/finish',json={'execution_token':token})
             api.run_sessions.pop(session_id,None)
-            return next(row for row in self.client.get('/api/tasks/t/summary').get_json()['testcases'] if row['id']=='a')
+            return next(row for row in self.client.get('/api/tasks/t/results').get_json()['testcases'] if row['id']=='a')
         with patch.object(api,'MAIN_PROGRAM_DIR',self.tmp.name),patch.object(api,'WORKSPACE_DIR',self.tmp.name),patch.dict(sys.modules,modules):
             failed=execute('step-detail')
             self.assertEqual(failed['status'],'Failed')
@@ -294,19 +296,6 @@ class CurrentStateTest(unittest.TestCase):
         self.assertEqual(self.client.get('/api/tasks/t/summary').get_json()['testcases'],[])
         with self.Session() as db: self.assertIsNotNone(db.get(Task,'t'))
 
-    def test_pdf_uses_current_scope_and_latest_membership_logs(self):
-        from report_generator import generate_task_pdf_report
-        from pypdf import PdfReader
-        self.seed_scope()
-        self.client.patch('/api/testcases/a',json={'tc_name':'Current A','folder_path':'Network/Ports'})
-        with self.Session() as db:
-            row=db.query(TaskTestCase).filter_by(testcase_id='a').one(); row.status='Passed';row.log_text='LATEST ONLY';row.result_json='{"detail":"latest result"}'
-            db.get(Task,'t').task_metadata='{"firmware":"current-fw"}'; db.commit()
-        out=Path(self.tmp.name,'report.pdf')
-        generate_task_pdf_report('t',str(out),db_path=str(Path(self.tmp.name,'test.db')))
-        reader=PdfReader(out); text=''.join(p.extract_text() for p in reader.pages)
-        self.assertIn('Current A',text);self.assertIn('Network/Ports',text);self.assertIn('current-fw',text)
-        self.assertEqual(reader.attachments['test_a.log'],[b'LATEST ONLY'])
 
     def test_flush_failure_and_restore_failure_preserve_recovery_data(self):
         import plan_state

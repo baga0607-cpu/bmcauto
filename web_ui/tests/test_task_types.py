@@ -38,7 +38,7 @@ class TaskTypesTest(unittest.TestCase):
         self.assertEqual(self.client.patch('/api/tasks/'+tid,json={'name':'Changed'}).status_code,400)
         self.assertEqual(self.client.patch('/api/tasks/'+tid,json={'setup':{'start_date':'2026-10-21','end_date':'2026-10-22'},'history':'Assign dates','expected_task_status':'Not Scheduled','expected_start_date':'','expected_end_date':''}).status_code,200)
         self.assertEqual(self.client.post('/api/tasks/'+tid+'/execution/start',json={'testcase_ids':[]}).status_code,404)
-        self.assertEqual(self.client.delete('/api/tasks/'+tid).status_code,200)
+        self.assertEqual(self.client.delete('/api/tasks/'+tid,json={'reason':'No longer needed'}).status_code,405)
         self.assertEqual(self.post(**payload).get_json()['name'],'Plan-FWA3051-002')
 
     def test_sku_normalization_and_independent_series(self):
@@ -84,7 +84,7 @@ class TaskTypesTest(unittest.TestCase):
             rows=list(pool.map(create,range(8)))
         self.assertEqual({r['name'] for r in rows},{f'Plan-Project-{n:03d}' for n in range(1,9)})
         for row in rows:
-            self.assertEqual(self.client.delete('/api/tasks/'+row['id']).status_code,200)
+            self.assertEqual(self.client.delete('/api/tasks/'+row['id'],json={'reason':'No longer needed'}).status_code,405)
         self.assertEqual(self.post(task_type='Plan',project_id='project').get_json()['name'],'Plan-Project-009')
 
     def test_plan_sku_binding_survives_custom_plan_name_and_no_duplicate_prefix(self):
@@ -153,7 +153,7 @@ class TaskTypesTest(unittest.TestCase):
         with self.Session() as session:
             session.get(ProjectPlan,'a').name='Project';session.commit()
         first=self.post(task_type='Plan',project_id='project').get_json()
-        self.assertEqual(self.client.delete('/api/tasks/'+first['id']).status_code,200)
+        self.assertEqual(self.client.delete('/api/tasks/'+first['id'],json={'reason':'No longer needed'}).status_code,405)
         self.assertEqual(self.post(task_type='Test',project_id='project',plan_id='a').get_json()['name'],'Test-Project-001')
 
     def test_repair_duplicate_keeps_first_name_and_all_task_ids_evidence(self):

@@ -6,7 +6,6 @@ import zipfile
 from pathlib import Path
 from urllib.parse import unquote
 from html.parser import HTMLParser
-import pypdf
 from models import TaskTestCase, TestCase
 import test_report_exports as fixtures
 
@@ -59,13 +58,12 @@ class HTMLReportTest(unittest.TestCase):
                 out=Path(target)/'html-fixture';out.mkdir(exist_ok=True)
                 archive.extractall(out)
 
-    def test_html_final_reference_matches_pdf_attachments_and_validates_scope(self):
+    def test_html_final_reference_matches_winning_logs_and_validates_scope(self):
         self.prepare()
         selection={'report_area':[{'kind':'plan','id':'a'}], 'reference_area':[{'kind':'task','id':'task-b'}]}
-        pdf=self.client.post('/api/projects/project/reports?format=pdf',json=selection)
         response=self.client.post('/api/projects/project/reports',json=selection)
         self.assertEqual(response.status_code,200)
-        expected=[v for values in pypdf.PdfReader(io.BytesIO(pdf.data)).attachments.values() for v in values]
+        expected=[b'winning-pass',b'winning-fail',b'winning-block']
         with zipfile.ZipFile(io.BytesIO(response.data)) as archive:
             self.assertEqual(sorted(archive.read(n) for n in archive.namelist() if n.endswith('.log')),sorted(expected))
             html=archive.read('BMC_Report.html').decode()

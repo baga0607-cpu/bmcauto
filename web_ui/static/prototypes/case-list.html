@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="zh-Hant">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BMCAgent · 測項列表原型</title>
+<style>
+*{box-sizing:border-box}body{margin:0;color:#182b40;background:#f5f7fa;font:15px "Segoe UI","Microsoft JhengHei",sans-serif}header,main{padding:0 clamp(16px,4vw,72px)}header{height:64px;display:flex;gap:32px;align-items:center;background:#fff;border-bottom:1px solid #d7dfe8}header strong{font-size:21px;letter-spacing:-1px}button,select,input{font:inherit;color:inherit}button,select{cursor:pointer}nav{height:100%;display:flex}nav button{border:0;background:none;padding:0 18px;border-bottom:3px solid transparent}nav button[aria-pressed=true]{color:#2358b8;border-color:#2358b8;font-weight:650}header small{margin-left:auto;color:#586c82}main{margin:30px auto;max-width:1650px}.bar{display:flex;align-items:center;gap:12px;margin-bottom:16px}.bar h1{font-size:21px;margin:0}.bar select,.bar input{border:1px solid #b9c6d4;border-radius:5px;background:white;padding:8px 12px}.bar input{width:min(330px,70vw)}#summary{margin-left:auto;color:#596d83;font-size:14px}.wrap{overflow:auto;border:1px solid #d1dbe5;border-radius:7px;background:white}table{border-collapse:collapse;width:100%;min-width:900px;table-layout:fixed;text-align:left}th{background:#edf1f6;color:#42546a;font-size:13px}td,th{padding:12px;border-bottom:1px solid #e0e6ed}td{font-size:14px}tr:last-child td{border-bottom:0}.folder{background:#f8fafc}.folder button,.purpose{background:none;border:0;text-align:left;padding:0}.folder button{font-weight:650}.folder small,.mode{color:#607287;font-size:12px}.folder small{margin-left:8px}.name{display:block;font-weight:600}.mode{margin-right:.5em}.purpose{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.state{color:#176341}.missing{color:#875500}.actions{display:flex;gap:5px}.actions button,dialog button{color:#2358b8;background:white;border:1px solid #c4d1df;border-radius:5px;padding:5px 8px}.actions button:hover,.purpose:hover{background:#edf3fd}dialog{border:1px solid #c6d1dc;border-radius:8px;width:min(500px,90vw);padding:24px;color:inherit}dialog::backdrop{background:#16253755}dialog h2{margin:0 0 12px;font-size:19px}dialog label{display:grid;gap:5px;margin:12px 0}dialog input{padding:7px}dialog footer{display:flex;justify-content:flex-end;gap:8px;margin-top:20px}:focus-visible{outline:2px solid #2358b8;outline-offset:2px}
+</style>
+<header><strong>BMCAgent</strong><nav aria-label="頁面"><button id="repo">測項庫</button><button id="plan">Plan</button></nav><small>Prototype · 示例資料</small></header>
+<main><div class="bar"><h1 id="heading"></h1><select id="plans" aria-label="Plan"><option>Firmware Validation</option><option>Redfish Review</option></select></div>
+<div class="bar"><input id="search" type="search" aria-label="搜尋測項" placeholder="搜尋測項名稱、編號或測試目的"><span id="summary"></span></div>
+<div class="wrap"><table><colgroup><col style="width:51%"><col style="width:20%"><col style="width:15%"><col style="width:14%"></colgroup><thead><tr><th>Directory / Test Case</th><th>Modified_at</th><th>Feature_ID</th><th>Actions</th></tr></thead><tbody id="rows"></tbody></table></div></main>
+<dialog id="detail"><h2 id="title"></h2><div id="body"></div><footer><button id="save">儲存</button><button id="closeDetail">關閉</button></footer></dialog>
+<script>
+const cases=[
+ ['RF-01-012','URI reference','Redfish / Protocol','檢查 GET 回應本文與標頭中的相對 URI，確認每個參照的格式均符合要求。','2026-11-23',{timeout:'30',scope:''}],
+ ['RF-01-014','Service root','Redfish / Protocol','確認 Service Root 提供預期的服務入口。','2026-11-18',{}],
+ ['RF-02-003','Session timeout','Redfish / Session','驗證逾時的 Session 無法再讀取受保護資源。','2026-11-15',{timeout:'60'}],
+ ['IP-03-001','Sensor reading','IPMI','確認讀取的感測值及單位符合預期。','2026-11-12',{sensor:'',unit:''}],
+ ['IP-04-002','Identify LED','IPMI','啟用 Identify 功能後，由測試者確認機箱 LED 狀態。','2026-11-09',{duration:'15'}]
+ ];
+const el=id=>document.getElementById(id),esc=v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let page='plan',editing=null;
+const collapsed=new Set(),settings=new Map();
+function values(c){const key=el('plans').value+c[0];if(!settings.has(key))settings.set(key,{...c[5]});return settings.get(key)}
+function render(){
+ const plan=page==='plan',all=plan?(el('plans').selectedIndex===1?cases.slice(0,3):cases.filter((_,i)=>i!==1)):cases;
+ const term=el('search').value.trim().toLowerCase(),found=all.filter(c=>c.slice(0,4).join(' ').toLowerCase().includes(term));
+ el('repo').setAttribute('aria-pressed',!plan);el('plan').setAttribute('aria-pressed',plan);el('plans').hidden=!plan;el('heading').textContent=plan?'Plan:':'測項庫';
+ el('summary').textContent=(term?found.length+' / '+all.length:all.length)+' 個測項';
+ function folder(path,depth){
+  const members=all.filter(c=>!path||c[2]===path||c[2].startsWith(path+' / ')),visible=members.filter(c=>found.includes(c));
+  if(!visible.length)return '';
+  const open=!!term||!collapsed.has(page+path),key=path.split(' / ').pop()||'BMC';
+  let html='<tr class="folder"><td colspan="4" style="padding-left:'+(12+depth*15)+'px"><button data-folder="'+esc(path)+'" aria-expanded="'+open+'">'+(open?'▾':'▸')+' '+esc(key)+'<small>'+members.length+' 項</small></button></td></tr>';
+  if(!open)return html;
+  const sub=new Set();for(const c of visible){if(c[2]===path)continue;const next=c[2].slice(path?path.length+3:0).split(' / ')[0];sub.add(path?path+' / '+next:next);}
+  for(const child of sub)html+=folder(child,depth+1);
+  for(const c of visible.filter(c=>c[2]===path)){
+   const count=Object.keys(c[5]).length;
+   html+='<tr><td style="padding-left:'+(24+depth*15)+'px"><span class="name">'+c[0]+' '+c[1]+'</span><span class="mode">'+(c[0]==='IP-04-002'?'半自動':'全自動')+'</span></td><td>'+c[4]+'</td><td></td><td><div class="actions"><button data-view="'+c[0]+'" aria-label="檢視 '+c[0]+'">檢視</button>'+(count?'<button data-params="'+c[0]+'" aria-label="參數 '+c[0]+'">參數</button>':'')+'</div></td></tr>';
+  }return html;
+ }
+ el('rows').innerHTML=folder('',0)||'<tr><td colspan="4">找不到符合的測項</td></tr>';
+}
+for(const id of ['plan','repo'])el(id).onclick=()=>{page=id;render()};
+el('plans').onchange=render;el('search').oninput=render;
+el('rows').onclick=e=>{
+ const b=e.target.closest('button');if(!b)return;
+ if(b.hasAttribute('data-folder')){if(el('search').value.trim())return;const k=page+b.dataset.folder;collapsed.has(k)?collapsed.delete(k):collapsed.add(k);render();return}
+ const c=cases.find(c=>c[0]===(b.dataset.params||b.dataset.view)),params=!!b.dataset.params;
+ editing=params&&page==='plan'?c:null;el('title').textContent=c[0]+' '+c[1];el('save').hidden=!editing;
+ el('body').innerHTML=params?Object.entries(editing?values(c):c[5]).map(([k,v])=>'<label>'+esc(k)+'<input data-key="'+esc(k)+'" value="'+esc(v)+'" '+(editing?'':'readonly')+'></label>').join(''):'<p>'+esc(c[3])+'</p>';
+ el('detail').showModal();
+};
+el('save').onclick=()=>{for(const input of el('body').querySelectorAll('input'))values(editing)[input.dataset.key]=input.value;el('detail').close();render()};
+el('closeDetail').onclick=()=>el('detail').close();
+render();
+</script></html>

@@ -5,13 +5,14 @@ import sqlite3
 import tempfile
 import uuid
 import zipfile
-from contextlib import closing
+from contextlib import closing, contextmanager
 from datetime import datetime
 from pathlib import Path
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 from models import Project, ProjectPlan, Task, TaskTestCase
 from plan_state import StateError, task_case_dict, co
+from task_management import is_deleted
 
 
 def selected_tasks(session, project_id, data):
@@ -31,12 +32,14 @@ def selected_tasks(session, project_id, data):
         raise StateError('Selected Plan does not belong to this Project.', 400)
     if any(t is None or session.get(ProjectPlan, t.plan_id).project_id != project_id for t in chosen_tasks):
         raise StateError('Selected Task does not belong to this Project.', 400)
+    if any(is_deleted(t) for t in chosen_tasks):
+        raise StateError('Deleted Tasks cannot be selected for a new report.', 409)
     scope = {p.id for p in chosen_plans} | {t.plan_id for t in chosen_tasks}
     if len(scope) != 1:
         raise StateError('Select a Plan or Tasks within the same Plan.')
     plan = session.get(ProjectPlan, next(iter(scope)))
     ids = {t.id for t in chosen_tasks}
-    ordered = [t for t in plan.tasks if chosen_plans or t.id in ids]
+    ordered = [t for t in plan.tasks if not is_deleted(t) and (chosen_plans or t.id in ids)]
     if any(t.execution_active for t in ordered):
         raise StateError('Finish active Tasks before generating their reports.', 409)
     return plan, ordered, bool(chosen_plans) or len(ordered) != 1
@@ -132,7 +135,6 @@ def report_groups(session, project_id, data):
 
 def prepare_report(session, plan, tasks, final):
     """Prepare a render target in the disposable database only."""
-    from report_generator import _safe_name
     source_tasks = None
     source_details = None
     if final:
@@ -151,58 +153,18 @@ def prepare_report(session, plan, tasks, final):
             if source:
                 source_tasks[tc.system_id] = source.name
                 source_details[tc.system_id] = {'name':source.name, 'setup':json.loads(source.task_metadata or '{}')}
-        label, filename = plan.name, _safe_name(plan.name)+'_Final_Report.pdf'
+        label = plan.name
     else:
         report_task = tasks[0]
         report_task.environment_config = redact_environment(report_task.environment_config)
-        label, filename = report_task.name, _safe_name(report_task.name)+'_Test_Report.pdf'
+        label = report_task.name
     return {'identity':report_task.id, 'source_tasks':source_tasks,
             'scope':[t.name for t in tasks] if final else None, 'final':final, 'source_details':source_details,
-            'label':label, 'filename':filename}
+            'label':label}
 
 
-def reference_separator():
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, HRFlowable
-    from report_generator import _build_styles, A4, MARGIN, C_BORDER
-    buffer = io.BytesIO()
-    styles = _build_styles()
-    SimpleDocTemplate(buffer, pagesize=A4, leftMargin=MARGIN, rightMargin=MARGIN).build([
-        Spacer(1, 200), Paragraph('Reference Reports', styles['cover_title']),
-        Spacer(1, 18), HRFlowable(width='100%', color=C_BORDER), Spacer(1, 18),
-        Paragraph('Supporting reports follow. Their results are separate from the formal reports.', styles['cover_sub'])])
-    return buffer.getvalue()
-
-
-def merge_reports(parts):
-    """Keep report order and all log attachments, including colliding filenames."""
-    import pypdf
-    from report_generator import _safe_name
-    writer = pypdf.PdfWriter()
-    report_root = None
-    reference_root = None
-    for index, (area, report, content) in enumerate(parts, 1):
-        if area == 'reference' and reference_root is None:
-            divider_page = len(writer.pages)
-            writer.append_pages_from_reader(pypdf.PdfReader(io.BytesIO(reference_separator())))
-            reference_root = writer.add_outline_item('Reference Reports', divider_page)
-        reader = pypdf.PdfReader(io.BytesIO(content))
-        offset = len(writer.pages)
-        writer.append_pages_from_reader(reader)
-        if report_root is None:
-            report_root = writer.add_outline_item('Report Area', 0)
-        writer.add_outline_item(report['label'], offset, parent=reference_root if area == 'reference' else report_root)
-        for name, attachments in reader.attachments.items():
-            for occurrence, attachment in enumerate(attachments, 1):
-                prefix = f'{index:02d}_{_safe_name(report["label"])[:60]}_{occurrence}__'
-                writer.add_attachment(prefix+name, attachment)
-    writer.add_metadata({'/Title':'BMC Reports', '/Author':'BMCAgent'})
-    output = io.BytesIO()
-    writer.write(output)
-    return output.getvalue()
-
-
-def generate_selection(db_path, project_id, data, output_format='pdf'):
-    from report_generator import generate_task_pdf_report
+@contextmanager
+def prepared_selection(db_path, project_id, data):
     with tempfile.TemporaryDirectory(prefix='bmca-report-') as temp:
         copied = Path(temp) / 'export.db'
         with closing(sqlite3.connect(Path(db_path).resolve().as_uri()+'?mode=ro', uri=True)) as source:
@@ -215,37 +177,46 @@ def generate_selection(db_path, project_id, data, output_format='pdf'):
                 groups = report_groups(session, project_id, data)
                 reports = [(area, prepare_report(session, plan, tasks, final)) for area, plan, tasks, final in groups]
                 session.commit()
-            if output_format == 'html':
-                from report_html import generate_html_bundle
-                return generate_html_bundle(str(copied), reports), 'BMC_HTML_Report.zip'
-            parts = []
-            for index, (area, report) in enumerate(reports):
-                output = Path(temp) / f'report-{index}.pdf'
-                generate_task_pdf_report(report['identity'], str(output), db_path=str(copied),
-                    report_title='BMC Final Report' if report['final'] else 'BMC Test Report',
-                    source_tasks=report['source_tasks'], report_scope=report['scope'], source_details=report['source_details'])
-                parts.append((area, report, output.read_bytes()))
-            if len(parts) == 1:
-                return parts[0][2], parts[0][1]['filename']
-            return merge_reports(parts), 'BMC_Reports.pdf'
+            yield copied, reports
         finally:
             engine.dispose()
 
 
+def generate_selection(db_path, project_id, data):
+    from report_html import generate_html_bundle
+    with prepared_selection(db_path, project_id, data) as (copied, reports):
+        return generate_html_bundle(str(copied), reports), 'BMC_HTML_Report.zip'
+
+
 def generate_log_archive(db_path, project_id, data):
-    """Export exactly the attachments selected by the PDF's Final/Reference rules."""
-    import pypdf
-    content, filename = generate_selection(db_path, project_id, data)
-    reader = pypdf.PdfReader(io.BytesIO(content))
+    from case_log import test_log_text
+    from report_html import object_value
     output = io.BytesIO()
     count = 0
-    with zipfile.ZipFile(output, 'w', compression=zipfile.ZIP_DEFLATED) as archive:
-        for name, attachments in reader.attachments.items():
-            # A numeric prefix guarantees distinct portable entries even after sanitizing.
-            safe = ''.join('_' if c in '<>:"/\\|?*' or ord(c) < 32 else c for c in name).rstrip('. ')[:180] or 'test.log'
-            for attachment in attachments:
-                count += 1
-                archive.writestr(f'{count:03d}_{safe}', attachment)
+    with prepared_selection(db_path, project_id, data) as (copied, reports), closing(sqlite3.connect(copied)) as conn:
+        with zipfile.ZipFile(output, 'w', compression=zipfile.ZIP_DEFLATED) as archive:
+            for _, report in reports:
+                rows = conn.execute("""
+                    SELECT m.testcase_id, m.result_json, m.log_text, m.api_log_text
+                    FROM task_testcases m JOIN tasks t ON t.id=m.task_id
+                    JOIN testcases c ON c.system_id=m.testcase_id AND c.plan_id=t.plan_id
+                    WHERE m.task_id=? ORDER BY m.position, m.testcase_id
+                """, (report['identity'],))
+                for case_id, result, log, api_log in rows:
+                    content = test_log_text(log, api_log)
+                    if not content:
+                        continue
+                    files = object_value(result).get('log_files')
+                    name = files.get('test') if isinstance(files, dict) else None
+                    if not name and isinstance(files, dict):
+                        legacy = files.get('execution') or files.get('api')
+                        if isinstance(legacy, str):
+                            name = legacy.removesuffix('__result.log').removesuffix('__http.log') + '__test.log'
+                    if not isinstance(name, str) or not name.endswith('.log'):
+                        name = f'test_{case_id}.log'
+                    name = ''.join('_' if ch in '<>:"/\\|?*' or ord(ch)<32 else ch for ch in name)
+                    count += 1
+                    archive.writestr(f'{count:03d}_{name[:-4][:150]}.log', content.encode('utf-8'))
     if not count:
         raise StateError('No Test log attachments are available for this selection.', 404)
-    return output.getvalue(), Path(filename).stem+'_Logs.zip'
+    return output.getvalue(), 'BMC_Logs.zip'

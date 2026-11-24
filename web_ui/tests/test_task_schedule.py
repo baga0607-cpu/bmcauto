@@ -92,7 +92,7 @@ class TaskScheduleTest(unittest.TestCase):
         for tid in ['task1','planning']:
             self.assertEqual(self.change(tid).status_code,200)
             before=self.client.get('/api/tasks/'+tid+'/history').get_json()['history']
-            self.assertEqual(self.client.delete('/api/tasks/'+tid).status_code,200)
+            self.assertEqual(self.client.delete('/api/tasks/'+tid,json={'reason':'No longer needed'}).status_code,405)
             self.assertEqual(self.client.get('/api/tasks/'+tid+'/history').get_json()['history'],before)
 
     def test_failed_history_insert_rolls_back_schedule_atomically(self):

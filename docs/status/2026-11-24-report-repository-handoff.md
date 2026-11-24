@@ -29,3 +29,19 @@
 ## 可貼到新對話
 
 > 請先讀 BMCAgent/docs/status/2026-11-24-report-repository-handoff.md。沿用已部署的報告與測項庫行為，先處理我指定的功能頁。全站彈窗設計規範等各頁功能定案後再一起確認。這次要調整的頁面是＿＿＿＿。
+
+## Plan 測項列的 View 與 Parameters
+
+兩個入口共用測項庫的原生彈窗版面。Plan 測項列與右鍵選單開啟同一個彈窗，儲存使用既有 Plan definition API 與 settings_revision。Chrome headless 以模擬 API 驗證原始碼、參數儲存、執行鎖定、三個關閉入口的未儲存確認及焦點還原。本機 5000 埠已供應新版 workbench.js。下一步可重新整理 Plan 頁面，以實際測項驗收列表位置與右鍵入口。
+
+## Plan 改動歷程
+
+排序右側的 History 顯示目前 Plan 的變更。每次成功提交才一起寫入 plan_history。既有 Plan 從啟用後開始記錄，登入身分由 REMOTE_USER 提供。多檔 Python 匯入保留逐檔結果，歷程以同一批次顯示成功項目。
+
+隔離工作目錄執行 python -m unittest test_plan_history test_mixed_case_selection test_single_case_repository，共 31 項通過。Chrome headless 在獨立 Flask 服務從 Plan 工具列開啟歷程，確認排序右側入口與兩筆操作的顯示。正式服務的歷程 API 仍回應 404，重啟後才會建立新表並載入路由。
+
+## Plan 選單與設定
+
+Plan 清單與單一 Plan 連結共用下拉選單、Add Plan 與 Edit Plan，選單沿用瀏覽器原有的 Plan 排序。新增與編輯共用彈窗，編輯時帶入目前名稱與 SKU。改名沿用原有 PATCH，修改 SKU 由新版 settings 路由與名稱一起儲存。
+
+Chrome 在隔離的 Flask 服務驗證兩個頁面入口、SKU 回填與修改、新增後選取及下拉切換。test_plan_history、test_mixed_case_selection、test_single_case_repository 共 31 項通過。目前 5000 埠服務需要重啟才能接受 settings 路由的 PATCH。

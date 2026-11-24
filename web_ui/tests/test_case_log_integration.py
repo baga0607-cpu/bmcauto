@@ -13,6 +13,23 @@ class CaseLogIntegrationTest(unittest.TestCase):
     setUp = fixtures.SingleCaseRepositoryTest.setUp
     add_case = fixtures.SingleCaseRepositoryTest.add_case
 
+    def report_attachments(self):
+        import io
+        import zipfile
+        response = self.client.post('/api/projects/project/reports/logs',json={'task_ids':['task1']})
+        self.assertEqual(response.status_code,200)
+        with zipfile.ZipFile(io.BytesIO(response.data)) as archive:
+            return {name.split('_',1)[1]:[archive.read(name)] for name in archive.namelist()}
+
+    def test_source_block_survives_runner_and_storage(self):
+        source = """TEST_CASE = {'name': 'Unsupported archive fixture', 'parameters': {}}
+def execute(client, context=None, preset=None):
+    context['_tc_status'] = 'BLOCK'
+"""
+        row = self.run_source(source, {}, expected='Block')
+        self.assertEqual(row['result']['log_records'][-1]['status'], 'Block')
+        self.assertIn('Test Case: BLOCK', row['log_text'])
+
     def run_source(self, source, body, expected='Passed', sdk_failure=False, existing=None, case_settings=None):
         if existing is None:
             response = self.client.post('/api/repository/testcases', json={'source': source})
@@ -49,7 +66,7 @@ class CaseLogIntegrationTest(unittest.TestCase):
                 api.run_sessions[sid]['input_queue'].put('')
                 worker.join(2)
                 self.fail('Unexpected blocked offline execution')
-        row = next(r for r in self.client.get('/api/tasks/task1/summary').get_json()['testcases'] if r['id'] == tc['id'])
+        row = next(r for r in self.client.get('/api/tasks/task1/results').get_json()['testcases'] if r['id'] == tc['id'])
         self.assertEqual(row['status'], expected)
         self.assertEqual(row['log_text'].count('Final result'), 1)
         records = row['result']['log_records']
@@ -107,15 +124,8 @@ class CaseLogIntegrationTest(unittest.TestCase):
                 self.assertIn('HTTP evidence #1', row['log_text'])
                 if number!=4:self.assertIn('\n  "', row['log_text'])
                 if number == 6:
-                    from report_generator import generate_task_pdf_report
-                    from pypdf import PdfReader
-                    pdf = self.root / 'log-report.pdf'
-                    generate_task_pdf_report('task1', str(pdf), db_path=str(self.root / 'test.db'))
-                    attachments = PdfReader(str(pdf)).attachments
+                    attachments = self.report_attachments()
                     self.assertIn(row['result']['log_files']['test'], attachments)
-                    import os
-                    target=os.environ.get('BMC_REPORT_QA_DIR')
-                    if target:(Path(target)/'rf-six-steps.pdf').write_bytes(pdf.read_bytes())
 
     def test_scr_failure_retains_independent_checks_and_record(self):
         source = next((Path(__file__).resolve().parents[2] / 'test_assets/redfish').glob('rf_01_002_*.py')).read_text(encoding='utf-8')
@@ -147,11 +157,7 @@ class CaseLogIntegrationTest(unittest.TestCase):
         for name, content in old.items():
             self.assertEqual((self.root / 'logs' / name).read_bytes(), content)
         self.assertEqual(len(list((self.root / 'logs').glob('*.log'))), 2)
-        from report_generator import generate_task_pdf_report
-        from pypdf import PdfReader
-        pdf = self.root / 'rerun-log-report.pdf'
-        generate_task_pdf_report('task1', str(pdf), db_path=str(self.root / 'test.db'))
-        attachments = PdfReader(str(pdf)).attachments
+        attachments = self.report_attachments()
         self.assertEqual(set(attachments), set(second['result']['log_files'].values()))
         self.assertTrue(set(old).isdisjoint(attachments))
         for kind, key in [('test', 'log_text')]:
@@ -170,11 +176,7 @@ class CaseLogIntegrationTest(unittest.TestCase):
         self.assertIn('保留原文', row['log_text'])
         self.assertIn('中文測項', row['log_text'])
         self.assertIn('Final result', row['log_text'])
-        from report_generator import generate_task_pdf_report
-        from pypdf import PdfReader
-        pdf = self.root / 'original-language.pdf'
-        generate_task_pdf_report('task1', str(pdf), db_path=str(self.root / 'test.db'))
-        attachments = PdfReader(str(pdf)).attachments
+        attachments = self.report_attachments()
         self.assertEqual(attachments[row['result']['log_files']['test']], [row['log_text'].encode('utf-8')])
 
     def test_sdk_proxy_body_is_in_the_single_test_log(self):
@@ -184,7 +186,7 @@ class CaseLogIntegrationTest(unittest.TestCase):
         self.assertIn('retained', row['log_text'])
         self.assertEqual(len(list((self.root / 'logs').glob('*.log'))), 1)
 
-    def test_old_split_evidence_has_one_complete_pdf_attachment(self):
+    def test_old_split_evidence_has_one_complete_log_attachment(self):
         source = "TEST_CASE = {'name': 'Legacy log', 'parameters': {}}\ndef execute(client, context=None, preset=None): pass\n"
         row = self.run_source(source, {})
         with api.DbSession() as session:
@@ -197,11 +199,7 @@ class CaseLogIntegrationTest(unittest.TestCase):
         self.assertIn('old execution evidence', current['log_text'])
         self.assertIn('old HTTP-only response', current['log_text'])
         self.assertEqual(current['api_log_text'], '')
-        from report_generator import generate_task_pdf_report
-        from pypdf import PdfReader
-        pdf = self.root / 'legacy-log-report.pdf'
-        generate_task_pdf_report('task1', str(pdf), db_path=str(self.root / 'test.db'))
-        attachments = PdfReader(str(pdf)).attachments
+        attachments = self.report_attachments()
         self.assertEqual(set(attachments), {'old__test.log'})
         self.assertEqual(attachments['old__test.log'], [current['log_text'].encode('utf-8')])
 
@@ -226,15 +224,11 @@ def execute(client, context=None, preset=None):
         self.assertIn(' - INFO -   indented\n', row['log_text'])
         self.assertIn('tail', row['log_text'])
 
-    def test_report_step_contract_survives_execution_and_pdf(self):
+    def test_report_step_contract_survives_execution_and_export(self):
         source=(Path(__file__).resolve().parents[2]/'test_assets/examples/report_step_case.py').read_text(encoding='utf-8')
         row=self.run_source(source,{})
         step=next(r for r in row['result']['log_records'] if r['kind']=='step')
         self.assertEqual((step['step'],step['criteria'],step['result']),('GET /redfish/v1/','HTTP status equals 200',{'actual':200,'status':'PASS'}))
         self.assertIn('Verify the Service Root',row['result']['report_definition']['description'])
-        from report_generator import generate_task_pdf_report
-        from pypdf import PdfReader
-        pdf=self.root/'structured-steps.pdf'
-        generate_task_pdf_report('task1',str(pdf),db_path=str(self.root/'test.db'))
-        text=' '.join(p.extract_text() or '' for p in PdfReader(str(pdf)).pages)
-        self.assertIn('GET /redfish/v1/',text);self.assertIn('HTTP status equals 200',text);self.assertIn('Verify the Service Root',text)
+        attachments = self.report_attachments()
+        self.assertEqual(attachments[row['result']['log_files']['test']],[row['log_text'].encode('utf-8')])

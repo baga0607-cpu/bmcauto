@@ -7,13 +7,14 @@ from result_policy import validate_case_cp
 from case_log import test_log_text, result_note
 import json
 import case_order as co
+import plan_history
 import task_environment as te
 import shutil
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from sqlalchemy import text
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, defer
 from models import Base, PlanFolder, ProjectPlan, TestCase, Task, TaskTestCase, Category, PlanSubfolder, RepositoryCase
 
 class StateError(ValueError):
@@ -28,6 +29,8 @@ def require(session, model, identity):
     if not identity: raise StateError(f"Missing {model.__name__} identity",400)
     row=session.get(model, identity)
     if row is None: raise StateError(f'{model.__name__} not found',404)
+    if model is Task and json.loads(row.task_metadata or '{}').get('task_status') == 'Deleted':
+        raise StateError('This Task is Deleted.', 409)
     return row
 
 def unlocked(session, plan_id):
@@ -146,15 +149,16 @@ def replace_scope(session,task_id,items):
         if isinstance(item,dict): row.selected=item.get('selected',True)
     session.flush()
 
-def task_case_dict(row,tc):
+def task_case_dict(row,tc,include_evidence=True):
     case=tc.to_dict()
     case.update(status=canonical_status(row.status),selected=bool(row.selected),position=row.position,
-                bug_id=row.bug_id or '',executed_at=row.executed_at,
-                result=json.loads(row.result_json) if row.result_json else None,
-                log_text=test_log_text(row.log_text, row.api_log_text),api_log_text='',
+                bug_id=row.bug_id or '',executed_at=row.executed_at,note=row.result_note or '',
                 manual_override=json.loads(row.manual_override_json) if row.manual_override_json else None,
                 needs_retest=bool(row.needs_retest),
                 retest_message='Plan test conditions or Task connection settings changed; rerun this Test Case.' if row.needs_retest else '')
+    if include_evidence:
+        case.update(result=json.loads(row.result_json) if row.result_json else None,
+                    log_text=test_log_text(row.log_text, row.api_log_text),api_log_text='')
     raw=case['manual_override'].get('modified_at') if case['manual_override'] else row.executed_at
     try:
         case['result_updated_at']=datetime.fromisoformat(raw.replace('Z','+00:00')).astimezone(timezone.utc).isoformat() if raw else None
@@ -184,15 +188,18 @@ def set_manual_status(session,task_id,tc_id,data):
     return task_case_dict(row,tc)
 
 
-def summary(session,task_id,root=None):
+def summary(session,task_id,root=None,include_evidence=True):
     from task_management import display_setup
     task=require(session,Task,task_id)
     cases=[]; counts={'Passed':0,'Failed':0,'Block':0,'C-PASS':0,'TBD':0}
-    for row,tc in session.query(TaskTestCase,TestCase).join(TestCase,TaskTestCase.testcase_id==TestCase.system_id).filter(TaskTestCase.task_id==task_id,TestCase.plan_id==task.plan_id).order_by(TaskTestCase.position):
-        case=task_case_dict(row,tc)
+    query=session.query(TaskTestCase,TestCase).join(TestCase,TaskTestCase.testcase_id==TestCase.system_id).filter(TaskTestCase.task_id==task_id,TestCase.plan_id==task.plan_id).order_by(TaskTestCase.position)
+    if not include_evidence:
+        query=query.options(defer(TaskTestCase.result_json),defer(TaskTestCase.log_text),defer(TaskTestCase.api_log_text))
+    for row,tc in query:
+        case=task_case_dict(row,tc,include_evidence=include_evidence)
         import single_case
         case['automation']=single_case.automation_for_case(root,tc)
-        case['source_created_at']=single_case.creation_time_for_case(root,tc)
+        case.update(single_case.source_dates_for_case(root,tc))
         cases.append(case); counts[canonical_status(row.status) if row.status in ('Passed','Failed','Block','CP','C-PASS') else 'TBD']+=1
     return dict(id=task.id,task_id=task.id,name=task.name,plan_id=task.plan_id,execution_active=bool(task.execution_active),setup=display_setup(task.task_metadata),connection_configured=bool(te.normalize(task.environment_config)["host"]),testcases=co.arrange(session,'plan:'+task.plan_id,cases),counts=counts)
 
@@ -203,7 +210,7 @@ def start_execution(session,task_id,ids):
     rows={r.testcase_id:r for r in session.query(TaskTestCase).filter_by(task_id=task_id)}
     if any(i not in rows for i in ids): raise StateError('Execution cannot add Task scope')
     for i in ids:
-        row=rows[i]; row.manual_override_json=None; row.status='TBD'; row.result_json=None; row.log_text=None; row.api_log_text=None; row.executed_at=None
+        row=rows[i]; row.manual_override_json=None; row.status='TBD'; row.result_json=None; row.result_note=None; row.log_text=None; row.api_log_text=None; row.executed_at=None
     task.execution_active=True; task.execution_selection=json.dumps(ids); task.execution_token=str(uuid.uuid4())
     task.execution_worker_id=None; task.execution_stop_requested=False
     return task.execution_token
@@ -224,10 +231,10 @@ def save_result(session,task_id,data):
     if row.testcase_id not in json.loads(task.execution_selection or '[]'): raise StateError('Testcase is not selected for this execution')
     row.status=canonical_status(data.get('status'))
     result = dict(data.get('result',data))
-    note = result_note(result)
-    try: validate_case_cp(row.status, result, note)
+    try: validate_case_cp(row.status, result, result_note(result))
     except ValueError as error: raise StateError(str(error))
-    result['note'] = note
+    row.result_note = result_note(result)
+    result['note'] = row.result_note
     row.result_json=json.dumps(result,ensure_ascii=False)
     row.log_text=data.get('log_text',data.get('log','')); row.api_log_text=data.get('api_log_text','')
     row.executed_at=data.get('executed_at'); row.bug_id=data.get('bug_id',row.bug_id)
@@ -235,12 +242,20 @@ def save_result(session,task_id,data):
         row.needs_retest=False
     session.flush()
 
+def request_worker_stop(run):
+    run['stop_requested'] = True
+    signal = run.get('cancel_event')
+    if signal is not None:
+        signal.set()
+    run['input_queue'].put('__STOP__')
+
+
 def finish_execution(session,task_id,execution_token):
     task=require(session,Task,task_id)
     check_execution_token(task,execution_token)
     if task.execution_worker_id: raise StateError('Execution worker is still stopping',409)
     for row in session.query(TaskTestCase).filter_by(task_id=task_id,status='Running'):
-        row.status='TBD'; row.result_json=None; row.log_text=None; row.api_log_text=None; row.executed_at=None
+        row.status='TBD'; row.result_json=None; row.result_note=None; row.log_text=None; row.api_log_text=None; row.executed_at=None
     task.execution_active=False; task.execution_selection=None; task.execution_token=None; task.execution_stop_requested=False
 
 def folder_descendants(session,folder):
@@ -262,6 +277,7 @@ def impact(session,folder=None,testcases=None):
     return dict(name=folder.name if folder else testcases[0].display_name,names=[t.display_name for t in testcases],descendant_folder_count=len(descendants),testcase_count=len(testcases),affected_task_count=len({r.task_id for r in rows}),task_testcase_count=len(rows),requires_acknowledgement=bool(folder and (testcases or descendants)))
 
 def delete_content(session,main_program_dir,data,folder=None,testcases=None,folders=None):
+    preserved=[]
     if folders is not None:
         deleting={}
         for item in folders:
@@ -269,7 +285,15 @@ def delete_content(session,main_program_dir,data,folder=None,testcases=None,fold
             for child in folder_descendants(session,item):deleting[child.id]=child
         folder_ids=set(deleting)
         combined={tc.system_id:tc for tc in (testcases or [])}
-        for tc in session.query(TestCase).filter(TestCase.folder_id.in_(folder_ids)).all():combined[tc.system_id]=tc
+        for tc in session.query(TestCase).filter(TestCase.folder_id.in_(folder_ids)).all():
+            if data.get('keep_cases') is True:
+                combined.pop(tc.system_id,None)
+                parent=tc.folder_id
+                while parent in deleting:
+                    parent=deleting[parent].parent_id
+                preserved.append((tc,session.get(PlanFolder,parent) if parent else None))
+            else:
+                combined[tc.system_id]=tc
         testcases=list(combined.values())
         plan_id=folders[0].plan_id if folders else testcases[0].plan_id
         memberships=session.query(TaskTestCase).filter(TaskTestCase.testcase_id.in_(combined)).all() if combined else []
@@ -286,6 +310,8 @@ def delete_content(session,main_program_dir,data,folder=None,testcases=None,fold
     root=(Path(main_program_dir)/'testcase_database'/'scripts').resolve()
     recovery=root/'.delete-recovery'/str(uuid.uuid4()); staged=[]
     try:
+        for tc,parent in preserved:
+            assign_folder(session,tc,parent)
         for tc in testcases:
             source=(root/tc.script_path.split('.')[-1]).resolve()
             if source.parent!=root: raise StateError('Invalid executable directory')
@@ -380,7 +406,7 @@ def migrate_current_state(engine,log_path):
         conn.exec_driver_sql('BEGIN IMMEDIATE')
         try:
             migrate_block_status(conn)
-            columns={'project_plans':{'folders_migrated':'BOOLEAN NOT NULL DEFAULT 0'},'testcases':{'folder_id':'TEXT'},'tasks':{'execution_active':'BOOLEAN NOT NULL DEFAULT 0','execution_selection':'TEXT','execution_token':'TEXT','execution_worker_id':'TEXT','execution_stop_requested':'BOOLEAN NOT NULL DEFAULT 0'},'task_testcases':{'manual_override_json':'TEXT','result_json':'TEXT','log_text':'TEXT','api_log_text':'TEXT'}}
+            columns={'project_plans':{'folders_migrated':'BOOLEAN NOT NULL DEFAULT 0'},'testcases':{'folder_id':'TEXT'},'tasks':{'execution_active':'BOOLEAN NOT NULL DEFAULT 0','execution_selection':'TEXT','execution_token':'TEXT','execution_worker_id':'TEXT','execution_stop_requested':'BOOLEAN NOT NULL DEFAULT 0'},'task_testcases':{'result_note':'TEXT','manual_override_json':'TEXT','result_json':'TEXT','log_text':'TEXT','api_log_text':'TEXT'}}
             for table, additions in columns.items():
                 present={r[1] for r in conn.exec_driver_sql(f'PRAGMA table_info({table})')}
                 for name,kind in additions.items():
@@ -516,9 +542,16 @@ def install_routes(app, runtime):
                 plans.update(p.id for p in session.query(ProjectPlan).filter_by(project_id=project_id))
             if request.endpoint=='run_testcase' and not data.get('task_id'):
                 for plan_id in plans: unlocked(session,plan_id)
-            execution={'current_start','current_finish','current_stop','current_result','save_results','annotate_task_tc','run_testcase','single_update','current_task_settings'}
+            execution={'current_start','current_finish','current_stop','current_case_stop','current_result','save_results','annotate_task_tc','run_testcase','single_update','current_task_settings'}
             if request.endpoint not in execution:
                 for plan_id in plans: unlocked(session,plan_id)
+            operation = plan_history.OPERATIONS.get(request.endpoint)
+            if operation:
+                target = args.get('plan_id') or data.get('plan_id')
+                if request.endpoint == 'current_folder' and request.method == 'DELETE':
+                    operation = 'Remove folder'
+                for identity in ([target] if target else plans):
+                    plan_history.watch(session, identity, operation)
         except Exception as e:
             session.rollback(); return jsonify(error=str(e)),getattr(e,'code',500)
 
@@ -541,6 +574,11 @@ def install_routes(app, runtime):
             else: app.add_url_rule(rule,name,handle,methods=methods)
             return handle
         return decorate
+
+    @route('/api/plans/<plan_id>/history',['GET'])
+    def current_plan_history(s,data,plan_id):
+        require(s, ProjectPlan, plan_id)
+        return jsonify(plan_history.entries(s, plan_id))
 
     @route('/api/plans/<plan_id>/folders',['GET','POST'])
     def current_folders(s,data,plan_id):
@@ -583,6 +621,9 @@ def install_routes(app, runtime):
 
     @route('/api/plans/<plan_id>/items/delete',['POST'])
     def current_delete_selection(s,data,plan_id):
+        return delete_selection(s,data,plan_id)
+
+    def delete_selection(s,data,plan_id):
         unlocked(s,plan_id)
         folder_ids=data.get('folder_ids',[]);case_ids=data.get('case_ids',[])
         if not isinstance(folder_ids,list) or not isinstance(case_ids,list) or not(folder_ids or case_ids) or any(not isinstance(i,str) or not i for i in folder_ids+case_ids):raise StateError('Select folders or Test Cases')
@@ -590,6 +631,12 @@ def install_routes(app, runtime):
         cases=[require(s,TestCase,i) for i in dict.fromkeys(case_ids)]
         if any(f.plan_id!=plan_id for f in folders) or any(c.plan_id!=plan_id for c in cases):raise StateError('Selection belongs to another Plan')
         return jsonify(status='ok',impact=delete_content(s,runtime['MAIN_PROGRAM_DIR'],data,folders=folders,testcases=cases))
+
+    @route('/api/plans/<plan_id>/items/remove',['POST'])
+    def remove_with_folder_policy(s,data,plan_id):
+        if not isinstance(data.get('keep_cases'),bool):
+            raise StateError('Choose how to handle folder contents')
+        return delete_selection(s,data,plan_id)
 
     @route('/api/plans/<plan_id>/items/move',['POST'])
     def current_move_selection(s,data,plan_id):
@@ -686,10 +733,19 @@ def install_routes(app, runtime):
     @route('/api/tasks/<task_id>/testcases/<tc_id>/logs',['GET'])
     def current_case_logs(s,data,task_id,tc_id):
         task,row,tc=live_task_case(s,task_id,tc_id)
+        if request.args.get('text_only') == '1':
+            return jsonify(id=tc.system_id,task_id=task.id,log_text=test_log_text(row.log_text,row.api_log_text))
         return jsonify(task_case_dict(row,tc))
 
     @route('/api/tasks/<task_id>/summary',['GET'])
-    def current_summary(s,data,task_id): return jsonify(summary(s,task_id,runtime['MAIN_PROGRAM_DIR']))
+    def current_summary(s,data,task_id):
+        result = summary(s,task_id,runtime['MAIN_PROGRAM_DIR'],include_evidence=False)
+        worker_id = require(s, Task, task_id).execution_worker_id
+        run = runtime['run_sessions'].get(worker_id)
+        if run and not run.get('closed') and run.get('activity_at'):
+            result['activity'] = dict(session_id=worker_id, case_id=run['testcase_id'],
+                                      at_ms=int(run['activity_at'] * 1000))
+        return jsonify(result)
 
     @route('/api/tasks/<task_id>/results',['GET'],endpoint='load_task_results')
     def current_results(s,data,task_id): return jsonify(summary(s,task_id,runtime['MAIN_PROGRAM_DIR']))
@@ -701,7 +757,10 @@ def install_routes(app, runtime):
         active=bool(task.execution_active)
         session_id=next((sid for sid,run in runtime['run_sessions'].items() if run.get('task_id')==task_id and run.get('thread') and run['thread'].is_alive()),None) if active else None
         return jsonify(task_id=task.id,execution_active=active,execution_token=task.execution_token if active else None,session_id=session_id,
-                       testcase_ids=json.loads(task.execution_selection or '[]'),stop_requested=bool(task.execution_stop_requested))
+                       testcase_ids=json.loads(task.execution_selection or '[]'),stop_requested=bool(task.execution_stop_requested),
+                       completed_testcase_ids=[run['testcase_id'] for run in runtime['run_sessions'].values()
+                           if active and run.get('task_id')==task_id and run.get('execution_token')==task.execution_token
+                           and run.get('closed') and run.get('testcase_id')])
 
     @route('/api/tasks/<task_id>/settings',['GET','PUT','POST'])
     def current_task_settings(s,data,task_id):
@@ -711,6 +770,7 @@ def install_routes(app, runtime):
 
     @route('/api/tasks/<task_id>/execution/start',['POST'])
     def current_start(s,data,task_id):
+        require(s,Task,task_id)
         if s.query(Task).filter_by(execution_active=True).first():
             raise StateError('Another Task is executing. Finish or stop it before starting a new Task.',409)
         ids=data.get('selected_testcase_ids',data.get('testcase_ids'))
@@ -736,6 +796,25 @@ def install_routes(app, runtime):
     @route('/api/tasks/<task_id>/execution/finish',['POST'])
     def current_finish(s,data,task_id): return terminal(s,task_id,data)
 
+    @route('/api/tasks/<task_id>/testcases/<tc_id>/execution/stop',['POST'])
+    def current_case_stop(s,data,task_id,tc_id):
+        task,row,tc=live_task_case(s,task_id,tc_id)
+        check_execution_token(task,data.get('execution_token'))
+        session_id=data.get('session_id')
+        run=runtime['run_sessions'].get(session_id)
+        # Bind the request to this worker; a late click must never stop the next case.
+        if (not session_id or task.execution_worker_id!=session_id or not run
+                or run.get('task_id')!=task_id or run.get('testcase_id')!=tc_id
+                or run.get('execution_token')!=task.execution_token
+                or run.get('closed') or row.status!='Running'):
+            raise StateError('This Test Case is no longer running',409)
+        if task.execution_stop_requested:
+            raise StateError('The entire Task is already stopping',409)
+        run['stop_scope']='case'
+        request_worker_stop(run)
+        s.commit()
+        return jsonify(status='stopping',scope='case',testcase_id=tc_id)
+
     @route('/api/tasks/<task_id>/execution/stop',['POST'])
     def current_stop(s,data,task_id):
         task=require(s,Task,task_id)
@@ -743,7 +822,7 @@ def install_routes(app, runtime):
         task.execution_stop_requested=True
         active=[r for r in runtime['run_sessions'].values() if r.get('task_id')==task_id and r.get('thread') and r['thread'].is_alive()]
         for run in active:
-            run['stop_requested']=True; run['input_queue'].put('__STOP__')
+            request_worker_stop(run)
         if task.execution_worker_id:
             s.commit(); return jsonify(status='stopping')
         return terminal(s,task_id,data)
@@ -782,7 +861,11 @@ def install_routes(app, runtime):
                 if plan is None:
                     from models import Project
                     owner=require(s,Project,project.get('id'))
-                    plan=ProjectPlan(id=plan_data.get('id') or str(uuid.uuid4()),project_id=owner.id,name=plan_data.get('name','Plan')); s.add(plan); s.flush()
+                    plan=ProjectPlan(id=plan_data.get('id') or str(uuid.uuid4()),project_id=owner.id,name=plan_data.get('name','Plan'))
+                    plan_history.watch(s,plan.id,'Create Plan')
+                    s.add(plan); s.flush()
+                else:
+                    plan_history.watch(s,plan.id,'Update Plan')
                 unlocked(s,plan.id)
                 for name in plan_data.get('custom_subfolders',[]): resolve_folder(s,plan.id,{'folder_path':'Custom/'+name})
                 if project.get('id') and plan.project_id!=project['id']: raise StateError('Plan belongs to another Project')

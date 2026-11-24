@@ -198,11 +198,23 @@ class TaskTestCase(Base):
     status = Column(String(50), nullable=False, default='TBD')
     manual_override_json = Column(Text, nullable=True)
     result_json = Column(Text, nullable=True)
+    result_note = Column(Text, nullable=True)
     log_text = Column(Text, nullable=True)
     api_log_text = Column(Text, nullable=True)
     bug_id = Column(String(100), nullable=True)
     executed_at = Column(String(50), nullable=True)
     needs_retest = Column(Boolean, nullable=False, default=False)
+
+
+class PlanHistory(Base):
+    __tablename__ = 'plan_history'
+    id = Column(Integer, primary_key=True)
+    plan_id = Column(String(36), ForeignKey('project_plans.id', ondelete='CASCADE'), nullable=False, index=True)
+    recorded_at = Column(String(50), nullable=False)
+    operator = Column(String(255))
+    batch_id = Column(String(36))
+    operation = Column(String(80), nullable=False)
+    changes = Column(Text, nullable=False)
 
 
 class RepositoryHistory(Base):

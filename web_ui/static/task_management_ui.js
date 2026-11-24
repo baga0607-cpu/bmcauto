@@ -11,7 +11,7 @@ window.TaskManagement = (() => {
   const iso = value => new Date(value * 86400000).toISOString().slice(0,10);
   const link = task => task.task_type==='Plan'? `#/project/${encodeURIComponent(task.project_id)}/plans` : `#/project/${encodeURIComponent(task.project_id)}/plan/${encodeURIComponent(task.plan_id)}/task/${encodeURIComponent(task.id)}`;
   const infoLink = task => `#/tasks/info/${encodeURIComponent(task.id)}`;
-  const action = (label, name, task) => `<button type="button" class="small-button ${name==='manager-delete'?'danger':''}" data-action="${name}" data-id="${escape(task.id)}" aria-label="${label} ${escape(task.name)}" ${task.locked?'disabled':''}>${label}</button>`;
+  const action = (label, name, task) => `<button type="button" class="small-button" data-action="${name}" data-id="${escape(task.id)}" aria-label="${label} ${escape(task.name)}" ${task.locked?'disabled':''}>${label}</button>`;
   const statuses=['Not Scheduled','New','On-Going','Complete','Cancel','Pending'];
   const statusOptions=value=>statuses.map(s=>`<option value="${s}" ${s===value?'selected':''} data-no-translate>${s}</option>`).join('');
   const scheduled = task => Boolean(task.setup.start_date && task.setup.end_date && Number.isFinite(day(task.setup.start_date)) && Number.isFinite(day(task.setup.end_date)));
@@ -20,7 +20,7 @@ window.TaskManagement = (() => {
     const sync=()=>{
       end.min=start.value;
       const invalid=Boolean(start.value&&end.value&&end.value<start.value);
-      end.setCustomValidity(invalid?(document.documentElement.lang==='zh-Hant'?'結束日期不可早於開始日期。':'End date must be on or after start date.'):'');
+      end.setCustomValidity(invalid?'End date must be on or after start date.':'');
     };
     start.addEventListener('input',sync);end.addEventListener('input',sync);
     start.addEventListener('change',sync);end.addEventListener('change',sync);sync();
@@ -72,7 +72,7 @@ window.TaskManagement = (() => {
     return `<td><button type="button" class="task-cell-edit" data-task-meta="fw_package" data-task-id="${escape(task.id)}" title="${escape(full)}" aria-label="FW Package — ${escape(full)}" ${task.locked?'disabled':''}>${packageValue(task.setup,true)}</button></td>`;
   }
   const referenceFields=value=>`<fieldset class="task-reference-fields field full"><legend data-no-translate>iDesign ID</legend><div class="fields"><label class="field"><span>Request ID</span><input name="idesign_request_id" maxlength="200" value="${escape(value?.request_id||'')}"></label><label class="field"><span>Hyperlink</span><input name="idesign_hyperlink" type="url" pattern="https?://.+" maxlength="2048" value="${escape(value?.hyperlink||'')}"></label></div></fieldset>`;
-  const packageRow=item=>`<div class="fw-package-row" ${defaultComponents.includes(item.component)?`data-fw-default="${escape(item.component)}"`:''}><label class="field"><span>Component</span><input data-fw-component maxlength="200" required value="${escape(item.component||'')}"></label><label class="field"><span>Version</span><input data-fw-version maxlength="255" ${!item.version&&defaultComponents.includes(item.component)?'':'required'} value="${escape(item.version||'')}"></label><button type="button" class="small-button danger" data-fw-remove>Remove</button></div>`;
+  const packageRow=item=>`<div class="fw-package-row" ${defaultComponents.includes(item.component)?`data-fw-default="${escape(item.component)}"`:''}><label class="field"><span class="sr-only">Component</span><input data-fw-component placeholder="Component" aria-label="Component" maxlength="200" required value="${escape(item.component||'')}"></label><label class="field"><span class="sr-only">Version</span><input data-fw-version placeholder="Version" aria-label="Version" maxlength="255" ${!item.version&&defaultComponents.includes(item.component)?'':'required'} value="${escape(item.version||'')}"></label><button type="button" class="small-button danger" data-fw-remove>Remove</button></div>`;
   const packageFields=(items=[],enabled=true)=>`<fieldset class="task-fw-editor field full" ${enabled?'':'disabled'}><legend data-no-translate>FW Package</legend><div data-fw-rows>${packageItems({fw_package:items}).map(packageRow).join('')}</div><button type="button" class="small-button" data-fw-add>Add item</button><p class="help">FW Package is editable for Test Tasks only.</p></fieldset>`;
   function metadataValues(form){
     const result={},request=form.querySelector('[name="idesign_request_id"]'),packageEditor=form.querySelector('.task-fw-editor');
@@ -113,28 +113,31 @@ window.TaskManagement = (() => {
   }
 
   const assignmentEdit=(task,field)=>`<button type="button" class="task-assignment-edit" data-task-edit="${field}" title="${escape(cellValue(task,field))}" aria-label="${editLabels[field]} — ${escape(cellValue(task,field))}" ${task.locked?'disabled':''}>${escape(cellValue(task,field))}</button>`;
-  const taskLabel=task=>`<td class="task-list-label"><a href="${infoLink(task)}" title="${escape(task.name)}">${escape(task.name)}</a><span class="schedule-owner task-list-assignment" data-no-translate><span class="task-list-assignee">Assignee: ${assignmentEdit(task,'owner')}</span><span class="task-list-status">· Status: ${assignmentEdit(task,'task_status')}</span></span></td>`;
+  const taskLabel=task=>`<td class="task-list-label"><a href="${infoLink(task)}" title="${escape(task.name)}">${escape(task.name)}</a></td><td>${assignmentEdit(task,'owner')}</td><td>${assignmentEdit(task,'task_status')}</td>`;
   function table(tasks, searching=false) {
     tableTasks=tasks;
-    return `<div class="table-wrap managed-tasks-wrap" tabindex="0" role="region" aria-label="Task List"><table class="managed-tasks"><colgroup>${[25,11,16,9,9,9,9,12].map(width=>`<col style="width:${width}%">`).join('')}</colgroup><thead><tr><th>Task</th><th data-no-translate>iDesign ID</th><th data-no-translate>FW Package</th><th>Plan Start Date</th><th>Plan End Date</th><th>Actual Start Date</th><th>Actual End Date</th><th data-no-translate>Days (Actual/Plan)</th></tr></thead><tbody>${tasks.map(t=>`<tr data-task-id="${escape(t.id)}">${taskLabel(t)}${referenceCell(t)}${packageCell(t)}${['start_date','end_date','actual_start_date','actual_end_date'].map(field=>editableCell(t,field)).join('')}<td data-no-translate ${t.calendar_complete===false||t.actual_calendar_complete===false?'title="Official holidays cover 2025–2027. Other years use weekends only; set holidays manually."':''}>${t.actual_working_days??'—'} / ${t.working_days??'—'}</td></tr>`).join('')||'<tr><td colspan="8">No matching Tasks</td></tr>'}</tbody></table></div>`;
+    return `<div class="table-wrap managed-tasks-wrap" tabindex="0" role="region" aria-label="Task List"><table class="managed-tasks"><colgroup>${[18,7,9,10,13,8,8,8,8,11].map(width=>`<col style="width:${width}%">`).join('')}</colgroup><thead><tr><th>Task</th><th>Assignee</th><th>Status</th><th data-no-translate>iDesign ID</th><th data-no-translate>FW Package</th><th>Plan Start Date</th><th>Plan End Date</th><th>Actual Start Date</th><th>Actual End Date</th><th data-no-translate>Days (Actual/Plan)</th></tr></thead><tbody>${tasks.map(t=>`<tr data-task-id="${escape(t.id)}">${taskLabel(t)}${referenceCell(t)}${packageCell(t)}${['start_date','end_date','actual_start_date','actual_end_date'].map(field=>editableCell(t,field)).join('')}<td data-no-translate ${t.calendar_complete===false||t.actual_calendar_complete===false?'title="Official holidays cover 2025–2027. Other years use weekends only; set holidays manually."':''}>${t.actual_working_days??'—'} / ${t.working_days??'—'}</td></tr>`).join('')||'<tr><td colspan="10">No matching Tasks</td></tr>'}</tbody></table></div>`;
   }
 
-  async function openCellEditor(control){
-    const task=tableTasks.find(t=>t.id===control.closest('tr').dataset.taskId),field=control.dataset.taskEdit;
+  async function openCellEditor(control, options={}){
+    const task=options.task||tableTasks.find(t=>t.id===control.closest('tr').dataset.taskId),field=options.field||control.dataset.taskEdit;
+    const editApi=options.api||scheduleApi,refresh=options.updated||redraw,message=options.toast||notify;
     if(!task||task.locked||!editLabels[field])return;
     let dialog=document.getElementById('task-cell-dialog');
     if(dialog?.open)return;
-    const owners=field==='owner'?(await scheduleApi('/api/tasks/options')).owners||['TBD']:[];
+    const owners=field==='owner'?(await editApi('/api/tasks/options')).owners||['TBD']:[];
     if(!control.isConnected)return;
     if(!dialog){dialog=document.createElement('dialog');dialog.id='task-cell-dialog';dialog.setAttribute('aria-labelledby','task-cell-title');document.body.append(dialog);}
     const original=cellValue(task,field),isOwner=field==='owner',isStatus=field==='task_status',isDate=field.endsWith('_date');
     const dateFields=field.startsWith('actual_')?['actual_start_date','actual_end_date']:['start_date','end_date'];
     const title=isDate?(field.startsWith('actual_')?'Edit Actual dates':'Edit Plan dates'):'Edit '+editLabels[field];
-    const options=[...new Set(['TBD',...owners,original])];
-    const editor=isOwner?`<select name="value">${options.map(value=>`<option value="${escape(value)}" ${value===original?'selected':''} data-no-translate>${escape(value)}</option>`).join('')}</select>`:isStatus?`<select name="value">${statusOptions(original)}</select>`:`<input type="date" name="value" value="${escape(original)}">`;
+    const ownerOptions=[...new Set(['TBD',...owners,original])];
+    const editor=isOwner?`<select name="value">${ownerOptions.map(value=>`<option value="${escape(value)}" ${value===original?'selected':''} data-no-translate>${escape(value)}</option>`).join('')}</select>`:isStatus?`<select name="value">${statusOptions(original)}</select>`:`<input type="date" name="value" value="${escape(original)}">`;
     const fields=isDate?`<div class="fields">${dateFields.map(key=>`<label class="field"><span>${editLabels[key]}</span><input type="date" name="${key}" value="${escape(cellValue(task,key))}"></label>`).join('')}</div>`:`<label class="field"><span>${editLabels[field]}</span>${editor}</label>`;
     dialog.innerHTML=`<form id="task-cell-form"><h2 id="task-cell-title">${title}</h2><p data-no-translate>${escape(task.name)}</p>${fields}${isOwner?'<p class="help">Assignee changes are recorded automatically in History.</p>':'<label class="field task-cell-history"><span>History — reason for date or status change</span><textarea name="history" rows="3" maxlength="4000" required></textarea></label>'}<p id="task-cell-error" class="plan-create-error" role="alert"></p><div class="form-actions"><button type="submit" class="primary">Save Task</button><button type="button" id="task-cell-cancel">Cancel</button></div></form>`;
     const form=dialog.querySelector('form');
+    form.querySelector('.task-cell-history span')?.replaceChildren('Note — reason for date or status change');
+    form.oninput=event=>event.stopPropagation();form.onchange=event=>event.stopPropagation();
     if(isStatus){const complete=Boolean(task.setup.start_date&&task.setup.end_date);for(const option of form.elements.value.options)option.disabled=complete?option.value==='Not Scheduled':option.value!=='Not Scheduled';}
     if(isDate)bindDateRange(form.elements[dateFields[0]],form.elements[dateFields[1]]);
     let saving=false;
@@ -148,14 +151,14 @@ window.TaskManagement = (() => {
       if(Object.entries(changes).every(([key,value])=>value===cellValue(task,key))){dialog.close();return;}
       const setup=task.setup,payload={setup:changes,expected_start_date:setup.start_date||'',expected_end_date:setup.end_date||'',expected_actual_start_date:setup.actual_start_date||'',expected_actual_end_date:setup.actual_end_date||'',expected_owner:setup.owner||'TBD',expected_task_status:setup.task_status||'New'};
       if(!isOwner)payload.history=form.elements.history.value;
-      const scroll=document.querySelector('.managed-tasks-wrap'),position={left:scroll.scrollLeft,top:scroll.scrollTop};
+      const scroll=document.querySelector('.managed-tasks-wrap'),position={left:scroll?.scrollLeft||0,top:scroll?.scrollTop||0};
       saving=true;for(const button of form.querySelectorAll('button'))button.disabled=true;
       try{
-        await scheduleApi('/api/tasks/'+encodeURIComponent(task.id),'PATCH',payload);
-        dialog.close();await redraw();const next=document.querySelector('.managed-tasks-wrap');if(next){next.scrollLeft=position.left;next.scrollTop=position.top;}
-        for(const row of document.querySelectorAll('.managed-tasks tr[data-task-id]'))if(row.dataset.taskId===task.id)row.querySelector('[data-task-edit="'+field+'"]').focus({preventScroll:true});
-        notify('Task updated.');
-      }catch(error){if(dialog.open)document.getElementById('task-cell-error').textContent=error.message;else notify(error.message,true);}
+        await editApi('/api/tasks/'+encodeURIComponent(task.id),'PATCH',payload);
+        dialog.close();await refresh();const next=document.querySelector('.managed-tasks-wrap');if(next){next.scrollLeft=position.left;next.scrollTop=position.top;}
+        if(!options.task)for(const row of document.querySelectorAll('.managed-tasks tr[data-task-id]'))if(row.dataset.taskId===task.id)row.querySelector('[data-task-edit="'+field+'"]').focus({preventScroll:true});
+        message('Task updated.');
+      }catch(error){if(dialog.open)document.getElementById('task-cell-error').textContent=error.message.replace(/\bHistory\b/g,'Note');else message(error.message,true);}
       finally{saving=false;for(const button of form.querySelectorAll('button'))button.disabled=false;}
     };
     dialog.showModal();form.elements[isDate?field:'value'].focus();
@@ -366,7 +369,7 @@ let calendar=null, viewStart=null, selectedDay=null, selectedTask=null, schedule
       <div class="form-actions"><button type="submit" class="primary" ${task?'':'disabled'}>${task?'Save Task':'Create Task'}</button><button type="button" data-action="close-panel">Cancel</button></div></form>`;
   }
 
-  function bindForm(projects, api) {
+  function bindForm(projects, api, historyLabel='History', onReady=()=>{}, modalNote=false) {
     const form=document.getElementById('task-manager-form');
     if(!form)return;
     bindMetadata(form);
@@ -374,6 +377,7 @@ let calendar=null, viewStart=null, selectedDay=null, selectedTask=null, schedule
     form.elements.task_type.addEventListener('change',updatePackageType);updatePackageType();
     bindDateStatus(form.elements.start_date,form.elements.end_date,form.elements.task_status,!form.dataset.taskId);
     bindDateRange(form.elements.actual_start_date,form.elements.actual_end_date);
+    if(form.dataset.taskId && modalNote){form.querySelector('#manager-history-field').remove();return;}
     if(form.dataset.taskId){
       let mode='none',scheduleReason='';
       const updateHistory=()=>{
@@ -386,7 +390,7 @@ let calendar=null, viewStart=null, selectedDay=null, selectedTask=null, schedule
         field.hidden=next==='none';input.disabled=next==='none';input.required=changed;input.readOnly=next==='owner';
         if(next==='date'&&mode!=='date')input.value=scheduleReason;
         if(next==='owner')input.value=ownerMessage;
-        field.querySelector('span').textContent=changed?'History — reason for date or status change':'History';
+        field.querySelector('span').textContent=changed?historyLabel+' — reason for date or status change':historyLabel;
         preview.hidden=!(changed&&ownerChanged);preview.textContent=ownerMessage;
         mode=next;
       };
@@ -419,9 +423,9 @@ let calendar=null, viewStart=null, selectedDay=null, selectedTask=null, schedule
       try{
         const result=await api('/api/tasks/name-preview?'+params);
         if(current!==version||!form.isConnected)return;
-        name.value=result.name;form.dataset.nameReady='true';submit.disabled=false;
+        name.value=result.name;form.dataset.nameReady='true';submit.disabled=false;onReady();
       }catch(e){if(current===version&&form.isConnected)error.textContent=e.message;}
     });
   }
-  return {metadataValues, content, historyList, taskInfo, infoLink, form, planOptions, link, bindForm, calendarRange, setCalendar, bindSchedule};
+  return {openCellEditor, metadataValues, content, historyList, taskInfo, infoLink, form, planOptions, link, bindForm, calendarRange, setCalendar, bindSchedule};
 })();

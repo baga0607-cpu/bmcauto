@@ -1,0 +1,7 @@
+# HTML-only report export — 2026-11-24
+
+Project and Task report downloads now return HTML + Logs ZIP. Explicit PDF requests return HTTP 400. The separate Logs ZIP reads current Task evidence from the same snapshot and Final/Reference selection logic and gives duplicate filenames unique numeric prefixes. An empty log selection returns 404.
+
+Verification used disposable databases and a Chrome download fixture. The report regression run covered 79 tests, with 78 passing. The existing case-level long Note expectation (END_OF_NOTE) still fails as described in the report/repository handoff. The PDF-only firmware-field check is retired. HTML Case presentation policy is unchanged.
+
+Live acceptance passed on 2026-11-24 at 127.0.0.1:5000 after restart-20261124-164209-160. The restart verification recorded integrity OK, zero foreign key errors and no changed tables (22 checked). The active-runs endpoint was empty. Chrome downloaded the FWA-6084 BMC formal / GPU reference package and standalone logs. The Task endpoint returned a ZIP for 13 cases. Both extracted HTML reports opened and a linked log opened from each. All 13 attachment links per package resolved, and all 13 standalone logs matched the merged attachments by SHA-256 including multiplicity. A single-case preview rendered the method table. The composer offered no PDF button, and Task and project PDF requests both returned HTTP 400.

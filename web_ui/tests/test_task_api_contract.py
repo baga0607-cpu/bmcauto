@@ -375,36 +375,7 @@ class TaskApiContractTest(unittest.TestCase):
 
 
 
-    def test_report_generator_prefers_task_named_entrypoint(self):
-        report_path = os.path.join(str(WEB_UI_DIR), "report_generator.py")
-        with open(report_path, "r", encoding="utf-8") as f:
-            source = f.read()
 
-        self.assertIn("def generate_task_pdf_report(task_id, output_path, db_path=None, log_dir=None):", source)
-        self.assertNotIn("def generate_pdf_report(", source)
-        self.assertNotIn("build_id, output_path", source)
-        self.assertIn("Task :", source)
-        self.assertIn("Task Name", source)
-        self.assertIn("Firmware / Task Label", source)
-        self.assertNotIn("Firmware / Build Label", source)
-        self.assertIn("task_table = 'tasks'", source)
-        self.assertIn("task_tc_table = 'task_testcases'", source)
-        self.assertIn("task_fk_col = 'task_id'", source)
-        self.assertNotIn("else 'builds'", source)
-        self.assertNotIn("else 'build_testcases'", source)
-        self.assertNotIn("else 'build_id'", source)
-        self.assertIn("task_name = task['name'] or 'Unnamed_Task'", source)
-        self.assertIn("'task_name': task_name", source)
-        self.assertNotIn("_report_meta.get('build_name'", source)
-        self.assertNotIn("'build_name':", source)
-
-    def test_task_report_route_uses_task_named_report_generator(self):
-        app_path = os.path.join(str(WEB_UI_DIR), "app.py")
-        with open(app_path, "r", encoding="utf-8") as f:
-            source = f.read()
-
-        self.assertIn("from report_generator import generate_task_pdf_report", source)
-        self.assertIn("generate_task_pdf_report(task_id, out_path, db_path=DB_PATH)", source)
 
     def test_app_no_longer_contains_legacy_build_schema_migration(self):
         app_path = os.path.join(str(WEB_UI_DIR), "app.py")

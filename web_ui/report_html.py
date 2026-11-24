@@ -281,7 +281,7 @@ def generate_html_bundle(db_path, reports):
     output = io.BytesIO()
     with zipfile.ZipFile(output, 'w', compression=zipfile.ZIP_DEFLATED) as archive:
         archive.writestr('BMC_Report.html', html)
-        archive.writestr('README.txt', 'Extract this ZIP first, then open BMC_Report.html in Chrome. Keep the logs folder beside the HTML. Log content is only in the separate attachments. Use Print / Save PDF for a printable copy; retain this package for full evidence.\n')
+        archive.writestr('README.txt', 'Extract this ZIP first, then open BMC_Report.html in Chrome. Keep the logs folder beside the HTML. Log content is only in the separate attachments.\n')
         for name, content in logs.items():
             archive.writestr(name, content)
     return output.getvalue()

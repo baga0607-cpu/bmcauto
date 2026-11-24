@@ -58,7 +58,7 @@ class TaskOwnerHistoryTest(unittest.TestCase):
             with self.Session() as s:
                 with self.assertRaises(IntegrityError):s.execute(text(sql));s.commit()
                 s.rollback()
-        self.assertEqual(self.client.delete('/api/tasks/task1').status_code,200)
+        self.assertEqual(self.client.delete('/api/tasks/task1',json={'reason':'No longer needed'}).status_code,405)
         self.assertEqual(self.entries(),before)
     def test_invalid_owner_creates_no_history(self):
         self.assertEqual(self.edit(owner='Unknown').status_code,400)

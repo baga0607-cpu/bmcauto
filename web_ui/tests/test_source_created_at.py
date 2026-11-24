@@ -40,6 +40,21 @@ class SourceCreatedAtTest(unittest.TestCase):
         tc=self.add_case();self.assertIsNone(self.definition(tc)['source_created_at'])
         self.assertTrue(self.repository['source_version'])
 
+    def test_modified_time_tracks_source_edits_only(self):
+        source = self.source('2020-01-02T00:00:00Z').replace("'name':", "'modified_at': '2021-01-01T08:00:00+08:00', 'name':", 1)
+        self.repository = self.client.post('/api/repository/testcases', json={'source':source}).get_json()
+        tc = self.add_case()
+        original = self.definition(tc)
+        self.assertEqual(original['source_modified_at'], '2021-01-01T00:00:00.000000+00:00')
+        settings = dict(original['settings'], expected=201)
+        unchanged = self.update(tc, {'settings':settings, 'settings_revision':0}).get_json()
+        self.assertEqual(unchanged['source_modified_at'], original['source_modified_at'])
+        changed = self.update(tc, {'source':original['source']+'\n# revised\n', 'settings_revision':1}).get_json()
+        self.assertGreater(changed['source_modified_at'], original['source_modified_at'])
+        self.assertEqual(changed['source_created_at'], original['source_created_at'])
+        copied = self.client.post('/api/plans/b/import-cases',json={'kind':'case','source_type':'plan','source_plan_id':'a','id':tc['id'],'target_folder_id':None}).get_json()['added'][0]
+        self.assertEqual(self.definition(copied,'b')['source_modified_at'], changed['source_modified_at'])
+
     def test_invalid_naive_non_time_or_non_text_creation_is_rejected(self):
         for value in ('not-time','2020-01-02','2020-01-02T03:04:05',123):
             with self.subTest(value=value):

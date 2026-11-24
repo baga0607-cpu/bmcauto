@@ -5,7 +5,6 @@ import unittest
 import zipfile
 from pathlib import Path
 
-import pypdf
 from report_case import method_table_rows
 import test_report_exports as fixtures
 
@@ -103,7 +102,7 @@ class MethodExportTest(unittest.TestCase):
     setUp = fixtures.ReportExportsTest.setUp
     prepare = fixtures.ReportExportsTest.prepare
 
-    def test_html_pdf_results_long_table_and_escaping(self):
+    def test_html_results_long_table_and_escaping(self):
         self.prepare()
         from test_rf01_method_items import MethodItemsTest, response, GOOD, CASES
         _, context, log, _ = MethodItemsTest().run_case(1, [response(dict(GOOD[1], RedfishVersion='1.20.0'))])
@@ -117,12 +116,9 @@ class MethodExportTest(unittest.TestCase):
             row = session.query(TaskTestCase).filter_by(task_id='task1', testcase_id='case-1').one()
             row.result_json = json.dumps({'log_records': [item(i, 'Checkpoint', 3, 'Check <escaped> & 中文 ' + str(i), 'FAIL', reason='response <script> & mismatch') for i in range(60)]})
             session.commit()
-        responses = {}
-        for fmt in ('html', 'pdf'):
-            response = self.client.post('/api/projects/project/reports?format='+fmt, json={'task_ids': ['task1']})
-            self.assertEqual(response.status_code, 200, response.get_json(silent=True))
-            responses[fmt] = response.data
-        with zipfile.ZipFile(io.BytesIO(responses['html'])) as archive:
+        response = self.client.post('/api/projects/project/reports', json={'task_ids': ['task1']})
+        self.assertEqual(response.status_code,200)
+        with zipfile.ZipFile(io.BytesIO(response.data)) as archive:
             html = archive.read('BMC_Report.html').decode()
             self.assertIn('Test Steps &amp; Results', html)
             self.assertIn('<th scope="col">Step</th>', html)
@@ -139,12 +135,3 @@ class MethodExportTest(unittest.TestCase):
             if target:
                 out = Path(target)/'methods-fixture'; out.mkdir(exist_ok=True)
                 archive.extractall(out)
-        reader = pypdf.PdfReader(io.BytesIO(responses['pdf']))
-        text = '\n'.join(p.extract_text() or '' for p in reader.pages)
-        for expected in ('Test Steps & Results', 'Judgement', 'Command', 'Action', 'Actual: 1.20.0', '中文 59', 'response <script> & mismatch'):
-            self.assertIn(expected, ' '.join(text.split()))
-        self.assertGreater(text.count('Description\nResult'), 1)
-        self.assertNotIn('NEVER-EXPORT-THIS-PASSWORD', text)
-        self.assertEqual(reader.attachments['test_case-0.log'], [log.encode('utf-8')])
-        if target:
-            (Path(target)/'methods.pdf').write_bytes(responses['pdf'])

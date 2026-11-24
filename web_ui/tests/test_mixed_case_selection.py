@@ -67,6 +67,27 @@ class MixedSelectionTest(unittest.TestCase):
         self.post('/api/plans/a/testcases/move',{'testcase_ids':[ids[0]],'folder_id':child},200)
         self.post('/api/tasks/task1/testcases/import',{'testcases':ids},200)
         return {'folder_ids':[parent,child],'case_ids':ids}
+    def test_keep_folder_contents_moves_cases_and_preserves_task_evidence(self):
+        selection=self.delete_fixture()
+        parent=self.folder('Surviving parent',plan='a')
+        self.client.patch('/api/folders/'+selection['folder_ids'][0],json={'parent_id':parent})
+        kept,removed=selection['case_ids']
+        with self.Session() as s:
+            member=s.query(TaskTestCase).filter_by(testcase_id=kept).one()
+            member.status='Passed';member.log_text='saved log';s.commit()
+        payload={**selection,'confirm':True,'acknowledgement':True,'keep_cases':True}
+        with patch.object(self.Session.class_,'commit',side_effect=RuntimeError('failure')):
+            self.post('/api/plans/a/items/remove',payload,500)
+        with self.Session() as s:
+            self.assertEqual(s.get(TestCase,kept).folder_id,selection['folder_ids'][1])
+        self.post('/api/plans/a/items/remove',payload,200)
+        with self.Session() as s:
+            self.assertEqual(s.get(TestCase,kept).folder_id,parent)
+            self.assertIsNone(s.get(TestCase,removed))
+            row=s.query(TaskTestCase).filter_by(testcase_id=kept).one()
+            self.assertEqual((row.status,row.log_text),('Passed','saved log'))
+
+
     def test_delete_mixed_overlap_once_preserves_tasks(self):
         selection=self.delete_fixture()
         response=self.client.post('/api/plans/a/items/delete',json=selection);self.assertEqual(response.status_code,400)

@@ -109,20 +109,6 @@ class ManualResultTest(unittest.TestCase):
         self.assertEqual(cases[1]['manual_override']['reason'], 'Reviewed by QA')
         self.assertEqual(cases[1]['status'], 'Failed')
 
-    def test_pdf_exposes_manual_marker_reason_and_time_without_execution(self):
-        from report_generator import generate_task_pdf_report
-        from pypdf import PdfReader
-        self.assertEqual(self.change(status='Block', reason='QA acceptance <confirmed>').status_code, 200)
-        marker = self.client.get('/api/tasks/t/summary').get_json()['testcases'][0]['manual_override']
-        pdf = Path(self.tmp.name) / 'report.pdf'
-        generate_task_pdf_report('t', str(pdf), db_path=str(self.db))
-        reader = PdfReader(str(pdf))
-        content = '\n'.join(page.extract_text() for page in reader.pages)
-        self.assertIn('BLOCK', content)
-        self.assertIn('Manual status', content)
-        self.assertIn('QA acceptance <confirmed>', content)
-        self.assertIn(marker['modified_at'], content)
-        self.assertEqual(list(reader.attachments), [])
 
     def test_projects_reload_preserves_manual_marker_without_loading_logs(self):
         import app as api

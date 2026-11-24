@@ -6,6 +6,17 @@ const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp
 const icons = {replace:'M3 8h16l-4-4m6 12H5l4 4',history:'M3 11a9 9 0 1 1 2 7M3 4v7h7 M12 7v5l4 2',edit:'M4 16l12-12 4 4L8 20H4z',close:'M5 5l14 14M19 5L5 19',checkAll:'M3 11l4 4 9-10M10 16l3 3 9-11',settings:'M4 7h16M4 17h16M8 4v6M16 14v6',sort:'M4 4v16m-3-3 3 3 3-3M10 5h4M10 11h7M10 17h10',folderPlus:'M3 7h7l2 2h9v11H3z M3 7V4h7l2 3 M12 12v6 M9 15h6',eye:'M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12 M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0',plus:'M12 5v14M5 12h14',folder:'M3 7h7l2 2h9v11H3z M3 7V4h7l2 3',plan:'M6 3h9l4 4v14H6z M14 3v5h5 M9 12h7 M9 16h7',task:'M8 4h12v17H4V4h4 M8 2h8v4H8z M8 11l2 2 5-5',chevron:'M9 5l7 7-7 7',trash:'M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7',menu:'M4 6h16M4 12h16M4 18h16',sun:'M12 3v2M12 19v2M3 12h2M19 12h2M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2 M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0'};
 const icon = name => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${icons[name] || icons.plan}"/></svg>`;
 const state = {projects:[], repository:[], route:[], tab:'cases', panel:null, caseId:null, definition:null, dirty:false, scope:new Set(), log:'', activeTask:null, generation:0};
+TaskInfoDrawer.configure({api, projects:()=>state.projects, toast, updated:async()=>{
+  const scrolls = ['#workspace','.managed-tasks-wrap','.gantt-scroll'].map(selector => {
+    const node = document.querySelector(selector);
+    return {selector, top:node?.scrollTop || 0, left:node?.scrollLeft || 0};
+  });
+  await refresh();
+  for (const position of scrolls) {
+    const node = document.querySelector(position.selector);
+    if (node) {node.scrollTop = position.top;node.scrollLeft = position.left;}
+  }
+}});
 let confirmationPending=false;
 let notificationTimer, previousHash = location.hash || '#/dashboard';
 const path = (p, plan, task) => `#/project/${encodeURIComponent(p.id)}${plan ? '/plan/'+encodeURIComponent(plan.id) : ''}${task ? '/task/'+encodeURIComponent(task.id) : ''}`;
@@ -16,6 +27,9 @@ const automation = value => {
  const shape=value==='automatic'?'<path d="M9 3h6l.5 3 2.5 1.5 2.8-1 3 5.2-2.3 2v2.6l2.3 2-3 5.2-2.8-1-2.5 1.5-.5 3H9l-.5-3L6 22.5l-2.8 1-3-5.2 2.3-2v-2.6l-2.3-2 3-5.2 2.8 1L8.5 6z" transform="translate(2 0) scale(.83)"/><circle cx="12" cy="12" r="3"/>':value==='semi_automatic'?'<path d="M14.7 6.3a5.5 5.5 0 0 0-7 7L2.8 18.2a2.1 2.1 0 0 0 3 3l4.9-4.9a5.5 5.5 0 0 0 7-7l-3.5 3.5-3-3z"/>':value==='manual'?'<circle cx="12" cy="7" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/>':'<circle cx="12" cy="12" r="9"/><path d="M9 9a3 3 0 0 1 6 0c0 2-3 2-3 5m0 3h.01"/>';
  return `<span class="automation-tag" role="img" aria-label="${label}" title="${label}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${shape}</svg></span>`;
 };
+const latestSourceDate = c => c.source_modified_at || c.source_created_at;
+const sourceSearchText = c => [c.tc_name || c.name, ...[c.source_created_at,c.source_modified_at].filter(Boolean).flatMap(v=>[v,version(v),new Date(v).toLocaleDateString('sv-SE')])].join(' ');
+const sourceDateLabel = c => '<span data-no-translate title="'+escape('Created: '+version(c.source_created_at)+' / Modified: '+version(c.source_modified_at))+'">'+escape(version(latestSourceDate(c)))+'</span>';
 const version = value => value ? date(value) + ' · ' + (String(value).match(/\.(\d+)/)?.[1] || '000000') : '—';
 const date = value => value ? new Date(value).toLocaleString('en-GB', {year:'numeric',month:'short',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'}) : '—';
 function toast(message, error=false) { clearTimeout(notificationTimer); $('#notifications').innerHTML=`<div class="toast ${error?'error':''}" role="${error?'alert':'status'}">${escape(message)}</div>`; notificationTimer=setTimeout(()=>$('#notifications').replaceChildren(),error?12000:5000); }
@@ -111,7 +125,7 @@ function sizeGlobalNavigation() {
   const nav=$('.global-nav'),link=nav?.querySelector('a');if(!link)return;
   const style=getComputedStyle(link),measure=document.createElement('canvas').getContext('2d');
   measure.font=`600 ${style.fontSize} ${style.fontFamily}`;
-  const labels=['Projects','Tasks','Test Case Repository','專案','任務','測項資料庫'];
+  const labels=['Projects','Tasks','Test Case Repository'];
   const width=Math.ceil(Math.max(...labels.map(label=>measure.measureText(label).width))+parseFloat(style.paddingLeft)+parseFloat(style.paddingRight))+2;
   nav.style.setProperty('--global-entry-width',width+'px');
 }
@@ -121,7 +135,7 @@ function sizeProjectNavigation() {
   const style=getComputedStyle(item),measure=document.createElement('canvas').getContext('2d');
   // Reserve the selected font weight for every entry, in both languages.
   measure.font=`600 ${style.fontSize} ${style.fontFamily}`;
-  const labels=['Project information','Test Plan','Test Report','Bug List','專案資訊'];
+  const labels=['Project information','Test Plan','Test Report','Bug List'];
   const width=Math.ceil(Math.max(...labels.map(label=>measure.measureText(label).width))+parseFloat(style.paddingLeft)+parseFloat(style.paddingRight))+2;
   nav.style.setProperty('--project-entry-width',width+'px');
 }
@@ -145,14 +159,14 @@ function sizePlanColumns() {
   if(!cell)return;
   const style=getComputedStyle(cell),canvas=document.createElement('canvas'),measure=canvas.getContext('2d');
   measure.font=`${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
-  const labels=['Total Cases','Completion','PASS','C-PASS','FAIL','Block','Not Run','Task','測項總數','完成度'];
+  const labels=['Total Cases','Completion','PASS','C-PASS','FAIL','Block','Not Run','Task'];
   const width=Math.ceil(Math.max(...labels.map(label=>measure.measureText(label).width))+parseFloat(style.paddingLeft)+parseFloat(style.paddingRight))+2;
   table.style.setProperty('--summary-column-width',width+'px');
   const create=$('.plan-list-footer button');
   if(create){
     const buttonStyle=getComputedStyle(create);
     measure.font=`${buttonStyle.fontWeight} ${buttonStyle.fontSize} ${buttonStyle.fontFamily}`;
-    const buttonWidth=Math.ceil(Math.max(...['Create','新增'].map(label=>measure.measureText(label).width))+parseFloat(buttonStyle.paddingLeft)+parseFloat(buttonStyle.paddingRight)+parseFloat(buttonStyle.borderLeftWidth)+parseFloat(buttonStyle.borderRightWidth))+2;
+    const buttonWidth=Math.ceil(measure.measureText('Create').width+parseFloat(buttonStyle.paddingLeft)+parseFloat(buttonStyle.paddingRight)+parseFloat(buttonStyle.borderLeftWidth)+parseFloat(buttonStyle.borderRightWidth))+2;
     create.style.width=buttonWidth+'px';
   }
 
@@ -191,14 +205,13 @@ function activePlanFor(project){
  if(!ids.includes(selected)){selected=ids[0]||null;selectPlanFor(project,selected);}
  state.inlinePlanId=selected;return selected;
 }
-async function planEditorList(project){
- const ids=planTabIds(project),active=activePlanFor(project),plan=project.plans.find(p=>p.id===active);
- const tabs='<div class="tabs plan-tabs" role="tablist" aria-label="Plans">'+ids.map(id=>{
+async function planEditorList(project,plan=project.plans.find(p=>p.id===activePlanFor(project))){
+ const options=planTabIds(project).map(id=>{
    const item=project.plans.find(p=>p.id===id);
-   return button(escape(item.name),'select-plan-tab','','role="tab" id="plan-tab-'+escape(id)+'" aria-selected="'+(active===id)+'" aria-controls="plan-tab-panel" draggable="true" data-plan-tab="'+escape(id)+'" data-id="'+escape(id)+'" data-no-translate');
- }).join('')+button('Add Plan','new-plan','','id="plan-tab-add" aria-haspopup="dialog"')+'</div>';
-
- return '<div class="plan-tabs-heading">'+heading('Plan',project.name)+tabs+'</div><section id="plan-tab-panel" '+(plan?'role="tabpanel" aria-labelledby="plan-tab-'+escape(plan.id)+'"':'aria-label="Plan workspace"')+'>'+(plan?'<div class="plan-inline-editor">'+await planPage(project,plan,true)+'</div>':empty('No Test Plans','Use Add Plan to create a Plan.'))+'</section>';
+   return `<option value="${escape(id)}" ${plan?.id===id?'selected':''} data-no-translate>${escape(item.name)}</option>`;
+ }).join('');
+ const controls=`<div class="plan-controls"><label for="plan-picker">Plan:</label><select id="plan-picker" ${plan?'':'disabled'}>${options}</select>${button('Add Plan','new-plan','','aria-haspopup="dialog"')}${button('Edit Plan','edit-plan','','aria-haspopup="dialog" '+(!plan||plan.locked?'disabled':''))}</div>`;
+ return controls+'<section class="plan-inline-editor" aria-label="Plan workspace">'+(plan?await planPage(project,plan):empty('No Test Plans','Use Add Plan to create a Plan.'))+'</section>';
 }
 function reportPage(project){
   state.reportExpanded??=new Set();state.reportMatrices??=new Set();
@@ -255,6 +268,7 @@ function renderReportComposer(focusKey=null){
     list.setAttribute('aria-busy',String(busy));
   }
   $('#report-compose-generate').disabled=busy||!draft.report.length;
+  $('#report-compose-logs').disabled=busy||!draft.report.length;
   $('#report-compose-cancel').disabled=busy;
   $('#report-compose-error').textContent=state.reportError||(!draft.report.length?'Keep at least one report in Report Area.':'');
   $('#report-compose-status').textContent=busy?'Generating report…':'';
@@ -271,19 +285,20 @@ function moveReportItem(key,area,index){
   draft[area].splice(Math.max(0,Math.min(index,draft[area].length)),0,item);
   state.reportError='';renderReportComposer(key);
 }
-async function generateReportSelection(){
+async function generateReportSelection(format='html'){
+  const logs=format==='logs';
   const draft=state.reportDraft;if(!draft?.report.length||state.reportBusy)return;
   const entries=area=>draft[area].map(({kind,id})=>({kind,id}));
   const payload={report_area:entries('report'),reference_area:entries('reference')};
   state.reportBusy=true;state.reportError='';renderReportComposer();await draw();
   try{
-    const response=await fetch('/api/projects/'+encodeURIComponent(draft.projectId)+'/reports',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    const response=await fetch('/api/projects/'+encodeURIComponent(draft.projectId)+'/reports'+(logs?'/logs':'?format='+format),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
     if(!response.ok){const error=await response.json().catch(()=>({}));throw Error(error.error||'Report generation failed.');}
     const blob=await response.blob(),disposition=response.headers.get('Content-Disposition')||'';
     const encoded=disposition.match(/filename\*=UTF-8''([^;]+)/i),plain=disposition.match(/filename="?([^";]+)/i);
-    const filename=encoded?decodeURIComponent(encoded[1]):plain?plain[1]:'BMC_Report.pdf';
+    const filename=encoded?decodeURIComponent(encoded[1]):plain?plain[1]:(logs?'BMC_Logs.zip':'BMC_HTML_Report.zip');
     const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
-    $('#report-compose-dialog').close();toast('Report generated.');
+    toast(logs?'Logs ZIP downloaded.':'HTML package downloaded. Extract the ZIP, then open BMC_Report.html.');
   }catch(error){state.reportError=error.message;}finally{state.reportBusy=false;renderReportComposer();await draw();}
 }
 function projectImportResultPanel(){
@@ -354,7 +369,7 @@ function syncCaseSelections(){
    const state=kind==='folder'?folderStates[type]?.get(id):null;
    input.checked=state?state.checked:itemIsSelected(type,{kind,id});input.indeterminate=state?.mixed||false;input.setAttribute('aria-checked',input.indeterminate?'mixed':String(input.checked));
  };
- for(const input of $$('.plan-selection-check'))update(input,'plan',input.dataset.kind,input.dataset.id);
+ if($('#plan-case-list'))refreshPlanSelection();
  for(const input of $$('.repository-batch-check'))update(input,'repository',input.dataset.kind,input.dataset.id);
  for(const input of $$('[data-import-select]'))update(input,'import','case',input.dataset.importSelect);
  for(const input of $$('[data-import-folder-select]'))update(input,'import','folder',input.dataset.importFolderSelect);
@@ -386,27 +401,84 @@ function saveFolderExpansions(){
 function planSelection(){
  const id=context().plan?.id;state.planSelections??={};return state.planSelections[id]??=new Set();
 }
-function planCheck(kind,id){return '<input type="checkbox" class="plan-selection-check" data-kind="'+kind+'" data-id="'+escape(id)+'" aria-label="Select '+kind+'" '+(planSelection().has(kind+':'+id)?'checked':'')+'>';}
-function planSelectionData(){const folder_ids=[],case_ids=[];for(const item of planSelection()){const at=item.indexOf(':'),kind=item.slice(0,at),id=item.slice(at+1);(kind==='folder'?folder_ids:case_ids).push(id);}return {folder_ids,case_ids};}
+function planSelectionData(){const folder_ids=[],case_ids=[];for(const item of planSelection()){if(item==='folder:')continue;const at=item.indexOf(':'),kind=item.slice(0,at),id=item.slice(at+1);(kind==='folder'?folder_ids:case_ids).push(id);}return {folder_ids,case_ids};}
+function planRows(){
+ return Array.from(document.querySelectorAll('#plan-case-list tr[data-plan-case],#plan-case-list tr[data-plan-folder]'));
+}
+function planRowKey(row){
+ return row.dataset.planCase?'case:'+row.dataset.planCase:'folder:'+row.dataset.planFolder;
+}
+function refreshPlanSelection(){
+ const plan=context().plan;
+ if(!plan)return;
+ const selected=planSelection(),{folder_ids,case_ids}=planSelectionData();
+ for(const row of planRows()){
+   const active=selected.has(planRowKey(row));
+   row.classList.toggle('repo-selected',active);
+   row.querySelector('.repository-folder-name')?.setAttribute('aria-pressed',String(active));
+ }
+ const folder=folder_ids[0]||'',oneFolder=selected.size===1&&folder_ids.length===1;
+ const parent=folder||plan.testcases.find(c=>c.id===case_ids[0])?.folder_id||'';
+ const actions={
+   'new-plan-folder':[selected.size>1,parent],
+   'choose-import-source':[false,''],
+   'plan-selection-delete':[!selected.size||selected.has('folder:'),''],
+   'rename-plan-folder':[!oneFolder,folder],
+   'resort-plan-folder':[selected.size>1||case_ids.length>0,folder]
+ };
+ for(const control of $$('.plan-tools [data-action]')){
+   const setting=actions[control.dataset.action];
+   if(setting){control.disabled=plan.locked||setting[0];control.dataset.id=setting[1];}
+ }
+}
+function selectPlanRow(row,event){
+ const selected=planSelection(),key=planRowKey(row),id=context().plan.id;
+ state.planAnchors??={};
+ if(key==='folder:'){selected.clear();selected.add(key);state.planAnchors[id]=key;}
+ else {
+   selected.delete('folder:');
+   state.planAnchors[id]=selectRowRange(selected,key,planRows().map(planRowKey),state.planAnchors[id],event);
+   selected.delete('folder:');
+ }
+ refreshPlanSelection();
+ row.focus({preventScroll:true});
+}
+for(const type of ['click','keydown']){
+ document.addEventListener(type,event=>{
+   const row=event.target.closest('#plan-case-list [data-plan-folder],#plan-case-list [data-plan-case]');
+   if(!row||event.target.closest('input,select,button:not(.repository-folder-name)'))return;
+   if(type==='keydown'&&!['Enter',' '].includes(event.key))return;
+   event.preventDefault();event.stopImmediatePropagation();selectPlanRow(row,event);
+ },true);
+}
+const caseListHeaders='<th data-no-translate>Modified_at</th><th data-no-translate>Feature_ID</th><th>Actions</th>';
+function caseListMetadata(c){
+ const value=c.source_modified_at,stamp=new Date(value);
+ const display=value&&Number.isFinite(stamp.getTime())?stamp.toLocaleDateString('sv-SE'):'—';
+ return `<td data-no-translate title="${escape(value||'')}">${display}</td><td></td>`;
+}
 function planCaseTable(plan) {
   const importing=Boolean(state.importSource);
-  const chosen=planSelection();for(const key of chosen){const at=key.indexOf(':'),id=key.slice(at+1);if(key.startsWith('case:')?!plan.testcases.some(c=>c.id===id):!plan.folders.some(f=>f.id===id))chosen.delete(key);}
+  const chosen=planSelection();for(const key of chosen){if(key==='folder:')continue;const at=key.indexOf(':'),id=key.slice(at+1);if(key.startsWith('case:')?!plan.testcases.some(c=>c.id===id):!plan.folders.some(f=>f.id===id))chosen.delete(key);}
   const query=(state.planSearch||'').trim().toLowerCase(),collapsed=state.planCollapsed=savedFolderCollapse('plan:'+plan.id,plan.folders);
-  const action=(label,type,id,shape,disabled=false)=>button(icon(shape),type,'small-button icon-button'+(shape==='trash'?' danger':''),`data-id="${escape(id||'')}" title="${label}" aria-label="${label}" ${disabled?'disabled':''}`);
-  const cases=(folder,depth,match)=>plan.testcases.filter(c=>(c.folder_id||null)===folder&&(match||!query||KeywordSearch.matches(c.tc_name,query))).map(c=>`<tr tabindex="0" aria-haspopup="menu" title="Right-click for actions" data-plan-case="${escape(c.id)}" draggable="${!plan.locked}" style="--depth:${depth}"><td><div class="case-selection-label">${planCheck('case',c.id)}<strong>${automation(c.automation)}${escape(c.tc_name)}</strong></div><p class="help case-source-version" data-no-translate>${escape(version(c.source_created_at))}</p></td>${importing?'':`<td>${c.parameter_count>0?button('Parameters','plan-case-parameters','small-button '+(c.parameters_complete===false?'primary case-parameters-incomplete':'case-parameters-complete'),`data-id="${escape(c.id)}"`):''}</td>`}<td><div class="actions">${action('View','plan-case-source',c.id,'eye',c.script_kind!=='single')}${action('Remove','plan-remove-case',c.id,'trash',plan.locked)}</div></td></tr>`).join('');
+  const cases=(folder,depth,match)=>plan.testcases.filter(c=>(c.folder_id||null)===folder&&(match||!query||KeywordSearch.matches(sourceSearchText(c),query))).map(c=>{
+    const attrs=`data-id="${escape(c.id)}" ${c.script_kind==='single'?'':'disabled'}`;
+    const view=repoIcon('View','plan-case-source','eye',attrs);
+    const parameters=c.parameter_count>0?executionIconButton('Parameters','plan-case-parameters','parameters',c.parameters_complete===false?'primary case-parameters-incomplete':'case-parameters-complete',attrs):'';
+    return `<tr tabindex="0" data-plan-case="${escape(c.id)}" draggable="${!plan.locked}" style="--depth:${depth}"><td><div class="case-selection-label"><strong>${automation(c.automation)}${escape(c.tc_name)}</strong></div>${importing?`<p class="help case-source-version" data-no-translate>${sourceDateLabel(c)}</p>`:''}</td>${importing?'':`${caseListMetadata(c)}<td><div class="actions">${view}${parameters}</div></td>`}</tr>`;
+  }).join('');
   const children=(parent,depth,ancestorMatch=false)=>plan.folders.filter(f=>(f.parent_id||null)===parent).sort((a,b)=>a.position-b.position).map(f=>{
     const match=ancestorMatch||Boolean(query&&KeywordSearch.matches(f.name,query)),descendants=children(f.id,depth+1,match)+cases(f.id,depth+1,match);
     if(query&&!match&&!descendants)return '';
-    return `<tr tabindex="0" aria-haspopup="menu" title="Right-click for actions" class="repository-folder-row" data-plan-folder="${escape(f.id)}" draggable="${!plan.locked}" style="--depth:${depth}"><td><div class="repository-folder-line">${planCheck('folder',f.id)}${button(collapsed.has(f.id)&&!query?'&#9656;':'&#9662;','toggle-plan-folder','folder-collapse',`data-id="${escape(f.id)}" aria-label="Toggle folder" aria-expanded="${!collapsed.has(f.id)||Boolean(query)}"`)}<button class="repository-folder-name" data-action="select-plan-folder" data-id="${escape(f.id)}" aria-pressed="${state.planFolder===f.id}">${icon('folder')}<strong>${escape(f.name)}</strong></button>${state.planRename===f.id?`<input class="plan-folder-rename repository-rename" data-id="${escape(f.id)}" aria-label="Folder name" maxlength="100" value="${escape(f.name)}">`:''}</div></td>${importing?'':'<td></td>'}<td><div class="actions">${action('New folder','new-plan-folder',f.id,'folderPlus',plan.locked)}${action('Resorting','resort-plan-folder',f.id,'sort',plan.locked)}${action('Remove folder','delete-folder',f.id,'trash',plan.locked)}</div></td></tr>${collapsed.has(f.id)&&!query?'':descendants}`;
+    return `<tr tabindex="0" class="repository-folder-row" data-plan-folder="${escape(f.id)}" draggable="${!plan.locked}" style="--depth:${depth}"><td><div class="repository-folder-line">${button(collapsed.has(f.id)&&!query?'&#9656;':'&#9662;','toggle-plan-folder','folder-collapse',`data-id="${escape(f.id)}" aria-label="Toggle folder" aria-expanded="${!collapsed.has(f.id)||Boolean(query)}"`)}<button class="repository-folder-name" data-action="select-plan-folder" data-id="${escape(f.id)}" aria-pressed="${state.planFolder===f.id}">${icon('folder')}<strong>${escape(f.name)}</strong></button></div></td>${importing?'':'<td></td><td></td><td></td>'}</tr>${collapsed.has(f.id)&&!query?'':descendants}`;
   }).join('');
   const rows=children(null,1)+cases(null,1,false);
-  const html=`<div class="table-wrap repository-scroll"><table id="repository-table" class="repository-hierarchy"><thead><tr><th>${listSelectAll('plan')}Directory / Test Case</th>${importing?'':'<th>Parameters</th>'}<th>Actions</th></tr></thead><tbody><tr tabindex="0" aria-haspopup="menu" title="Right-click for actions" class="repository-folder-row" data-plan-folder=""><td><div class="repository-folder-line"><input type="checkbox" disabled data-selection-root="plan" aria-label="BMC"><span class="folder-collapse-spacer" aria-hidden="true"></span><span class="repository-folder-name">${icon('folder')}<strong>BMC</strong><span class="repository-folder-count">(${plan.testcases.length})</span></span></div></td>${importing?'':'<td></td>'}<td><div class="actions">${action('New folder','new-plan-folder','','folderPlus',plan.locked)}${action('Resorting','resort-plan-folder','','sort',plan.locked)}</div></td></tr>${rows||`<tr><td colspan="${importing?2:3}">No Test Cases</td></tr>`}</tbody></table></div>`;
-  return html.replace(/<td><div class="actions">[\s\S]*?<\/div><\/td>/g,'').replace('<th>Actions</th>','').replace(/colspan="[23]"/g,'colspan="'+(importing?1:2)+'"');
+  return `<div class="table-wrap repository-scroll"><table id="repository-table" class="repository-hierarchy ${importing?'':'case-list-columns'}"><thead><tr><th>Directory / Test Case</th>${importing?'':caseListHeaders}</tr></thead><tbody><tr tabindex="0" class="repository-folder-row" data-plan-folder=""><td><div class="repository-folder-line"><span class="folder-collapse-spacer"></span><span class="repository-folder-name">${icon('folder')}<strong>BMC</strong><span class="repository-folder-count">(${plan.testcases.length})</span></span></div></td>${importing?'':'<td></td><td></td><td></td>'}</tr>${rows||`<tr><td colspan="${importing?1:4}">No Test Cases</td></tr>`}</tbody></table></div>`;
 }
 function importSourceTable(){
   const source=state.importSource,collapsed=state.importCollapsed=savedFolderCollapse(folderExpansionScope('import'),source.folders);
   const query=(state.importSearch||'').toLowerCase().trim();
-  const cases=(parent,depth,match)=>source.cases.filter(c=>(c.folder_id||null)===parent&&(match||!query||KeywordSearch.matches(c.name,query))).map(c=>`<tr data-import-kind="case" data-import-id="${escape(c.id)}" draggable="true" style="--depth:${depth}"><td><label class="import-case-choice"><input type="checkbox" data-import-select="${escape(c.id)}" aria-label="Select ${escape(c.name)}" ${state.importSelection?.has(c.id)?'checked':''}><strong>${automation(c.automation)}${escape(c.name)}</strong></label><p class="help case-source-version" data-no-translate>${escape(version(c.source_created_at))}</p></td></tr>`).join('');
+  const cases=(parent,depth,match)=>source.cases.filter(c=>(c.folder_id||null)===parent&&(match||!query||KeywordSearch.matches(sourceSearchText(c),query))).map(c=>`<tr data-import-kind="case" data-import-id="${escape(c.id)}" draggable="true" style="--depth:${depth}"><td><label class="import-case-choice"><input type="checkbox" data-import-select="${escape(c.id)}" aria-label="Select ${escape(c.name)}" ${state.importSelection?.has(c.id)?'checked':''}><strong>${automation(c.automation)}${escape(c.name)}</strong></label><p class="help case-source-version" data-no-translate>${sourceDateLabel(c)}</p></td></tr>`).join('');
   const folders=(parent,depth,match=false)=>source.folders.filter(f=>(f.parent_id||null)===parent).sort((a,b)=>a.position-b.position).map(f=>{
     const matches=match||Boolean(query&&KeywordSearch.matches(f.name,query)),contents=folders(f.id,depth+1,matches)+cases(f.id,depth+1,matches);
     if(query&&!matches&&!contents)return '';
@@ -419,25 +491,24 @@ function importSourceOptions(){
  return '<option value="repository" '+(source?.type==='repository'?'selected':'')+'>Test Case Repository</option>'+state.projects.map(p=>'<optgroup label="'+escape(p.name)+'">'+p.plans.filter(plan=>plan.id!==target).map(plan=>'<option value="plan:'+escape(plan.id)+'" '+(source?.planId===plan.id?'selected':'')+' data-no-translate>'+escape(p.name+' / '+plan.name)+'</option>').join('')+'</optgroup>').join('');
 }
 function importSourcePane(){
- return '<section class="import-source-pane" aria-label="Import source"><header class="import-pane-heading"><select id="import-workspace-source" aria-label="Source Project / Plan">'+importSourceOptions()+'</select><label><span class="sr-only">Find Source Test Case</span><input id="import-source-search" type="search" placeholder="Find Source Test Case" value="'+escape(state.importSearch||'')+'"></label>'+button('Close','close-import-source','preview-close')+'</header><div id="import-source-list">'+importSourceTable()+'</div></section>';
+ return '<section class="import-source-pane" aria-label="Import source"><header class="import-pane-heading"><select id="import-workspace-source" aria-label="Source Project / Plan">'+importSourceOptions()+'</select><label><span class="sr-only">Find Source Test Case</span><input id="import-source-search" type="search" placeholder="Find Source Test Case" value="'+escape(state.importSearch||'')+'"></label>'+button('Close','close-import-source','preview-close')+'</header><div role="status">'+escape(state.planImportResult||'')+'</div><div id="import-source-list">'+importSourceTable()+'</div></section>';
 }
-async function planPage(project, plan, inline=false) {
+async function planPage(project, plan) {
   if(!plan.testcases.some(c=>c.id===state.caseId))state.caseId=null;
-  const header=heading('Test Plan: '+plan.name,'',button('Rename','rename-plan','',plan.locked?'disabled':'')+button('Delete','delete-plan','danger',plan.locked?'disabled':''));
   let contents;
   if(state.panel==='add-repository'){
     state.repository=await api('/api/repository/testcases');state.repositoryFolders=await api('/api/repository/folders');
     contents=`<div class="toolbar"><h2>Add from Test Case Repository</h2>${button('Back to Plan','close-panel')}</div>${repositoryWorkspace(true,plan)}`;
   }else{
-    contents=`<div class="repository-page-controls actions"><label><span class="sr-only">Find Test Case</span><input id="plan-search" type="search" placeholder="Find Test Case" value="${escape(state.planSearch||'')}"></label>${button('Import Test Case','choose-import-source','',plan.locked?'disabled':'')}${inline?button('Rename','plan-list-rename','','data-id="'+escape(plan.id)+'" '+(plan.locked?'disabled':''))+button('Delete','plan-list-delete','danger','data-id="'+escape(plan.id)+'" '+(plan.locked?'disabled':'')):''}</div><div class="repository-layout ${state.caseId?'has-preview':''}" style="--preview-width:${state.repositoryPreviewWidth||45}%"><div class="repository-list" id="plan-case-list">${planCaseTable(plan)}</div>${state.caseId?`<div class="repository-resizer" role="separator" tabindex="0" aria-label="Resize details panel" aria-orientation="vertical" aria-controls="case-editor" aria-valuemin="25" aria-valuemax="70" aria-valuenow="${state.repositoryPreviewWidth||45}"></div><section class="plan-case-details" aria-label="Test Case details"><div class="toolbar repository-preview-header"><h2>${escape(plan.testcases.find(c=>c.id===state.caseId)?.tc_name||'')}</h2>${button('Close','close-plan-case','preview-close')}</div><div class="repository-preview-content" id="case-editor"></div></section>`:''}</div>`;
+    contents=`<div class="repository-page-controls actions plan-tools"><label><span class="sr-only">Find Test Case</span><input id="plan-search" type="search" placeholder="Find Test Case" value="${escape(state.planSearch||'')}"></label>${repoIcon('New folder','new-plan-folder','folderPlus')}${repoIcon('Import Test Case','choose-import-source','plus')}${repoIcon('Delete selected','plan-selection-delete','trash')}${repoIcon('Select all','plan-select-all','checkAll')}${repoIcon('Rename folder','rename-plan-folder','edit')}${repoIcon('Sort Test Cases','resort-plan-folder','sort')}${repoIcon('History','plan-history','history')}</div><div class="repository-layout ${state.caseId?'has-preview':''}" style="--preview-width:${state.repositoryPreviewWidth||45}%"><div class="repository-list" id="plan-case-list">${planCaseTable(plan)}</div>${state.caseId?`<div class="repository-resizer" role="separator" tabindex="0" aria-label="Resize details panel" aria-orientation="vertical" aria-controls="case-editor" aria-valuemin="25" aria-valuemax="70" aria-valuenow="${state.repositoryPreviewWidth||45}"></div><section class="plan-case-details" aria-label="Test Case details"><div class="toolbar repository-preview-header"><h2>${escape(plan.testcases.find(c=>c.id===state.caseId)?.tc_name||'')}</h2>${button('Close','close-plan-case','preview-close')}</div><div class="repository-preview-content" id="case-editor"></div></section>`:''}</div>`;
   }
   if(state.importSource){
     const ratio=state.importSplit??50;
     const layout=`<div class="plan-import-layout" style="--import-left:${ratio}fr;--import-right:${100-ratio}fr"><section class="import-target-pane"><header class="import-pane-heading"><h1 data-no-translate>Test Plan: ${escape(plan.name)}</h1><label><span class="sr-only">Find Test Case</span><input id="plan-search" type="search" placeholder="Find Test Case" value="${escape(state.planSearch||'')}"></label></header><div class="repository-list" id="plan-case-list">${planCaseTable(plan)}</div></section><div class="import-resizer" role="separator" tabindex="0" aria-label="Resize import workspaces" aria-orientation="vertical" aria-valuemin="25" aria-valuemax="75" aria-valuenow="${ratio}"></div>${importSourcePane()}</div>`;
-    return (inline?'':header)+'<div inert aria-hidden="true">'+contents.replace(/id="/g,'id="background-')+'</div><dialog id="plan-import-workspace-dialog" aria-label="Import Test Cases">'+layout+'</dialog>';
+    return '<div inert aria-hidden="true">'+contents.replace(/id="/g,'id="background-')+'</div><dialog id="plan-import-workspace-dialog" aria-label="Import Test Cases">'+layout+'</dialog>';
   }
 
-  return (inline?'':header)+(plan.locked?'<div class="notice info">A Task is running. Plan structure and Task scope are locked. Only the running Test Case’s Python file and parameters are locked.</div>':'')+(state.panel==='rename-plan'?nameForm('rename-plan',plan.name):'')+contents;
+  return (plan.locked?'<div class="notice info">A Task is running. Plan structure and Task scope are locked. Only the running Test Case’s Python file and parameters are locked.</div>':'')+contents;
 }
 
 function folderPage(plan) {
@@ -470,22 +541,176 @@ async function loadCase() {
 async function taskPage(project,plan,task) {
   if(!task.testcases.some(c=>c.id===state.caseId)) state.caseId=task.testcases[0]?.id||null;
   const scope=state.tab==='scope'; const needs=task.testcases.filter(c=>c.needs_retest).length;
-  const toolbar=button('Generate report','report','',`data-id="${escape(task.id)}" ${task.execution_active?'disabled':''}`)+button('Delete','delete-task','danger',task.execution_active?'disabled':'');
+  const toolbar=button('Generate report','report','',`data-id="${escape(task.id)}" ${task.execution_active?'disabled':''}`);
   let content;
   if(state.tab==='settings') content=await settingsPage(task);
   else if(scope) {
-    content=`<p>Choose the Plan Test Cases included in this Task. Edit all test parameters in the <a href="${path(project,plan)}">Plan</a>.</p><div class="toolbar"><div class="actions">${button('Select all','scope-all','',plan.locked?'disabled':'')}${button('Clear selection','scope-none','',plan.locked?'disabled':'')}</div><span class="help" id="scope-count">${state.scope.size} selected</span></div><form id="scope-form"><div class="table-wrap"><table class="test-case-scope-list"><thead><tr><th>Include</th><th>Test Case</th><th>Folder</th><th>Created at</th></tr></thead><tbody>${plan.testcases.map(c=>`<tr><td class="check"><input type="checkbox" data-scope="${escape(c.id)}" aria-label="Include ${escape(c.tc_name)}" ${state.scope.has(c.id)?'checked':''} ${plan.locked||c.script_kind!=='single'?'disabled':''}></td><td>${automation(c.automation)}${escape(c.tc_name)}${c.script_kind!=='single'?'<p class="help">Retired — single .py required</p>':''}</td><td>${escape(c.folder_path||'Unfiled')}</td><td>${escape(version(c.source_created_at))}</td></tr>`).join('')}</tbody></table></div><div class="form-actions"><button class="primary" ${plan.locked?'disabled':''}>Save Task scope</button><span class="help">Removing a case also removes its current Task result and logs.</span></div></form>`;
+    content=`<p>Choose the Plan Test Cases included in this Task. Edit all test parameters in the <a href="${path(project,plan)}">Plan</a>.</p><div class="toolbar"><div class="actions">${button('Select all','scope-all','',plan.locked?'disabled':'')}${button('Clear selection','scope-none','',plan.locked?'disabled':'')}</div><span class="help" id="scope-count">${state.scope.size} selected</span></div><form id="scope-form"><div class="table-wrap"><table class="test-case-scope-list"><thead><tr><th>Include</th><th>Test Case</th><th>Folder</th><th>Latest source date</th></tr></thead><tbody>${plan.testcases.map(c=>`<tr><td class="check"><input type="checkbox" data-scope="${escape(c.id)}" aria-label="Include ${escape(c.tc_name)}" ${state.scope.has(c.id)?'checked':''} ${plan.locked||c.script_kind!=='single'?'disabled':''}></td><td>${automation(c.automation)}${escape(c.tc_name)}${c.script_kind!=='single'?'<p class="help">Retired — single .py required</p>':''}</td><td>${escape(c.folder_path||'Unfiled')}</td><td>${sourceDateLabel(c)}</td></tr>`).join('')}</tbody></table></div><div class="form-actions"><button class="primary" ${plan.locked?'disabled':''}>Save Task scope</button><span class="help">Removing a case also removes its current Task result and logs.</span></div></form>`;
   }
   else content=taskExecutionContent(project,plan,task);
   return breadcrumbs()+heading(task.name,'Task · '+plan.name,toolbar)+(state.panel==='rename-task'?nameForm(state.panel,task.name):'')+(needs?`<div class="notice">Plan definitions or Task connection settings changed for ${needs} Test Case(s). Existing results and logs remain available; rerun those cases before using the report.</div>`:'')+(task.execution_active?'<div class="notice info">Execution is active. Scope is locked until execution finishes or stops.</div>':'')+tabs([['settings','Connection settings'],['scope','Task scope'],['execution','Execution & results']],state.tab)+content;
 }
-function taskExecutionContent(project,plan,task){
- const needs=task.testcases.filter(c=>c.needs_retest).length;
- return (task.execution_active?'<div class="notice info">Execution is active. Scope is locked until execution finishes or stops.</div>':'')+(task.testcases.length?`<div class="execution-summary"><span><strong>${task.testcases.length}</strong> in scope</span><span><strong>${task.counts.Passed}</strong> passed</span><span><strong>${task.counts.Failed}</strong> failed</span><span><strong>${needs}</strong> need rerun</span></div><div class="toolbar"><p class="help">Run checked cases using the latest saved Plan settings.</p><div class="actions">${task.execution_active?button('Stop execution','stop','danger')+(!state.activeTask?button('Resume monitoring','resume','primary'):''):button('Run selected cases','run','primary',state.activeTask?'disabled title="Another Task is being monitored in this window."':'')}</div></div><div class="split"><div class="case-browser"><div class="case-list">${task.testcases.map(c=>`<div class="task-case"><label class="checkbox-field" style="padding:10px 18px 0"><input type="checkbox" data-run="${escape(c.id)}" aria-label="Run ${escape(c.tc_name)}" ${c.selected?'checked':''} ${task.execution_active||c.script_kind!=='single'?'disabled':''}><span class="help">Include in execution</span></label><button class="case-row" data-action="select-result" data-id="${escape(c.id)}" aria-pressed="${state.caseId===c.id}"><strong>${automation(c.automation)}${escape(c.tc_name)}</strong><span class="case-result-labels">${status(c.status)} ${c.needs_retest?'<span class="status stale">Rerun needed</span>':''}</span>${c.script_kind!=='single'?'<p class="help">Retired step-based case</p>':''}</button></div>`).join('')}</div></div><div class="case-editor" id="evidence">${evidence(task)}</div></div>`:empty('Set this Task’s scope','Select Test Cases from the Plan before starting an execution.','<a href="#/tasks/info/'+encodeURIComponent(task.id)+'">Open Task Info to choose Test Cases</a>'));
+function taskExecutionContent(project,plan,task){return executionControlsContent(project,plan,task);}
+
+// Execution rows and dialogs retain stable Task/Plan/Case identities across monitoring refreshes.
+function executionBusy(){return Boolean(state.executionStarting||state.activeTask||executionView().available?.some(t=>t.execution_active)||context().task?.execution_active);}
+function executionCases(task){const filter=executionView().filters?.[task.id]||'all';return task.testcases.filter(c=>filter==='all'||(filter==='automatic'?c.automation==='automatic':['semi_automatic','manual'].includes(c.automation)));}
+function executionIconButton(label,action,name,kind='',extra=''){
+ return button(icon(name),action,'execution-icon-button '+kind,'title="'+escape(label)+'" aria-label="'+escape(label)+'" '+extra);
 }
+function executionRunButton(task){return task.execution_active?executionIconButton('Stop Execution','stop','stop','danger'):executionIconButton('Run Selected Cases','run','play','primary',executionBusy()||state.executionSelectionBusy?'disabled':'');}
+Object.assign(icons,{reportPreview:'M4 3h11l4 4v6 M14 3v5h5 M8 11h5 M8 15h3 M4 3v18h7 M21 21l-3-3 M19 15a4 4 0 1 1-8 0 4 4 0 0 1 8 0',log:'M6 3h9l4 4v14H6z M14 3v5h5 M9 12h7 M9 16h7',play:'M7 4l14 8-14 8z',stop:'M5 5h14v14H5z',selectAll:'M4 4h16v16H4z M7 12l3 3 7-7',clearSelection:'M4 4h16v16H4z M8 8l8 8 M16 8l-8 8',parameters:'M4 6h16 M4 12h16 M4 18h16 M8 3v6 M16 9v6 M10 15v6',scope:'M8 4h12v17H4V4h4 M8 2h8v4H8z M8 11l2 2 5-5 M8 17h8',connection:'M8 3v5 M16 3v5 M6 8h12v3a6 6 0 0 1-12 0z M12 17v4'});
+function executionRows(task){
+ const busy=executionBusy()||state.executionSelectionBusy,cases=executionCases(task);
+ return cases.map(c=>{
+ const label=({TBD:'NR',Passed:'PASS','C-PASS':'C-PASS',Failed:'FAIL',Block:'Block',Running:'Running'})[c.status]||'NR';
+ const attrs='data-id="'+escape(c.id)+'"';
+ return '<tr class="execution-case-row" data-execution-case="'+escape(c.id)+'"><td><input type="checkbox" data-run="'+escape(c.id)+'" aria-label="Run '+escape(c.tc_name)+'" '+(c.selected?'checked ':'')+(busy||c.script_kind!=='single'?'disabled':'')+'></td><td><div class="execution-case-name">'+automation(c.automation)+'<strong data-no-translate>'+escape(c.tc_name)+'</strong></div>'+(c.needs_retest?'<span class="status stale">Rerun needed</span>':'')+'</td><td>'+button(label,'execution-annotation','status '+escape(String(c.status).toLowerCase()),attrs+(c.status==='Running'?' data-no-translate':'')+' aria-label="Result Annotation: '+escape(c.tc_name)+'"')+'</td><td>'+(task.execution_active&&c.status==='Running'?executionIconButton('Stop this case and continue with the next selected case','execution-stop-one','stop','danger',attrs):executionIconButton('Run: '+c.tc_name,'execution-run-one','play','',attrs+' '+(busy||c.script_kind!=='single'?'disabled':'')))+'</td><td>'+executionIconButton('Log: '+c.tc_name,'execution-log','log','',attrs)+'</td><td>'+executionIconButton('Report preview: '+c.tc_name,'execution-report-preview','reportPreview','',attrs)+'</td><td>'+(c.automation==='automatic'?'':executionIconButton('Parameters: '+c.tc_name,'execution-parameters','parameters','',attrs+' '+(executionBusy()||c.script_kind!=='single'||c.status==='Running'?'disabled':'')))+'</td></tr>';
+ }).join('')||'<tr><td colspan="7" class="empty">'+(task.testcases.length?'No matching Test Cases.':'No Test Cases. Use Scope to add cases.')+'</td></tr>';
+}
+function executionControlsContent(project,plan,task){
+ const busy=executionBusy(),filter=executionView().filters?.[task.id]||'all';
+ return '<div class="execution-toolbar" role="toolbar" aria-label="Task controls"><label class="execution-filter"><span class="sr-only">Automation filter</span><select id="execution-filter" aria-label="Automation filter">'+[['all','All cases'],['automatic','Fully automatic'],['operator','Semi-automatic + Manual']].map(([v,l])=>'<option value="'+v+'" '+(filter===v?'selected':'')+'>'+l+'</option>').join('')+'</select></label><div class="actions">'+executionIconButton('Select All','execution-select-all','selectAll','',busy?'disabled':'')+executionIconButton('Clear Selection','execution-select-none','clearSelection','',busy?'disabled':'')+'</div><div class="actions">'+'<span data-execution-run-control>'+executionRunButton(task)+'</span>'+(task.execution_active&&!state.activeTask?button('Resume monitoring','resume'):'')+'</div><div class="actions execution-configuration">'+executionIconButton('Scope','execution-scope','scope','',plan.locked?'disabled':'')+executionIconButton('Connection','execution-connection','connection')+'</div></div><div class="execution-case-scroll" tabindex="0" aria-label="Test Cases"><table class="execution-case-table" aria-label="Test Cases"><tbody>'+executionRows(task)+'</tbody></table></div>';
+}
+function syncExecutionControls(){
+ const task=context().task,body=$('.execution-case-table tbody');if(!task||!body)return;
+ const focus=document.activeElement,caseId=focus?.closest('[data-execution-case]')?.dataset.executionCase,action=focus?.dataset.action,run=focus?.dataset.run;
+ const markup=executionRows(task);if(body._executionMarkup!==markup){body.innerHTML=markup;body._executionMarkup=markup;}
+ updateRunningLabel();
+ if(!executionDialog&&caseId){const row=$$('[data-execution-case]').find(r=>r.dataset.executionCase===caseId);(run?row?.querySelector('[data-run]'):Array.from(row?.querySelectorAll('[data-action]')||[]).find(b=>b.dataset.action===action))?.focus({preventScroll:true});}
+ if(executionDialog?.kind==='parameters'){const fieldset=executionDialog.el.querySelector('fieldset');if(fieldset)fieldset.disabled=executionBusy()||executionDialog.saving||Boolean(executionDialog.def?.editing_locked);}
+ const toolbar=$('.execution-toolbar'),resume=toolbar?.querySelector('[data-action=resume]');if(task.execution_active&&!state.activeTask&&!resume)toolbar?.insertAdjacentHTML('beforeend',button('Resume monitoring','resume'));else if(!task.execution_active||state.activeTask)resume?.remove();
+ const runControl=$('[data-execution-run-control]');if(runControl){const markup=executionRunButton(task);if(runControl._markup!==markup){const focused=runControl.contains(document.activeElement);runControl.innerHTML=markup;runControl._markup=markup;if(focused&&!executionDialog)runControl.querySelector('button')?.focus({preventScroll:true});}}
+ const busy=executionBusy();for(const b of $$('.execution-toolbar [data-action]')){if(['run','execution-select-all','execution-select-none'].includes(b.dataset.action))b.disabled=busy||Boolean(state.executionSelectionBusy);if(b.dataset.action==='stop')b.disabled=!task.execution_active;}
+}
+let executionSelectionQueue=Promise.resolve();
+async function saveExecutionSelection(task,changes){
+ if(executionBusy())throw Error('Selection is locked while testing is active.');
+ state.executionSelectionBusy=true;syncExecutionControls();
+ const request=executionSelectionQueue.then(async()=>{for(const [id,selected] of changes){await api('/api/task_testcases/'+encodeURIComponent(task.id)+'/'+encodeURIComponent(id),'PATCH',{selected});const c=task.testcases.find(c=>c.id===id);if(c)c.selected=selected;}});
+ executionSelectionQueue=request.catch(()=>{});
+ try{await request;}finally{state.executionSelectionBusy=false;syncExecutionControls();}
+}
+async function startExecutionCases(task,ids){
+ if(executionBusy()||state.executionSelectionBusy)throw Error('Wait for the current operation to finish.');
+ if(!ids.length)throw Error('Select at least one Test Case to run.');
+
+ state.executionStarting=true;syncExecutionControls();
+ try{
+ const config=await api('/api/tasks/'+task.id+'/settings');if(!config.host)throw Error('Set this Task’s BMC URL in Connection before running.');
+ const result=await api('/api/tasks/'+task.id+'/execution/start','POST',{testcase_ids:ids});
+ task.execution_active=true;runTask(task.id,ids,result.execution_token).catch(e=>toast(e.message,true));
+ }finally{state.executionStarting=false;syncExecutionControls();}
+}
+let executionDialog=null;
+function closeExecutionDialog(force=false){
+ const d=executionDialog;if(!d)return true;
+ if(!force&&(d.saving||d.dirty&&!window.confirm('Discard unsaved changes?')))return false;
+ d.el.close();d.el.remove();executionDialog=null;if(d.opener?.isConnected)d.opener.focus({preventScroll:true});return true;
+}
+async function openExecutionDialog(kind,caseId,opener){
+ if(!closeExecutionDialog())return;
+ ReportPreview.close();
+ const {project,plan,task}=context();if(!task)return;
+ if(kind==='parameters'&&executionBusy())throw Error('Parameters are locked while testing is active.');
+ const tc=task.testcases.find(c=>c.id===caseId);
+ if(caseId&&!tc)throw Error('Test Case is no longer in this Task.');
+ const titles={scope:'Scope',connection:'Connection',parameters:'Parameters',annotation:'Result Annotation',log:'Test log'};
+ const el=document.createElement('dialog');el.className='execution-dialog';el.dataset.kind=kind;el.setAttribute('aria-labelledby','execution-dialog-title');
+ const d={el,kind,taskId:task.id,planId:plan.id,caseId,dirty:false,saving:false,opener};executionDialog=d;
+ el.innerHTML='<header class="execution-dialog-header"><div><h2 id="execution-dialog-title">'+titles[kind]+'</h2><p class="help" data-no-translate>'+escape(task.name+(tc?' / '+tc.tc_name:''))+'</p></div><div class="execution-dialog-actions">'+(kind==='log'?'<button type="button" data-execution-export disabled>Export</button>':'')+'<button type="button" data-execution-close>Close</button></div></header><div class="execution-dialog-body">Loading…</div><p class="execution-dialog-error" role="alert"></p>';
+ const exportButton=el.querySelector('[data-execution-export]');
+ if(exportButton)exportButton.onclick=()=>{
+   updateExecutionLog();
+   const log=el.querySelector('[data-execution-log]');if(!log||!d.logText)return;
+   const safe=value=>String(value).replace(/[<>:"/\\|?*\x00-\x1f]/g,'_').replace(/[. ]+$/g,'').slice(0,80);
+   download(safe(task.name)+'__'+safe(tc.tc_name)+'__test.log',d.logText,'text/plain;charset=utf-8');
+ };
+ document.body.append(el);el.showModal();el.querySelector('[data-execution-close]').onclick=()=>closeExecutionDialog();el.addEventListener('cancel',e=>{e.preventDefault();closeExecutionDialog();});
+ el.addEventListener('input',e=>{e.stopPropagation();if(kind!=='log')d.dirty=true;});
+ el.addEventListener('change',e=>e.stopPropagation());
+ el.addEventListener('submit',async e=>{
+ e.preventDefault();e.stopPropagation();if(d.saving)return;
+ const form=e.target,values=Object.fromEntries(new FormData(form));d.saving=true;el.querySelector('.execution-dialog-error').textContent='';el.querySelectorAll('button').forEach(b=>b.disabled=true);
+ try{
+ if(kind==='scope'){const ids=[...form.querySelectorAll('[data-dialog-scope]:checked')].map(c=>c.dataset.dialogScope);if(task.testcases.some(c=>!ids.includes(c.id))&&!window.confirm('Remove these cases from the Task? Their current results and logs will be removed.'))return;await api('/api/tasks/'+d.taskId+'/testcases/import','POST',{testcases:ids});}
+ else if(kind==='connection'){values.verify_ssl=form.elements.verify_ssl.checked;await api('/api/tasks/'+d.taskId+'/settings','PUT',values);}
+ else if(kind==='parameters'){const activity=await api('/api/tasks');if(activity.tasks.some(t=>t.execution_active)||executionBusy())throw Error('Parameters are locked while testing is active.');const settings={};for(const [name,spec] of Object.entries(d.def.metadata.parameters||{})){const f=form.elements.namedItem('p:'+name);settings[name]=spec.type==='boolean'?f.checked:['integer','number'].includes(spec.type)?Number(f.value):f.value;}await api('/api/plans/'+d.planId+'/testcases/'+d.caseId+'/definition','PUT',{source:d.def.source,settings,settings_revision:d.def.settings_revision});}
+ else if(kind==='annotation'){await api('/api/tasks/'+d.taskId+'/testcases/'+d.caseId+'/status','PATCH',{status:values.status,reason:values.reason});await api('/api/task_tc/annotate','POST',{task_id:d.taskId,testcase_id:d.caseId,bug_id:values.bug_id});}
+ else if(kind==='log'){await api('/api/input','POST',{session_id:form.dataset.session,value:values.value});state.prompt=null;form.remove();return;}
+ d.dirty=false;closeExecutionDialog(true);await refresh();toast('Saved.');
+ }catch(error){el.querySelector('.execution-dialog-error').textContent=error.message;}
+ finally{d.saving=false;if(el.isConnected){el.querySelectorAll('button').forEach(b=>b.disabled=false);}}
+ });
+ try{
+ let html='';
+ if(kind==='connection')html=await settingsPage(task);
+ if(kind==='scope')html='<form><div class="actions">'+button('Select all','dialog-scope-all')+button('Clear selection','dialog-scope-none')+'</div><div class="table-wrap"><table><thead><tr><th>Include</th><th>Case Name</th><th>Folder</th></tr></thead><tbody>'+plan.testcases.map(c=>'<tr><td><input type="checkbox" data-dialog-scope="'+escape(c.id)+'" aria-label="Include '+escape(c.tc_name)+'" '+(task.testcases.some(t=>t.id===c.id)?'checked ':'')+(plan.locked||c.script_kind!=='single'?'disabled':'')+'></td><td>'+automation(c.automation)+escape(c.tc_name)+'</td><td>'+escape(c.folder_path||'Unfiled')+'</td></tr>').join('')+'</tbody></table></div><div class="form-actions"><button type="submit" class="primary" '+(plan.locked?'disabled':'')+'>Save scope</button></div></form>';
+ if(kind==='parameters'){d.def=await api('/api/plans/'+d.planId+'/testcases/'+d.caseId+'/definition');html='<p class="help">Saved parameters belong to '+escape(plan.name)+' and apply to every Task using this Plan case.</p><form><fieldset '+(executionBusy()||d.def.editing_locked?'disabled':'')+'><div class="fields">'+(parameterFields(d.def.metadata,d.def.settings||{})||'<p>No editable parameters.</p>')+'</div><div class="form-actions"><button type="submit" class="primary">Save parameters</button></div></fieldset></form>';}
+ if(kind==='annotation')html=(tc.manual_override?'<p class="help">'+escape(tc.manual_override.reason||'')+'</p>':'')+'<form><fieldset '+(task.execution_active?'disabled':'')+'><div class="fields"><label class="field"><span>Status</span><select name="status">'+[['TBD','NR'],['Passed','PASS'],['C-PASS','C-PASS'],['Failed','FAIL'],['Block','Block']].map(([v,l])=>'<option value="'+v+'" '+(tc.status===v?'selected':'')+'>'+l+'</option>').join('')+'</select></label><label class="field"><span>Reason / Note for C-PASS</span><input name="reason" required></label><label class="field"><span>Bug ID</span><input name="bug_id" value="'+escape(tc.bug_id)+'"></label></div><div class="form-actions"><button type="submit" class="primary">Save annotation</button></div></fieldset></form>';
+ if(kind==='log')html='<p class="help" data-execution-log-notice hidden>Showing the latest 65,536 characters. Export saves the complete test log.</p><pre class="log code" data-execution-log data-no-translate></pre><div data-execution-input></div>';
+ if(executionDialog!==d)return;el.querySelector('.execution-dialog-body').innerHTML=html;
+ for(const b of el.querySelectorAll('[data-action^="dialog-scope-"]'))b.onclick=e=>{e.stopPropagation();if(plan.locked)return;el.querySelectorAll('[data-dialog-scope]:not(:disabled)').forEach(c=>c.checked=b.dataset.action==='dialog-scope-all');d.dirty=true;};
+ updateExecutionLog();
+ }catch(error){if(el.isConnected)el.querySelector('.execution-dialog-error').textContent=error.message;}
+}
+window.addEventListener('beforeunload',event=>{if(executionDialog?.dirty||executionDialog?.saving){event.preventDefault();event.returnValue='';}});
+// Bound DOM work independently of the complete evidence retained for Export.
+const executionLogPreviewLimit=65536;
+let executionLogUpdateTimer=null;
+async function loadExecutionLog(d,key){
+ if(d.loadingLog)return;
+ d.loadingLog=true;d.logKey=key;
+ try{
+  const data=await api('/api/tasks/'+encodeURIComponent(d.taskId)+'/testcases/'+encodeURIComponent(d.caseId)+'/logs?text_only=1');
+  if(executionDialog!==d)return;
+  d.logText=data.log_text||'';d.logLoadedAt=Date.now();d.el.querySelector('.execution-dialog-error').textContent='';
+ }catch(error){if(executionDialog===d){d.el.querySelector('.execution-dialog-error').textContent=error.message;d.logLoadedAt=Date.now();}}
+ finally{d.loadingLog=false;if(executionDialog===d)updateExecutionLog();}
+}
+function scheduleExecutionLogUpdate(){
+ if(executionLogUpdateTimer!==null)return;
+ executionLogUpdateTimer=setTimeout(()=>{executionLogUpdateTimer=null;updateExecutionLog();},100);
+}
+function updateExecutionLog(){
+ if(executionLogUpdateTimer!==null){clearTimeout(executionLogUpdateTimer);executionLogUpdateTimer=null;}
+ const toolbar=$('.execution-toolbar');
+ if(toolbar){let response=toolbar.querySelector('[data-action="execution-response"]');if(state.prompt&&state.activeTask===context().task?.id){if(!response){response=document.createElement('button');response.type='button';response.dataset.action='execution-response';response.textContent='Response required';response.className='primary';toolbar.append(response);}}else response?.remove();}
+ const d=executionDialog;if(!d||d.kind!=='log')return;
+ const task=context().task,tc=task?.id===d.taskId?task.testcases.find(c=>c.id===d.caseId):null;
+ const out=d.el.querySelector('[data-execution-log]');if(out&&tc){
+  const live=state.activeTask===task.id&&tc.status==='Running';
+  if(live){d.logText=state.log;d.logKey=null;}
+  else{
+   const key=JSON.stringify([tc.status,tc.executed_at,tc.result_updated_at]);
+   if(!d.loadingLog&&(d.logKey!==key||(tc.status==='Running'&&Date.now()-(d.logLoadedAt||0)>=2000)))void loadExecutionLog(d,key);
+  }
+  const full=d.logText||'',text=full.slice(-executionLogPreviewLimit)||(d.loadingLog?'Loading test log…':'No test log available.');
+  const notice=d.el.querySelector('[data-execution-log-notice]');if(notice)notice.hidden=full.length<=executionLogPreviewLimit;
+  d.el.querySelector('[data-execution-export]').disabled=!full||d.saving||(!live&&d.loadingLog);
+  if(out.textContent!==text){const atEnd=out.scrollTop+out.clientHeight>=out.scrollHeight-30;out.textContent=text;if(atEnd)out.scrollTop=out.scrollHeight;}
+ }
+ const slot=d.el.querySelector('[data-execution-input]');if(!slot)return;
+ const prompt=state.activeTask===d.taskId&&tc?.status==='Running'?state.prompt:null;
+ if(prompt&&!slot.querySelector('form'))slot.innerHTML=inputForm(prompt.session,prompt.text);
+ if(!prompt&&slot.firstChild)slot.replaceChildren();
+}
+let executionPolling=false,executionPolledAt=0,executionPolledTask=null;
+setInterval(async()=>{
+ if(executionPolling||!$('#execution-panel')||state.executionSelectionBusy||state.executionStarting)return;
+ const task=context().task;if(!task)return;
+ const interval=document.hidden?30000:executionBusy()?2000:15000;
+ if(executionPolledTask===task.id&&Date.now()-executionPolledAt<interval)return;
+ executionPolling=true;executionPolledAt=Date.now();executionPolledTask=task.id;
+ try{const [summary,result]=await Promise.all([api('/api/tasks/'+task.id+'/summary'),api('/api/tasks')]);if(context().task?.id!==task.id||state.executionSelectionBusy||state.executionStarting)return;executionView().available=result.tasks.filter(t=>t.task_type==='Test');executionView().task=summary;syncExecutionControls();updateExecutionLog();}
+ catch(error){if(executionDialog)executionDialog.el.querySelector('.execution-dialog-error').textContent=error.message;}
+ finally{executionPolling=false;}
+},2000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)executionPolledAt=0;});
+
 function evidence(task) {
   const tc=task.testcases.find(c=>c.id===state.caseId); if(!tc)return '';
-  return `<h2>${automation(tc.automation)}${escape(tc.tc_name)}</h2><div class="metadata"><span>Latest result ${status(tc.status)}</span><span>Executed <strong>${escape(date(tc.executed_at))}</strong></span></div>${tc.needs_retest?'<div class="notice">Retained evidence predates the current Plan definition or Task connection settings. Rerun needed.</div>':''}${tc.manual_override?`<p class="help">Manual result: ${escape(tc.manual_override.status==='CP'?'C-PASS':tc.manual_override.status)} · ${escape(tc.manual_override.reason||'No reason recorded')}</p>`:''}<div class="actions"><strong>Test log</strong>${button('Report preview','execution-report-preview','','data-id="'+escape(tc.id)+'"')}</div><pre class="log code" id="log-output">${escape(state.activeTask===task.id && tc.status==='Running'?state.log:tc.log_text||'No test log. Run this Test Case to collect evidence.')}</pre><div id="input-slot">${state.activeTask===task.id&&state.prompt?inputForm(state.prompt.session,state.prompt.text):''}</div><details><summary>Result annotation</summary><form id="annotation-form"><div class="fields"><label class="field"><span>Manual status</span><select name="status" ${task.execution_active?'disabled':''}><option value="TBD">Not run / pending</option><option value="Passed">Passed</option><option value="C-PASS">C-PASS</option><option value="Failed">Failed</option><option value="Block">Block</option></select></label><label class="field"><span>Reason / Note for C-PASS</span><input name="reason" ${task.execution_active?'disabled':''}></label><label class="field"><span>Bug ID</span><input name="bug_id" value="${escape(tc.bug_id)}" ${task.execution_active?'disabled':''}></label></div><div class="form-actions"><button ${task.execution_active?'disabled':''}>Save annotation</button></div></form></details>`;
+  return `<h2>${automation(tc.automation)}${escape(tc.tc_name)}</h2><div class="metadata"><span>Latest result ${status(tc.status)}</span><span>Executed <strong>${escape(date(tc.executed_at))}</strong></span></div>${tc.needs_retest?'<div class="notice">Retained evidence predates the current Plan definition or Task connection settings. Rerun needed.</div>':''}${tc.manual_override?`<p class="help">Manual result: ${escape(tc.manual_override.status==='CP'?'C-PASS':tc.manual_override.status)} · ${escape(tc.manual_override.reason||'No reason recorded')}</p>`:''}<div class="actions"><strong>Test log</strong></div><pre class="log code" id="log-output">${escape(state.activeTask===task.id && tc.status==='Running'?state.log:tc.log_text||'No test log. Run this Test Case to collect evidence.')}</pre><div id="input-slot">${state.activeTask===task.id&&state.prompt?inputForm(state.prompt.session,state.prompt.text):''}</div><details><summary>Result annotation</summary><form id="annotation-form"><div class="fields"><label class="field"><span>Manual status</span><select name="status" ${task.execution_active?'disabled':''}><option value="TBD">Not run / pending</option><option value="Passed">Passed</option><option value="C-PASS">C-PASS</option><option value="Failed">Failed</option><option value="Block">Block</option></select></label><label class="field"><span>Reason / Note for C-PASS</span><input name="reason" ${task.execution_active?'disabled':''}></label><label class="field"><span>Bug ID</span><input name="bug_id" value="${escape(tc.bug_id)}" ${task.execution_active?'disabled':''}></label></div><div class="form-actions"><button ${task.execution_active?'disabled':''}>Save annotation</button></div></form></details>`;
 }
 function repositoryCheck(kind,id){return `<input type="checkbox" class="repository-batch-check" data-kind="${kind}" data-id="${escape(id)}" aria-label="Select ${kind}" ${state.repositorySelection?.has(kind+':'+id)?'checked':''}>`;}
 function repositorySelectionData(){const folders=[],cases=[];for(const value of state.repositorySelection||[]){const [kind,id]=value.split(':');(kind==='folder'?folders:cases).push(id);}return {folder_ids:folders,case_ids:cases};}
@@ -493,9 +718,6 @@ function folderAction(label,action,id,kind=''){return button(icon(action==='new-
 function selectedRepositoryFolder(){return state.repositoryFolders.find(f=>f.id===state.repositoryFolder)||state.repositoryFolders.find(f=>f.is_root);}
 function repositoryFolderOptions(selected) {
  return (state.repositoryFolders||[]).map(f=>`<option value="${escape(f.id)}" ${selected===f.id?'selected':''}>${escape(f.folder_path)}</option>`).join('');
-}
-function executionIconButton(label,action,name,kind='',extra=''){
- return button(icon(name),action,'execution-icon-button '+kind,'title="'+escape(label)+'" aria-label="'+escape(label)+'" '+extra);
 }
 function repoIcon(label,action,glyph,extra=''){
  return executionIconButton(label,action,glyph,glyph==='trash'?'danger':'',extra);
@@ -521,17 +743,21 @@ function refreshRepoSelection(){
   const control=document.querySelector(`[data-action="${action}"]`);if(control)control.disabled=disabled;
  }
 }
-function selectRepoRow(row,event){
- const selected=state.repositorySelection??=new Set(),key=repoKey(row);
- const keys=repoRows().filter(r=>!r.hidden).map(repoKey),start=keys.indexOf(state.repoAnchor),end=keys.indexOf(key);
+function selectRowRange(selected,key,keys,anchor,event){
+ const start=keys.indexOf(anchor),end=keys.indexOf(key);
  if(event.shiftKey&&start>=0){
   if(!event.ctrlKey&&!event.metaKey)selected.clear();
   keys.slice(Math.min(start,end),Math.max(start,end)+1).forEach(k=>selected.add(k));
  }else{
   if(event.ctrlKey||event.metaKey){if(selected.has(key))selected.delete(key);else selected.add(key);}
   else{selected.clear();selected.add(key);}
-  state.repoAnchor=key;
+  return key;
  }
+ return anchor;
+}
+function selectRepoRow(row,event){
+ const selected=state.repositorySelection??=new Set(),key=repoKey(row);
+ state.repoAnchor=selectRowRange(selected,key,repoRows().filter(r=>!r.hidden).map(repoKey),state.repoAnchor,event);
  state.repositoryFolder=row.dataset.folderNode||state.repository.find(c=>c.id===row.dataset.repositoryId)?.folder_id;
  refreshRepoSelection();row.focus({preventScroll:true});
 }
@@ -545,12 +771,170 @@ function repoDialog(title,body,footer=''){
   dialog.innerHTML=`<header><h2>${escape(title)}</h2>${repoIcon('Close','repo-close','close')}</header><div class="repo-view-content">${body}</div><p role="alert"></p>`;
  }
  document.body.append(dialog);dialog.addEventListener('close',()=>dialog.remove(),{once:true});
- dialog.querySelector('[data-action=repo-close]').onclick=()=>dialog.close();
+ dialog.querySelector('[data-action=repo-close]').onclick=event=>{
+   event.stopPropagation();
+   dialog.close();
+ };
  dialog.showModal();return dialog;
+}
+let planCaseDialog=null;
+async function openPlanCaseDialog(plan,id,source){
+ const ref=planCaseReference(plan,id);
+ const action=source?'plan-case-source':'plan-case-parameters';
+ const opener=document.querySelector(`[data-plan-case="${CSS.escape(id)}"] [data-action="${action}"]`);
+ const dialog=repoDialog((source?'View Python source':'Parameters')+' · '+ref.name,'<p role="status">Loading…</p>');
+ const body=dialog.querySelector('.repo-view-content'),error=dialog.querySelector('[role=alert]');
+ const close=dialog.querySelector('[data-action=repo-close]');
+ let dirty=false,saving=false;
+ function finish(){
+   dialog.close();
+   if(opener?.isConnected)opener.focus({preventScroll:true});
+ }
+ function requestClose(){
+   if(saving||(dirty&&!window.confirm('Discard unsaved parameter changes?')))return false;
+   finish();return true;
+ }
+ planCaseDialog={requestClose};
+ function protect(event){if(dirty||saving){event.preventDefault();event.returnValue='';}}
+ window.addEventListener('beforeunload',protect);
+ dialog.addEventListener('close',()=>{
+   window.removeEventListener('beforeunload',protect);
+   if(planCaseDialog?.requestClose===requestClose)planCaseDialog=null;
+ },{once:true});
+ close.onclick=requestClose;
+ dialog.addEventListener('cancel',event=>{event.preventDefault();requestClose();});
+ dialog.addEventListener('click',event=>event.stopPropagation());
+ const url='/api/plans/'+encodeURIComponent(plan.id)+'/testcases/'+encodeURIComponent(id)+'/definition';
+ try{
+   const def=await api(url);
+   if(!dialog.open)return;
+   if(source){body.innerHTML='<pre class="case-source-code" data-no-translate>'+escape(def.source)+'</pre>';return;}
+   const locked=def.editing_locked;
+   body.innerHTML=(locked?'<p class="notice info">This Test Case is running. Parameters are locked until it finishes.</p>':'')+'<form id="plan-dialog-parameters"><fieldset><div class="fields">'+parameterFields(def.metadata,def.settings,locked)+'</div></fieldset></form>';
+   const form=body.querySelector('form');
+   dialog.insertAdjacentHTML('beforeend','<div class="actions plan-parameter-actions"><button class="primary" type="submit" form="plan-dialog-parameters">Save parameters</button><button type="button">Cancel</button></div>');
+   const save=dialog.querySelector('[type=submit]'),cancel=dialog.querySelector('.plan-parameter-actions [type=button]');
+   const fields=form.querySelector('fieldset');
+   save.disabled=locked;cancel.onclick=requestClose;
+   for(const type of ['input','change'])form.addEventListener(type,event=>{event.stopPropagation();dirty=true;});
+   form.onsubmit=async event=>{
+     event.preventDefault();event.stopPropagation();
+     if(saving||save.disabled)return;
+     const settings=currentSettings(form,def.metadata);
+     saving=true;save.disabled=close.disabled=cancel.disabled=fields.disabled=true;error.textContent='';
+     try{
+       await api(url,'PUT',{source:def.source,settings,settings_revision:def.settings_revision});
+       dirty=false;
+       finish();toast('Parameters saved.');
+       await refresh(false);
+       const updated=context().plan?.testcases.find(c=>c.id===id);
+       if(updated&&opener){
+         const incomplete=updated.parameters_complete===false;
+         for(const cls of ['primary','case-parameters-incomplete'])opener.classList.toggle(cls,incomplete);
+         opener.classList.toggle('case-parameters-complete',!incomplete);
+       }
+     }catch(e){if(dialog.open)error.textContent=e.message;else toast(e.message,true);if(e.status===423)def.editing_locked=true;}
+     finally{saving=false;close.disabled=cancel.disabled=false;save.disabled=fields.disabled=Boolean(def.editing_locked);}
+   };
+ }catch(e){body.textContent='';error.textContent=e.message;}
 }
 function repoConfirm(dialog,callback){
  const btn=dialog.querySelector('[data-action=repo-confirm]');
  btn.onclick=async()=>{btn.disabled=true;try{await callback();dialog.close();await draw();}catch(e){dialog.querySelector('[role=alert]').textContent=e.message;btn.disabled=false;}};
+}
+function planOperationDialog(title, body, label, glyph, save){
+ const dialog=repoDialog(title,body,repoIcon(label,'repo-confirm',glyph)+repoIcon('Cancel','repo-close','close'));
+ const confirm=dialog.querySelector('[data-action=repo-confirm]');
+ const cancel=dialog.querySelector('[data-action=repo-close]');
+ const input=dialog.querySelector('input'),choice=dialog.querySelector('select');
+ let pending=false;
+ const validate=()=>{confirm.disabled=pending||Boolean(choice&&!choice.value)||Boolean(input&&(!input.value.trim()||input.value.trim()===input.defaultValue.trim()));};
+ choice?.addEventListener('change',validate);
+ dialog.addEventListener('cancel',event=>{if(pending)event.preventDefault();});
+ dialog.addEventListener('click',event=>event.stopPropagation());
+ if(input){
+   input.addEventListener('input',validate);
+   input.addEventListener('keydown',event=>{if(event.key==='Enter'&&!event.isComposing){event.preventDefault();confirm.click();}});
+   input.focus();input.select();
+ }
+ validate();
+ confirm.onclick=async()=>{
+   pending=true;confirm.disabled=true;cancel.disabled=true;
+   if(input)input.readOnly=true;
+   if(choice)choice.disabled=true;
+   try{
+     await save(input?.value.trim(),choice?.value);
+   }catch(error){
+     dialog.querySelector('[role=alert]').textContent=error.message;
+     pending=false;cancel.disabled=false;
+     if(choice)choice.disabled=false;
+     if(input){input.readOnly=false;input.focus();}
+     validate();return;
+   }
+   dialog.close();
+   try{await refresh();}catch(error){toast(error.message,true);}
+ };
+ return dialog;
+}
+function folderContents(folderIds,folders,cases){
+ const subtree=new Set(folderIds);
+ for(const id of subtree){
+   for(const folder of folders)if(folder.parent_id===id)subtree.add(folder.id);
+ }
+ return {subtree,contained:new Set(cases.filter(c=>subtree.has(c.folder_id)).map(c=>c.id))};
+}
+function folderRemovalChoice(count){
+ return count?`<label class="field"><span>Test Cases inside selected folders (${count})</span><select><option value="">Choose an action</option><option value="keep">Move to parent folder</option><option value="delete">Delete with folders</option></select></label>`:'';
+}
+function historyRows(entry,caseNames){
+ const groups=new Map();
+ for(const change of entry.changes||[]){
+   const before=change.before||{},after=change.after||{};
+   const identity=['name','folder_path','path'].find(key=>key in before||key in after);
+   const renamed=identity&&before[identity]!=null&&after[identity]!=null&&before[identity]!==after[identity];
+   const item=renamed?before[identity]+' → '+after[identity]
+     :(after[identity]??before[identity]??after.folder??before.folder??change.item);
+   const details=[];
+   function value(v){
+     if(v===undefined)return '—';
+     if(Array.isArray(v))return v.map(id=>caseNames.get(id)||id).join(', ');
+     return typeof v==='string'&&v!==''?v:JSON.stringify(v);
+   }
+   function detail(label,a,b){
+     if(JSON.stringify(a)===JSON.stringify(b))return;
+     const text=a===undefined||b===undefined?value(a===undefined?b:a):value(a)+' → '+value(b);
+     details.push(label+' · '+text);
+   }
+   for(const key of new Set([...Object.keys(before),...Object.keys(after)])){
+     if(key===identity||(key==='folder'&&!identity&&change.item?.startsWith('order:')))continue;
+     if(key==='parameters'){
+       const a=before.parameters||{},b=after.parameters||{};
+       for(const name of new Set([...Object.keys(a),...Object.keys(b)])){
+         if(JSON.stringify(a[name])!==JSON.stringify(b[name]))details.push(name+' · '+value(a[name])+' → '+value(b[name]));
+       }
+     }else detail(key,before[key],after[key]);
+   }
+   const description=details.join('\n');
+   if(!groups.has(description))groups.set(description,[]);
+   groups.get(description).push(item);
+ }
+ return [...groups].map(([description,items])=>'<div class="history-change"><span data-no-translate>'+escape(items.join(', '))+'</span>'+
+   (description?'<pre data-no-translate>'+escape(description)+'</pre>':'')+'</div>').join('');
+}
+async function showCaseHistory(plan=null){
+ const dialog=repoDialog(plan?'History · '+plan.name:'History','<p role="status">Loading…</p>');
+ const body=dialog.querySelector('.repo-view-content');
+ try{
+   const entries=await api(plan?'/api/plans/'+encodeURIComponent(plan.id)+'/history':'/api/repository/history');
+   if(!entries.length){body.innerHTML='<p>No changes recorded.</p>';return;}
+   const caseNames=new Map((state.repository||[]).map(c=>[c.id,c.name]));
+   const operations={folder_create:'Create folder',folder_modify:'Change folder',import:'Import Test Cases',
+     remove:'Remove Test Case',replace:'Replace Test Case',move:'Move items',delete:'Remove items',
+     resort:'Sort Test Cases',case_move:'Move Test Cases'};
+   const rows=entries.map(entry=>'<tr><td>'+escape(date(entry.time))+'</td><td>'+escape(entry.operator||'—')+
+     '</td><td><strong>'+escape(operations[entry.operation]||entry.operation)+'</strong>'+historyRows(entry,caseNames)+'</td></tr>').join('');
+   body.innerHTML='<table><thead><tr><th>Time</th><th>Operator</th><th>Change</th></tr></thead><tbody>'+rows+'</tbody></table>';
+ }catch(e){body.textContent='';dialog.querySelector('[role=alert]').textContent=e.message;}
 }
 async function repositoryOperation(action){
  const selection=repositorySelectionData(),folder=selection.folder_ids[0],current=state.repository.find(c=>c.id===selection.case_ids[0]);
@@ -572,17 +956,16 @@ async function repositoryOperation(action){
   repoConfirm(dialog,()=>api('/api/repository/folders/'+encodeURIComponent(target.id),'PATCH',{name:input.value.trim()}));
   input.focus();input.select();return;
  }
- if(action==='repo-history'){
-  const entries=await api('/api/repository/history');
-  const describe=v=>v?Object.entries(v).map(([k,x])=>k+' = '+(Array.isArray(x)?x.join(', '):x)).join('\n'):'—';
-  repoDialog('History',`<table><thead><tr><th>Time</th><th>Operator</th><th>Item</th><th>Change</th></tr></thead><tbody>${entries.flatMap(e=>(e.changes.length?e.changes:[{}]).map(c=>`<tr><td>${escape(version(e.time))}</td><td>${escape(e.operator||'')}</td><td>${escape(c.after?.name||c.before?.name||c.after?.folder_path||c.before?.folder_path||c.item||'')}</td><td><strong>${escape(e.operation)}</strong><pre>${escape(describe(c.before))} → ${escape(describe(c.after))}</pre></td></tr>`)).join('')}</tbody></table>`);return;
- }
+ if(action==='repo-history')return showCaseHistory();
  if(action==='repo-delete'){
-  const dialog=repoDialog('Delete selected items?',`<p>${selection.folder_ids.length} folders · ${selection.case_ids.length} Test Cases</p>${folder?'<label class="field"><span>Test Cases inside selected folders</span><select><option value="keep">Move to parent folder</option><option value="delete">Delete with folders</option></select></label>':''}`,repoIcon('Confirm deletion','repo-confirm','trash')+repoIcon('Cancel','repo-close','close'));
-  repoConfirm(dialog,async()=>{await api('/api/repository/batch','POST',{...selection,action:'delete',confirm:true,keep_cases:dialog.querySelector('select')?.value==='keep'});state.repositorySelection.clear();state.repositoryDefinition=null;});return;
+  const {contained}=folderContents(selection.folder_ids,state.repositoryFolders,state.repository);
+  const dialog=repoDialog('Delete selected items?',`<p>${selection.folder_ids.length} directories · ${selection.case_ids.length} Test Cases selected</p>`+folderRemovalChoice(contained.size),repoIcon('Confirm deletion','repo-confirm','trash')+repoIcon('Cancel','repo-close','close'));
+  const choice=dialog.querySelector('select'),confirm=dialog.querySelector('[data-action=repo-confirm]');
+  if(choice){confirm.disabled=true;choice.onchange=()=>{confirm.disabled=!choice.value;};}
+  repoConfirm(dialog,async()=>{await api('/api/repository/batch','POST',{...selection,action:'delete',confirm:true,keep_cases:choice?.value!=='delete'});state.repositorySelection.clear();state.repositoryDefinition=null;});return;
  }
  if(action==='repo-replace'&&current){
-  const dialog=repoDialog('Replace Test Case',`<h3>Current Test Case</h3><p>${escape(current.name)} · ${escape(version(current.metadata?.modified_at||current.source_created_at||current.source_version))}</p><h3>Replacement Test Case</h3><label class="field"><span>Python file</span><input type="file" accept=".py"></label><p data-candidate></p>`,repoIcon('Confirm replacement','repo-confirm','replace','disabled')+repoIcon('Cancel','repo-close','close'));
+  const dialog=repoDialog('Replace Test Case',`<h3>Current Test Case</h3><p>${escape(current.name)} · ${escape(version(latestSourceDate(current)||current.source_version))}</p><h3>Replacement Test Case</h3><label class="field"><span>Python file</span><input type="file" accept=".py"></label><p data-candidate></p>`,repoIcon('Confirm replacement','repo-confirm','replace','disabled')+repoIcon('Cancel','repo-close','close'));
   const input=dialog.querySelector('input'),preview=dialog.querySelector('[data-candidate]'),confirm=dialog.querySelector('[data-action=repo-confirm]');
   let source=null,request=0;
   input.onchange=async()=>{const n=++request;confirm.disabled=true;source=null;preview.textContent='';
@@ -607,10 +990,10 @@ function repositoryTable(add=false,plan=null) {
  const folderCounts=new Map();
  const folderCount=id=>{if(!folderCounts.has(id))folderCounts.set(id,state.repository.filter(c=>c.folder_id===id).length+state.repositoryFolders.filter(f=>f.parent_id===id).reduce((n,f)=>n+folderCount(f.id),0));return folderCounts.get(id);};
  const caseRow=(c,depth)=>{const exists=plan?.testcases.some(t=>t.tc_name.toLowerCase()===c.name.toLowerCase());
- return `<tr tabindex="0"  data-repository-id="${escape(c.id)}" ${add?'':'draggable="true"'} data-search="${escape(c.name.toLowerCase())}" style="--depth:${depth}"><td><div class="case-selection-label">${add?repositoryCheck('case',c.id):''}<strong>${automation(c.metadata.automation)}${escape(c.name)}</strong></div><p class="help">${escape(version(c.source_created_at))}</p></td><td>${add?button(exists?'Already in Plan':'Add to Plan','add-case',exists?'':'primary',`data-id="${escape(c.id)}" ${exists||plan.locked?'disabled':''}`):repoIcon('View Python source','view-standard','eye',`data-id="${escape(c.id)}"`)+(Object.keys(c.metadata.parameters||{}).length?repoIcon('Parameters for '+c.name,'view-parameters','settings',`data-id="${escape(c.id)}"`):'')}</td>${add?'':`<td><div class="actions">${button(icon('eye'),'view-standard','small-button icon-button',`data-id="${escape(c.id)}" title="View" aria-label="View ${escape(c.name)}"`)}${button(icon('trash'),'remove-standard','small-button icon-button danger',`data-id="${escape(c.id)}" title="Remove" aria-label="Remove ${escape(c.name)}"`)}</div></td>`}</tr>`;};
- const children=(parent,depth)=>state.repositoryFolders.filter(f=>f.parent_id===parent).sort((a,b)=>a.position-b.position).map(f=>`<tr tabindex="0"  class="repository-folder-row" data-folder-node="${escape(f.id)}" data-action="select-repository-folder" data-id="${escape(f.id)}" ${add||f.is_root?'':'draggable="true"'} style="--depth:${depth}"><td><div class="repository-folder-line">${!add?'':f.is_root?'<input type="checkbox" disabled data-selection-root="repository" aria-label="BMC">':repositoryCheck('folder',f.id)}${button(state.repositoryCollapsed?.has(f.id)?'&#9656;':'&#9662;','toggle-repository-folder','folder-collapse',`data-id="${escape(f.id)}" aria-label="Toggle folder" aria-expanded="${!state.repositoryCollapsed?.has(f.id)}"`)}<button type="button" class="repository-folder-name" data-action="select-repository-folder" data-id="${escape(f.id)}" aria-pressed="${selected?.id===f.id}" title="${escape(f.folder_path)}">${icon('folder')}<strong>${escape(f.name)}</strong><span class="repository-folder-count">(${folderCount(f.id)})</span></button>${state.repositoryRename===f.id?`<input class="repository-rename" data-id="${escape(f.id)}" aria-label="Folder name" value="${escape(f.name)}" maxlength="100">`:''}</div></td>${add?'':'<td></td>'}<td><div class="actions">${add?button('Add folder to Plan','add-repository-folder','small-button',`data-id="${escape(f.id)}" ${plan.locked?'disabled':''}`):folderAction('Add Test Case','new-repository-case',f.id)+folderAction('New folder','new-repository-folder',f.id)+folderAction('Resorting','resort-repository-folder',f.id)+(f.is_root?'':folderAction('Remove folder','remove-repository-folder',f.id,'danger'))}</div></td></tr>${state.repositoryCollapsed?.has(f.id)?'':children(f.id,depth+1)+state.repository.filter(c=>c.folder_id===f.id).map(c=>caseRow(c,depth+1)).join('')}`).join('');
- const html=`${add?'<div class="toolbar"><label><span class="sr-only">Find Test Case</span><input id="repository-search" type="search" placeholder="Find Test Case"></label></div>':''}<div class="table-wrap repository-scroll"><table id="repository-table" class="repository-hierarchy"><thead><tr><th>${add?listSelectAll('repository'):''}Directory / Test Case</th><th>${add?'Plan action':'<span class="sr-only">Case actions</span>'}</th>${add?'':'<th>Actions</th>'}</tr></thead><tbody>${children(null,0)}</tbody></table></div>`;
- return add?html:html.replace(/<td><div class="actions">[\s\S]*?<\/div><\/td>/g,'').replace('<th>Actions</th>','');
+ return `<tr tabindex="0"  data-repository-id="${escape(c.id)}" ${add?'':'draggable="true"'} data-search="${escape(sourceSearchText(c).toLowerCase())}" style="--depth:${depth}"><td><div class="case-selection-label">${add?repositoryCheck('case',c.id):''}<strong>${automation(c.metadata.automation)}${escape(c.name)}</strong></div>${add?`<p class="help">${sourceDateLabel(c)}</p>`:''}</td>${add?'':caseListMetadata(c)}<td>${add?button(exists?'Already in Plan':'Add to Plan','add-case',exists?'':'primary',`data-id="${escape(c.id)}" ${exists||plan.locked?'disabled':''}`):`<div class="actions">${repoIcon('View Python source','view-standard','eye',`data-id="${escape(c.id)}"`)+(Object.keys(c.metadata.parameters||{}).length?repoIcon('Parameters for '+c.name,'view-parameters','parameters',`data-id="${escape(c.id)}"`):'')}</div>`}</td></tr>`;};
+ const children=(parent,depth)=>state.repositoryFolders.filter(f=>f.parent_id===parent).sort((a,b)=>a.position-b.position).map(f=>`<tr tabindex="0"  class="repository-folder-row" data-folder-node="${escape(f.id)}" data-action="select-repository-folder" data-id="${escape(f.id)}" ${add||f.is_root?'':'draggable="true"'} style="--depth:${depth}"><td><div class="repository-folder-line">${!add?'':f.is_root?'<input type="checkbox" disabled data-selection-root="repository" aria-label="BMC">':repositoryCheck('folder',f.id)}${button(state.repositoryCollapsed?.has(f.id)?'&#9656;':'&#9662;','toggle-repository-folder','folder-collapse',`data-id="${escape(f.id)}" aria-label="Toggle folder" aria-expanded="${!state.repositoryCollapsed?.has(f.id)}"`)}<button type="button" class="repository-folder-name" data-action="select-repository-folder" data-id="${escape(f.id)}" aria-pressed="${selected?.id===f.id}" title="${escape(f.folder_path)}">${icon('folder')}<strong>${escape(f.name)}</strong><span class="repository-folder-count">(${folderCount(f.id)})</span></button>${state.repositoryRename===f.id?`<input class="repository-rename" data-id="${escape(f.id)}" aria-label="Folder name" value="${escape(f.name)}" maxlength="100">`:''}</div></td>${add?`<td><div class="actions">${button('Add folder to Plan','add-repository-folder','small-button',`data-id="${escape(f.id)}" ${plan.locked?'disabled':''}`)}</div></td>`:'<td></td><td></td><td></td>'}</tr>${state.repositoryCollapsed?.has(f.id)?'':children(f.id,depth+1)+state.repository.filter(c=>c.folder_id===f.id).map(c=>caseRow(c,depth+1)).join('')}`).join('');
+ const html=`${add?'<div class="toolbar"><label><span class="sr-only">Find Test Case</span><input id="repository-search" type="search" placeholder="Find Test Case"></label></div>':''}<div class="table-wrap repository-scroll"><table id="repository-table" class="repository-hierarchy ${add?'':'case-list-columns'}"><thead><tr><th>${add?listSelectAll('repository'):''}Directory / Test Case</th>${add?'<th>Plan action</th>':caseListHeaders}</tr></thead><tbody>${children(null,0)}</tbody></table></div>`;
+ return html;
 }
 function repositoryWorkspace(add=false,plan=null){
  const selected=selectedRepositoryFolder();state.repositoryFolder=selected.id;
@@ -675,7 +1058,7 @@ async function executionPage(project){
    return '<span class="execution-tab-item" role="presentation" data-execution-tab="'+escape(id)+'">'+button(escape(name),'execution-tab','', 'draggable="true" role="tab" id="execution-tab-'+escape(id)+'" aria-controls="execution-panel" aria-selected="'+(view.active===id)+'" data-task-id="'+escape(id)+'" data-no-translate')+button('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>','execution-close','execution-tab-close','aria-label="Close '+escape(name)+' tab" title="Close tab" data-task-id="'+escape(id)+'"')+'</span>';
  }).join('')+button('Add Task','execution-picker','', 'id="execution-tab-add" aria-haspopup="dialog"')+'</div>';
  const picker='<label class="field"><span>Project</span><select id="execution-picker-project" aria-label="Project">'+state.projects.map(p=>'<option value="'+escape(p.id)+'" data-no-translate>'+escape(p.name)+'</option>').join('')+'</select></label><div id="execution-picker-cases"></div><section aria-label="Selected Tasks"><h3>Selected Tasks <span id="execution-selection-count">0</span></h3><div id="execution-selected-tasks"></div></section><div class="form-actions">'+button('Cancel','execution-picker-cancel')+button('Add Selected Tasks','execution-add','primary','disabled')+'</div>';
- return heading('Execution','',project?'<a href="'+path(project)+'/test-plans">Test Plans</a>':'').replace('<p></p>','')+tabs+'<section id="execution-panel" role="tabpanel" '+(view.active?'aria-labelledby="execution-tab-'+escape(view.active)+'"':'aria-label="Execution"')+' '+(task?'data-execution-task-id="'+escape(task.id)+'"':'')+'>'+(task?'<div class="toolbar"><h2 data-no-translate>'+escape(task.name)+'</h2><a href="#/tasks/info/'+encodeURIComponent(task.id)+'">Task Info</a></div>'+taskExecutionContent(project,plan,task):empty('No Task open','Use Add Task to choose existing Test Tasks.'))+'</section><dialog id="execution-picker-dialog" aria-labelledby="execution-picker-title"><h2 id="execution-picker-title">Select Test Tasks</h2>'+picker+'</dialog>';
+ return '<h1 class="sr-only">Execution</h1>'+tabs+'<section id="execution-panel" role="tabpanel" '+(view.active?'aria-labelledby="execution-tab-'+escape(view.active)+'"':'aria-label="Execution"')+' '+(task?'data-execution-task-id="'+escape(task.id)+'"':'')+'>'+(task?taskExecutionContent(project,plan,task):empty('No Task open','Use Add Task to choose existing Test Tasks.'))+'</section><dialog id="execution-picker-dialog" aria-labelledby="execution-picker-title"><h2 id="execution-picker-title">Select Test Tasks</h2>'+picker+'</dialog>';
 }
 function renderExecutionPicker(){
  const view=executionView(),projectId=$('#execution-picker-project').value;
@@ -749,7 +1132,7 @@ async function taskInfoPage(task,form){
 function taskInfoScope(project,plan,task,editing){
   const rows=editing?plan.testcases:task.testcases;
   return (editing?'<p>Choose the Plan Test Cases included in this Task.</p><div class="toolbar"><div class="actions">'+button('Select all','scope-all','',plan.locked?'disabled':'')+button('Clear selection','scope-none','',plan.locked?'disabled':'')+'</div><span class="help" id="scope-count">'+state.scope.size+' selected</span></div><form id="scope-form">':'')+
-    '<div class="table-wrap"><table class="test-case-scope-list"><thead><tr>'+(editing?'<th>Include</th>':'')+'<th>Test Case</th><th>Folder</th><th>Created at</th>'+(editing?'':'<th>Status</th>')+'</tr></thead><tbody>'+rows.map(c=>'<tr>'+(editing?'<td class="check"><input type="checkbox" data-scope="'+escape(c.id)+'" aria-label="Include '+escape(c.tc_name)+'" '+(state.scope.has(c.id)?'checked':'')+' '+(plan.locked||c.script_kind!=='single'?'disabled':'')+'></td>':'')+'<td>'+automation(c.automation)+escape(c.tc_name)+'</td><td>'+escape(c.folder_path||'Unfiled')+'</td><td data-no-translate>'+escape(version(c.source_created_at))+'</td>'+(editing?'':'<td>'+status(c.status)+'</td>')+'</tr>').join('')+(rows.length?'':'<tr><td colspan="4">No Test Cases</td></tr>')+'</tbody></table></div>'+(editing?'<div class="form-actions"><button class="primary" '+(plan.locked?'disabled':'')+'>Save Task scope</button></div></form>':'');
+    '<div class="table-wrap"><table class="test-case-scope-list"><thead><tr>'+(editing?'<th>Include</th>':'')+'<th>Test Case</th><th>Folder</th><th>Latest source date</th>'+(editing?'':'<th>Status</th>')+'</tr></thead><tbody>'+rows.map(c=>'<tr>'+(editing?'<td class="check"><input type="checkbox" data-scope="'+escape(c.id)+'" aria-label="Include '+escape(c.tc_name)+'" '+(state.scope.has(c.id)?'checked':'')+' '+(plan.locked||c.script_kind!=='single'?'disabled':'')+'></td>':'')+'<td>'+automation(c.automation)+escape(c.tc_name)+'</td><td>'+escape(c.folder_path||'Unfiled')+'</td><td data-no-translate>'+sourceDateLabel(c)+'</td>'+(editing?'':'<td>'+status(c.status)+'</td>')+'</tr>').join('')+(rows.length?'':'<tr><td colspan="4">No Test Cases</td></tr>')+'</tbody></table></div>'+(editing?'<div class="form-actions"><button class="primary" '+(plan.locked?'disabled':'')+'>Save Task scope</button></div></form>':'');
 }
 function applyTaskInfoTab(){
   const selected=state.taskInfoTab;
@@ -768,7 +1151,7 @@ function bindTaskInfoForm(){
   form.addEventListener('invalid',event=>{state.taskInfoTab=event.target.closest('[data-info-form-panel]')?.dataset.infoFormPanel||'content';applyTaskInfoTab();},true);
 }
 function taskWorkspaceTabs(selected) {
-  const tabs=['schedule','my-schedule'].includes(selected)?[['schedule','Schedule'],['my-schedule','My Schedule']]:[['list','Task List'],['my-task','My Task'],['info','Task Info']];
+  const tabs=['schedule','my-schedule'].includes(selected)?[['schedule','Schedule'],['my-schedule','My Schedule']]:[['list','Task List']];
   return `<div class="tabs ${['schedule','my-schedule'].includes(selected)?'schedule-tabs':['list','my-task'].includes(selected)?'task-list-tabs':''}" role="tablist" aria-label="Task workspace">${tabs.map(([id,label])=>button(label,'manager-tab','',`id="manager-tab-${id}" role="tab" aria-selected="${selected===id}" aria-controls="task-manager-content" data-manager-tab="${id}" data-no-translate`)).join('')}</div>`;
 }
 function missingWorkspaceParent() {
@@ -791,7 +1174,6 @@ function caseContextItems(row){
    const c=plan.testcases.find(item=>item.id===row.dataset.planCase);if(!c)return [];
    add('View Python source','plan-case-source',c.id,c.script_kind!=='single');
    if(c.parameter_count>0)add('Edit parameters','plan-case-parameters',c.id,c.script_kind!=='single');
-   add('Delete Test Case','plan-remove-case',c.id,plan.locked,true);
  }else if(row.hasAttribute('data-plan-folder')&&plan){
    const id=row.dataset.planFolder;
    add('New folder','new-plan-folder',id,plan.locked);
@@ -817,7 +1199,7 @@ function caseContextItems(row){
  return items;
 }
 function openCaseContextMenu(row,x,y){
- if(document.body.classList.contains('repository-page'))return false;
+ if(row.matches('[data-plan-folder]')||document.body.classList.contains('repository-page')||(row.hasAttribute('data-plan-case')&&state.importSource))return false;
  if(row.closest('[inert]'))return false;
  const items=caseContextItems(row);if(!items.length)return false;
  closeCaseContextMenu();caseContextRow=row;
@@ -840,7 +1222,7 @@ function openCaseContextMenu(row,x,y){
 }
 const caseContextSelector='#repository-table [data-plan-case],#repository-table [data-plan-folder],#repository-table [data-repository-id],#repository-table [data-folder-node]';
 document.addEventListener('contextmenu',event=>{
- const row=event.target.closest(caseContextSelector);if(row&&document.body.classList.contains('repository-page')){event.preventDefault();return;}if(row&&openCaseContextMenu(row,event.clientX,event.clientY))event.preventDefault();
+ const row=event.target.closest(caseContextSelector);if(row&&(row.matches('[data-plan-folder]')||document.body.classList.contains('repository-page'))){event.preventDefault();return;}if(row&&openCaseContextMenu(row,event.clientX,event.clientY))event.preventDefault();
 });
 document.addEventListener('keydown',event=>{
  if(event.key!=='ContextMenu'&&!(event.shiftKey&&event.key==='F10'))return;
@@ -858,9 +1240,9 @@ async function draw() {
   if(parent){location.replace(parent);return;}
 
   const generation=++state.generation; const workspace=$('#workspace'); workspace.setAttribute('aria-busy','true');
-  const section=state.route[0]||'dashboard'; document.body.classList.toggle('repository-page',section==='repository'); $$('.global-nav a').forEach(a=>a.toggleAttribute('aria-current',a.dataset.section===(context().task?'tasks':section==='project'?'projects':section))); $$('.global-nav [aria-current]').forEach(a=>a.setAttribute('aria-current','page'));
+  const section=state.route[0]||'dashboard'; document.body.classList.toggle('execution-workspace',section==='execution'||state.route[2]==='execution'); document.body.classList.toggle('repository-page',section==='repository'); $$('.global-nav a').forEach(a=>a.toggleAttribute('aria-current',a.dataset.section===(context().task?'tasks':section==='project'?'projects':section))); $$('.global-nav [aria-current]').forEach(a=>a.setAttribute('aria-current','page'));
 
-  const {project,plan,task}=context(); document.body.classList.toggle('plan-workspace',Boolean(plan&&!task));document.body.classList.toggle('plan-list-workspace',section==='project'&&['plans','test-plans'].includes(state.route[2]));let html;
+  const {project,plan,task}=context(); document.body.classList.toggle('plan-workspace',Boolean(plan&&!task));document.body.classList.toggle('plan-list-workspace',section==='project'&&(['plans','test-plans'].includes(state.route[2])||(plan&&!task)));let html;
   if(task&&state.route[0]!=='execution'&&state.route[2]!=='execution') Object.assign(task, await api(`/api/tasks/${task.id}/summary`));
   if(generation!==state.generation)return;
   if(section==='execution') html=await executionPage();
@@ -869,15 +1251,27 @@ async function draw() {
   else if(project&&state.route[2]==='plans') html=await planEditorList(project);
   else if(project&&state.route[2]==='test-plans') html=await planEditorList(project);
   else if(project&&state.route[2]==='reports') html=reportPage(project);
-  else if(project&&(!state.route[2]||['info','reports','bugs'].includes(state.route[2]))) html=await projectSectionPage(project); else if(task) html=await taskPage(project,plan,task); else if(plan) html=await planPage(project,plan); else html=projectPage(project);
+  else if(project&&(!state.route[2]||['info','reports','bugs'].includes(state.route[2]))) html=await projectSectionPage(project); else if(task) html=await taskPage(project,plan,task); else if(plan) html=await planEditorList(project,plan); else html=projectPage(project);
   if(task)state.taskInfoPath=TaskManagement.infoLink(task);
-  if(generation!==state.generation)return; workspace.innerHTML=html; sizePlanColumns(); workspace.setAttribute('aria-busy','false'); drawTree();
+  if(generation!==state.generation)return;
+  const previousList=workspace.querySelector('.execution-case-scroll');
+  const previousTask=previousList?.closest('[data-execution-task-id]')?.dataset.executionTaskId;
+  const listTop=previousList?.scrollTop, listLeft=previousList?.scrollLeft;
+  workspace.innerHTML=html;
+  if(previousTask){
+    const list=workspace.querySelector('.execution-case-scroll');
+    if(list?.closest('[data-execution-task-id]')?.dataset.executionTaskId===previousTask){
+      list.scrollTop=listTop;
+      list.scrollLeft=listLeft;
+    }
+  }
+  sizePlanColumns(); workspace.setAttribute('aria-busy','false'); drawTree();
   const importDialog=$('#plan-import-workspace-dialog');
   if(importDialog){
     importDialog.addEventListener('cancel',event=>{event.preventDefault();if(state.importBusy)return;state.importSource=null;draw().catch(e=>toast(e.message,true));});
     importDialog.showModal();
   }
-  TaskManagement.bindForm(state.taskOptions||[],api);
+  if ($('#task-manager-form',workspace)) TaskManagement.bindForm(state.taskOptions||[],api);
   if(project&&state.route[2]==='plans'&&state.panel==='manager-new'){
     const form=$('#task-manager-form'),type=form.elements.task_type,selector=form.elements.project_id;
     [...type.options].forEach(option=>{if(option.value!=='Plan')option.remove();});
@@ -893,16 +1287,23 @@ async function draw() {
   if(plan&&!task) await loadCase();
   if(state.panel && $('#name-form input')) $('#name-form input').focus();
 }
-function discard() { return (!state.dirty || window.confirm('Discard unsaved changes?'))&&CaseWindows.confirmDiscard(); }
+function discard() { if(!closeExecutionDialog())return false;return (!state.dirty || window.confirm('Discard unsaved changes?'))&&CaseWindows.confirmDiscard(); }
 async function navigate() {
   if(state.restoringHash){state.restoringHash=false;return;}
+  if (!await TaskInfoDrawer.leave()) {state.restoringHash=true;location.hash=previousHash;return;}
+  if(location.hash==='#/tasks/my-task')history.replaceState(null,'','#/tasks/list');
   if(!discard()){state.restoringHash=true;location.hash=previousHash;return;}
   CaseWindows.closeAll(true);
+  if(planCaseDialog&&!planCaseDialog.requestClose()){state.restoringHash=true;location.hash=previousHash;return;}
   if(!state.reportBusy)$('#report-compose-dialog')?.close();
   state.managerTab=state.nextManagerTab||(location.hash==='#/tasks/list'?'list':location.hash==='#/tasks/my-task'?'my-task':location.hash==='#/tasks/my-schedule'?'my-schedule':location.hash.startsWith('#/tasks/info/')?'info':'schedule');state.nextManagerTab=null;
   state.taskInfoEditor=null;state.taskInfoId=null;
   state.infoEditing=false;state.projectImport=null;state.projectInformation=null;state.infoCollapsed=new Set();state.infoSection='spec';
   previousHash=location.hash||'#/dashboard'; state.route=previousHash.slice(2).split('/').map(decodeURIComponent); state.panel=null;state.dirty=false;state.definition=null;state.caseId=null;state.planSearch='';state.planCollapsed=new Set();state.planFolder=null;state.planRename=null;state.planTargetFolder=null;state.importSource=null;state.repositoryDefinition=null;document.body.classList.toggle('repository-page',state.route[0]==='repository');
+  const infoId = state.route[0] === 'tasks' && state.route[1] === 'info' ? state.route[2] : null;
+  if (infoId) {
+    history.replaceState(null,'','#/tasks/list');previousHash='#/tasks/list';state.route=['tasks','list'];state.managerTab='list';
+  }
   if(state.route[0]==='project'&&state.route[2]==='execution'){location.replace('#/execution');return;}
   if(state.route[0]==='project'&&state.route[4]==='task'&&state.route[6]==='info'){location.replace('#/tasks/info/'+encodeURIComponent(state.route[5]));return;}
   $('#workspace').innerHTML='<div class="loading">Loading workspace…</div>';
@@ -912,6 +1313,7 @@ async function navigate() {
   state.tab=state.route[4]==='task'?'settings':'cases'; const {task}=context(); state.scope=new Set(task?.testcases.map(c=>c.id)||[]);
   state.panel=state.nextPanel||null;state.nextPanel=null;
   document.body.classList.remove('nav-open');await draw();
+  if (infoId) await TaskInfoDrawer.open(infoId);
 }
 async function confirmDelete(title,message,itemName) {
   if(confirmationPending)return false;confirmationPending=true;
@@ -919,11 +1321,12 @@ async function confirmDelete(title,message,itemName) {
   return new Promise(resolve=>dialog.addEventListener('close',()=>{const answer=dialog.returnValue==='confirm';confirmationPending=false;resolve(answer);},{once:true}));
 }
 function download(name, content, type='text/plain') { const url=URL.createObjectURL(new Blob([content],{type})); const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000); }
-function currentSettings() { const form=$('#case-form'); return Object.fromEntries(Object.entries(state.definition.metadata.parameters||{}).map(([key,spec])=>{const field=form.elements.namedItem('p:'+key);return [key,spec.type==='boolean'?field.checked:['integer','number'].includes(spec.type)?Number(field.value):field.value];})); }
+function currentSettings(form=$('#case-form'),metadata=state.definition.metadata) { return Object.fromEntries(Object.entries(metadata.parameters||{}).map(([key,spec])=>{const field=form.elements.namedItem('p:'+key);return [key,spec.type==='boolean'?field.checked:['integer','number'].includes(spec.type)?Number(field.value):field.value];})); }
 async function doAction(action, element) {
   if(action.startsWith('repo-'))return repositoryOperation(action);
   const {project,plan,task}=taskFormContext();
   if(!executionElementMatches(element))return;
+  if(action==='plan-history')return showCaseHistory(plan);
   if(action==='execution-picker'){
     const view=executionView();view.pending=new Set();const selector=$('#execution-picker-project');selector.value=view.pickerProject||state.projects[0]?.id||'';renderExecutionPicker();
     $('#execution-picker-dialog').showModal();return;
@@ -948,18 +1351,6 @@ async function doAction(action, element) {
     view.task=null;state.caseId=null;state.dirty=false;
     $('#execution-panel').inert=true;
     await draw();$('#execution-tab-'+(view.active||'add'))?.focus();return;
-  }
-  if(action==='plan-list-rename'||action==='plan-list-delete'){
-    if(!discard())return;
-    if(state.inlinePlanId!==element.dataset.id){state.caseId=null;state.definition=null;state.planSearch='';state.planCollapsed=new Set();state.planFolder=null;state.planRename=null;state.importSource=null;}
-    selectPlanFor(project,element.dataset.id);state.panel=null;state.dirty=false;state.tab='cases';
-    await draw();return doAction(action==='plan-list-rename'?'rename-plan':'delete-plan',element);
-  }
-  if(action==='expand-plan-editor'||action==='select-plan-tab'){
-    if(!discard())return;
-    selectPlanFor(project,element.dataset.id);
-    state.caseId=null;state.definition=null;state.planSearch='';state.planCollapsed=new Set();state.planFolder=null;state.planRename=null;state.importSource=null;state.panel=null;state.dirty=false;state.tab='cases';
-    await draw();return;
   }
   if(action==='task-info-tab'){
     const selected=element.dataset.taskInfoTab;
@@ -1014,27 +1405,31 @@ async function doAction(action, element) {
       state.dirty=false;await refresh();toast('Test Cases sorted by number.');
     }finally{element.disabled=false;}
   } else if(action==='new-task'){
-    if(!discard())return;state.nextPanel='manager-new';state.dirty=false;location.hash='#/tasks/list';
+    if(!discard())return;await TaskInfoDrawer.open(null);
   } else if(action==='manager-new'||action==='manager-edit'){
-    if(!discard())return;state.dirty=false;state.panel=action;state.managerTaskId=action==='manager-edit'?element.dataset.id:null;await draw();$('#manager-type')?.focus();
-  } else if(action==='manager-delete'){
-    const current=state.managedTasks.find(t=>t.id===element.dataset.id);if(!current)return;
-    if(!discard())return;
-    if(!await confirmDelete(`Delete Task: ${current.name}?`,'This deletes the Task, its scope and current results. Plan Test Cases and other Tasks remain.'))return;
-    await api(`/api/tasks/${current.id}`,'DELETE');state.dirty=false;state.panel=null;await refresh();toast('Task deleted.');
+    if(!discard())return;await TaskInfoDrawer.open(action==='manager-edit'?element.dataset.id:null);
   } else if(action==='tab'){if(!discard())return;state.dirty=false;state.tab=element.dataset.tab;state.panel=null;await draw();}
   else if(action==='close-panel'){if(!discard())return;state.dirty=false;state.panel=null;await draw();}
-  else if(action==='new-plan'){
+  else if(action==='new-plan'||action==='edit-plan'){
     if(!discard())return;state.dirty=false;
     element.disabled=true;
     try{
       const options=(await api('/api/tasks/options')).projects.find(p=>p.id===project.id);
-      const information={project_name:options.name},skus=options.skus,form=$('#plan-create-form');
-      form.reset();form.dataset.projectId=project.id;
+      const editing=action==='edit-plan',current=editing?options.plans.find(p=>p.id===plan?.id):null;
+      if(editing&&(!current||current.locked))throw Error('Plan is unavailable for editing.');
+      const skus=options.skus,form=$('#plan-create-form');
+      form.reset();form.dataset.projectId=project.id;form.dataset.planId=current?.id||'';
+      form.dataset.originalSku=current?.sku_id||'';
+      $('#plan-create-title').textContent=editing?'Edit Plan':'Add Plan';
+      form.querySelector('[type=submit]').textContent=editing?'Save':'Create';
       const selector=$('#plan-create-sku'),name=$('#plan-create-name');
       selector.replaceChildren(new Option('Choose a SKU',''),...skus.map(sku=>{const option=new Option(sku.full_name,sku.id);option.setAttribute('data-no-translate','');return option;}));
-      $('#plan-create-sku-field').hidden=!skus.length;selector.required=Boolean(skus.length);selector.disabled=!skus.length;
-      name.value=skus.length?'':information.project_name;name.disabled=Boolean(skus.length);
+      const showSku=Boolean(skus.length||current?.sku_id);
+      $('#plan-create-sku-field').hidden=!showSku;selector.disabled=!showSku;
+      if(current?.sku_id&&!skus.some(s=>s.id===current.sku_id))selector.add(new Option(current.sku_id,current.sku_id));
+      if(current)selector.value=current.sku_id||'';
+      selector.required=showSku&&(!current||Boolean(current.sku_id));
+      name.value=current?current.name:skus.length?'':options.name;name.disabled=!current&&Boolean(skus.length);
       $('#plan-create-error').textContent='';$('#plan-create-dialog').showModal();
       (skus.length?selector:name).focus();
     }finally{element.disabled=false;}
@@ -1054,7 +1449,6 @@ async function doAction(action, element) {
   }
   else if(['new-project','new-plan','new-task','rename-project','rename-plan','rename-task','new-folder','add-repository','import-python'].includes(action)){if(!discard())return;state.dirty=false;if(action==='new-project'){state.projectCreateMode=null;state.projectImport=null;state.projectImportResult=null;}if(action==='new-project'&&state.route[0]!=='dashboard'){state.nextPanel=action;location.hash='#/dashboard';return;}state.panel=action;state.tab='cases';await draw();}
   else if(action==='select-case'){if(!discard())return;state.generation++;state.dirty=false;state.caseId=element.dataset.id;$$('.case-row').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.id===state.caseId)));await loadCase();}
-  else if(action==='execution-report-preview'){const tc=task?.testcases.find(c=>c.id===element.dataset.id);if(!tc)return;await ReportPreview.open({taskId:task.id,caseId:tc.id,taskName:task.name,caseName:tc.tc_name,opener:element});}
   else if(action==='select-result'){state.caseId=element.dataset.id;if(state.route[0]==='execution'||project&&state.route[2]==='execution')executionView(project).cases[task.id]=state.caseId;await draw();}
   else if(action==='report-select'){state.reportSelecting=!state.reportSelecting;state.reportSelection=null;state.reportError='';await draw();}
   else if(action==='report-plan-toggle'){state.reportExpanded??=new Set();state.reportExpanded.has(element.dataset.id)?state.reportExpanded.delete(element.dataset.id):state.reportExpanded.add(element.dataset.id);await draw();}
@@ -1062,12 +1456,30 @@ async function doAction(action, element) {
   else if(action==='report-generate'){openReportComposer(project);}
   else if(action==='toggle-plan-matrix'){state.expandedPlans??=new Set();const id=element.dataset.id;state.expandedPlans.has(id)?state.expandedPlans.delete(id):state.expandedPlans.add(id);const expanded=state.expandedPlans.has(id);element.setAttribute('aria-expanded',String(expanded));element.closest('tr').nextElementSibling.hidden=!expanded;}
   else if(action==='toggle-repository-folder'){state.repositoryCollapsed??=new Set();state.repositoryCollapsed.has(element.dataset.id)?state.repositoryCollapsed.delete(element.dataset.id):state.repositoryCollapsed.add(element.dataset.id);saveFolderExpansions();await draw();}
+  else if(action==='plan-select-all'){
+    const keys=state.planSearch?.trim()?planRows().map(planRowKey):listSelectionItems('plan').map(item=>item.kind+':'+item.id);
+    const selected=planSelection();selected.clear();
+    for(const key of keys)if(key!=='folder:')selected.add(key);
+    refreshPlanSelection();
+  }
   else if(action==='plan-selection-delete'){
     if(plan.locked||state.importBusy||!discard())return;
     const selection=planSelectionData();if(!selection.folder_ids.length&&!selection.case_ids.length)return;
-    if(!await confirmDelete('Delete selected items?',selection.folder_ids.length+' folders and '+selection.case_ids.length+' Test Cases selected. Selected folders, their descendants and affected Task results/logs will be deleted.'))return;
-    await api('/api/plans/'+plan.id+'/items/delete','POST',{...selection,confirm:true,acknowledgement:true});
-    planSelection().clear();state.caseId=null;state.planRename=null;state.dirty=false;await refresh();toast('Selected items deleted.');
+    const {subtree,contained}=folderContents(selection.folder_ids,plan.folders,plan.testcases);
+    const direct=selection.case_ids.filter(id=>!contained.has(id));
+    const body=`<p>${subtree.size} folders selected for removal</p>`+folderRemovalChoice(contained.size)+'<p data-removal-impact></p>';
+    const dialog=planOperationDialog('Remove selected items from Plan?',body,'Remove selected items','trash',async(_,choice)=>{
+      await api('/api/plans/'+plan.id+'/items/remove','POST',{...selection,confirm:true,acknowledgement:true,keep_cases:choice!=='delete'});
+      planSelection().clear();state.caseId=null;state.dirty=false;
+    });
+    const choice=dialog.querySelector('select');
+    const updateImpact=()=>{
+      const removed=new Set(direct);
+      if(choice?.value==='delete')for(const id of contained)removed.add(id);
+      const affected=plan.tasks.filter(t=>t.testcases.some(c=>removed.has(c.id))).length;
+      dialog.querySelector('[data-removal-impact]').textContent=choice&&!choice.value?'Choose how to handle the folder contents.':`${removed.size} Test Cases will be deleted. Results and logs for these cases will be removed from ${affected} affected Tasks.`;
+    };
+    choice?.addEventListener('change',updateImpact);updateImpact();
   }
   else if(action==='repository-batch-delete'){const selection=repositorySelectionData();if(!await confirmDelete('Delete selected items?',`${selection.folder_ids.length} directories and ${selection.case_ids.length} Test Cases selected. Selected directories and all their contents will be permanently deleted. Plan copies remain independent.`))return;await api('/api/repository/batch','POST',{...selection,action:'delete',confirm:true});state.repositorySelection.clear();state.repositoryDefinition=null;await draw();toast('Selected items deleted.');}
   else if(action==='rename-repository-folder'){
@@ -1079,8 +1491,8 @@ async function doAction(action, element) {
   else if(action==='rename-plan-folder'){
     if(plan.locked||state.importBusy||!discard())return;
     const folder=plan.folders.find(f=>f.id===element.dataset.id);if(!folder)return;
-    state.dirty=false;state.planFolder=folder.id;state.planRename=folder.id;
-    $('#plan-case-list').innerHTML=planCaseTable(plan);syncCaseSelections();const input=$('.plan-folder-rename');input?.focus();input?.select();
+    planOperationDialog('Rename folder',`<label class="field"><span>Folder name</span><input maxlength="100" required value="${escape(folder.name)}"></label>`,
+      'Confirm rename','checkAll',name=>api('/api/folders/'+encodeURIComponent(folder.id),'PATCH',{name}));
   }
   else if(action==='select-repository-folder'){
     state.repositoryRename=null;state.repositoryFolder=element.dataset.id;state.repositoryDefinition=null;if(state.route[0]==='repository')state.panel=null;await draw();
@@ -1094,7 +1506,7 @@ async function doAction(action, element) {
     state.dirty=false;const picker=$('#repository-file-picker');picker.multiple=false;picker.dataset.planId=plan.id;picker.dataset.folderId=element.dataset.id||'';picker.value='';picker.click();
   }
   else if(action==='toggle-plan-folder'){state.planCollapsed??=new Set();const id=element.dataset.id;state.planCollapsed.has(id)?state.planCollapsed.delete(id):state.planCollapsed.add(id);saveFolderExpansions();$('#plan-case-list').innerHTML=planCaseTable(plan);syncCaseSelections();}
-  else if(['plan-case-parameters','plan-case-source'].includes(action)){if(state.dirty&&!discard())return;const ref=planCaseReference(plan,element.dataset.id);state.dirty=false;if(state.importSource){state.importSource=null;await draw();}await CaseWindows.open(action==='plan-case-source'?'viewer':'parameters',ref);}
+  else if(['plan-case-parameters','plan-case-source'].includes(action)){await openPlanCaseDialog(plan,element.dataset.id,action==='plan-case-source');}
   else if(action==='close-plan-case'){if(!discard())return;state.dirty=false;state.caseId=null;await draw();}
   else if(action==='plan-remove-case'){
     if(!discard())return;const current=plan.testcases.find(c=>c.id===element.dataset.id);if(!current)return;
@@ -1103,7 +1515,7 @@ async function doAction(action, element) {
   }
   else if(action==='choose-import-source'){
     if(plan.locked||!discard())return;state.dirty=false;element.disabled=true;
-    try{await loadImportSource('repository');}finally{element.disabled=false;}
+    try{state.planImportResult='';await loadImportSource('repository');}finally{element.disabled=false;}
   }
   else if(action==='cancel-import-conflicts')$('#import-conflict-dialog').close();
   else if(action==='cancel-import-source')$('#plan-import-dialog').close();
@@ -1112,8 +1524,14 @@ async function doAction(action, element) {
   else if(action==='plan-add-cases'){if(!discard())return;state.dirty=false;state.planTargetFolder=element.dataset.id||null;state.panel='add-repository';await draw();}
   else if(action==='new-plan-folder'){
     if(!discard())return;state.dirty=false;
-    const form=$('#repository-create-folder-form');form.reset();form.querySelector('[type=submit]').textContent='Create';form.querySelector('[data-action=cancel-repository-folder]').textContent='Cancel';form.querySelectorAll('.execution-icon-button').forEach(b=>b.classList.remove('execution-icon-button'));form.dataset.parentId=element.dataset.id||'';form.dataset.planId=plan.id;
-    $('#repository-create-folder-error').textContent='';$('#repository-create-folder-dialog').showModal();$('#repository-create-folder-name').focus();
+    const parent=element.dataset.id||null;
+    const folder=plan.folders.find(f=>f.id===parent);
+    const location=folder?'BMC / '+(folder.folder_path||folder.name):'BMC';
+    planOperationDialog('New folder',`<p>Location: ${escape(location)}</p><label class="field"><span>Folder name</span><input maxlength="100" required></label>`,
+      'Create folder','checkAll',async name=>{
+        await api('/api/plans/'+plan.id+'/folders','POST',{name,parent_id:parent});
+        state.planCollapsed?.delete(parent);saveFolderExpansions();
+      });
   }
   else if(action==='new-repository-case'){
     if(state.repositoryImporting)return;
@@ -1131,10 +1549,15 @@ async function doAction(action, element) {
   else if(action==='inspect-source'){const result=await api('/api/repository/inspect','POST',{source:$('#case-form').elements.source.value});const old=currentSettings();state.definition.metadata=result.metadata;const settings=Object.fromEntries(Object.entries(result.metadata.parameters||{}).map(([k,s])=>[k,k in old?old[k]:s.default]));$('#case-form .fields').innerHTML=parameterFields(result.metadata,settings);state.dirty=true;toast('Editable fields refreshed. Save to apply this adaptation.');}
   else if(action==='scope'){state.tab='scope';await draw();}
   else if(action==='scope-all'||action==='scope-none'){state.scope=new Set(action==='scope-all'?plan.testcases.filter(c=>c.script_kind==='single').map(c=>c.id):[]);state.dirty=true;await draw();}
-  else if(action==='run'){if(state.activeTask)throw Error('This window is already monitoring an execution.');const ids=$$('[data-run]:checked').map(e=>e.dataset.run);if(!ids.length)throw Error('Select at least one Test Case to run.');if(task.testcases.some(c=>ids.includes(c.id)&&c.result)&&!window.confirm('Run selected cases again? Their current results and logs will be replaced.'))return;const config=await api(`/api/tasks/${task.id}/settings`).catch(()=>{throw Error('Configure this Task?s BMC connection in Connection settings before running.');});if(!config.host)throw Error('Set this Task?s BMC URL in Connection settings before running.');const result=await api(`/api/tasks/${task.id}/execution/start`,'POST',{testcase_ids:ids});runTask(task.id,ids,result.execution_token).catch(e=>toast(e.message,true));}
+  else if(action==='run'||action==='execution-run-one'){await startExecutionCases(task,action==='execution-run-one'?[element.dataset.id]:executionCases(task).filter(c=>c.selected&&c.script_kind==='single').map(c=>c.id));}
+  else if(action==='execution-select-all'||action==='execution-select-none'){await saveExecutionSelection(task,executionCases(task).filter(c=>c.script_kind==='single').map(c=>[c.id,action==='execution-select-all']));}
+  else if(action==='execution-report-preview'){const tc=task?.testcases.find(c=>c.id===element.dataset.id);if(!tc)return;if(!closeExecutionDialog())return;await ReportPreview.open({taskId:task.id,caseId:tc.id,taskName:task.name,caseName:tc.tc_name,opener:element});}
+  else if(['execution-scope','execution-connection','execution-parameters','execution-annotation','execution-log'].includes(action)){await openExecutionDialog(action.slice(10),element.dataset.id,element);}
+  else if(action==='execution-response'){const running=task.testcases.find(c=>c.status==='Running');if(running)await openExecutionDialog('log',running.id,element);}
+  else if(action==='execution-stop-one'){if(!task.execution_active||!task.testcases.some(c=>c.id===element.dataset.id&&c.status==='Running'))return;const current=await api('/api/tasks/'+task.id+'/execution');await api('/api/tasks/'+task.id+'/testcases/'+encodeURIComponent(element.dataset.id)+'/execution/stop','POST',{execution_token:current.execution_token,session_id:current.session_id});toast('Stop requested for this case. The next selected case will run after cleanup.');}
   else if(action==='resume'){const current=await api(`/api/tasks/${task.id}/execution`);runTask(task.id,current.testcase_ids,current.execution_token,current.session_id).catch(e=>toast(e.message,true));}
   else if(action==='stop'){const current=await api(`/api/tasks/${task.id}/execution`);await api(`/api/tasks/${task.id}/execution/stop`,'POST',{execution_token:current.execution_token});toast('Stop requested. Waiting for the running Test Case to finish.');}
-  else if(action==='report'){element.disabled=true;try{const response=await fetch(`/api/tasks/${element.dataset.id}/report`);if(!response.ok){const err=await response.json();throw Error(err.error||'Report generation failed.');}const blob=await response.blob();const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`BMC_Test_Report_${element.dataset.id}.pdf`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);toast('Task report generated.');}finally{element.disabled=false;}}
+  else if(action==='report'){element.disabled=true;try{const response=await fetch(`/api/tasks/${element.dataset.id}/report`);if(!response.ok){const err=await response.json();throw Error(err.error||'Report generation failed.');}const blob=await response.blob();const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`BMC_Test_Report_${element.dataset.id}.zip`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);toast('Task report generated.');}finally{element.disabled=false;}}
   else if(action==='delete-folder'){const impact=await api(`/api/folders/${element.dataset.id}/impact`);if(!await confirmDelete('Delete folder and contents?',`${impact.testcase_count} Test Case(s), ${impact.descendant_folder_count} child folder(s) and evidence in ${impact.affected_task_count} Task(s) will be deleted.`))return;await api(`/api/folders/${element.dataset.id}`,'DELETE',{confirm:true,acknowledgement:true});state.dirty=false;await refresh();toast('Folder and contents deleted.');}
   else if(['view-standard','view-parameters'].includes(action)){if(state.dirty&&!discard())return;state.dirty=false;const source=action==='view-standard';
     const dialog=repoDialog(source?'View Python source':'Parameters','<div class="repo-definition" role="status">Loading…</div>');
@@ -1152,12 +1575,12 @@ async function doAction(action, element) {
     state.dirty=false;state.panel=null;await draw();toast('Repository Test Case removed.');
   }
   else if(action==='close-standard'){state.repositoryDefinition=null;await draw();}
-  else if(action==='export-case'){const c=plan.testcases.find(c=>c.id===state.caseId);download(c.tc_name+'.json',JSON.stringify({script_kind:'single',tc_name:c.tc_name,source:state.definition.source,source_version:c.source_version,source_created_at:c.source_created_at,settings:state.definition.settings,folder_path:c.folder_path},null,2),'application/json');}
-  else if(action.startsWith('delete-')) {
-    const type=action.split('-')[1],tc=plan?.testcases.find(c=>c.id===state.caseId);const name=type==='project'?project.name:type==='plan'?plan.name:type==='task'?task.name:tc.tc_name;
+  else if(action==='export-case'){const c=plan.testcases.find(c=>c.id===state.caseId);download(c.tc_name+'.json',JSON.stringify({script_kind:'single',tc_name:c.tc_name,source:state.definition.source,source_version:c.source_version,source_created_at:c.source_created_at,source_modified_at:c.source_modified_at,settings:state.definition.settings,folder_path:c.folder_path},null,2),'application/json');}
+  else if(['delete-project','delete-case'].includes(action)) {
+    const type=action.split('-')[1],tc=plan?.testcases.find(c=>c.id===state.caseId);const name=type==='project'?project.name:type==='task'?task.name:tc.tc_name;
     if(!await confirmDelete(`Delete ${type}: ${name}?`,type==='case'?'This deletes the Plan Test Case and its current results and logs from every Task in this Plan.':`This permanently deletes the ${type} and its contained items, including current test evidence.`))return;
-    if(type==='project')await api('/api/delete_project','POST',{project_id:project.id,project:project.name,confirm:true});else if(type==='plan')await api('/api/delete_plan','POST',{plan_id:plan.id,confirm:true});else if(type==='task')await api(`/api/tasks/${task.id}`,'DELETE');else await api(`/api/testcases/${tc.id}`,'DELETE',{confirm:true,acknowledgement:true});
-    state.dirty=false;await refresh(false);if(type==='project')location.hash='#/dashboard';else if(type==='plan'){selectPlanFor(project,null);state.caseId=null;const target=path(project)+'/plans';if(location.hash===target)await draw();else location.hash=target;}else if(type==='task')location.hash=path(project,plan);else await draw();toast('Deleted '+type+'.');
+    if(type==='project')await api('/api/delete_project','POST',{project_id:project.id,project:project.name,confirm:true});else await api(`/api/testcases/${tc.id}`,'DELETE',{confirm:true,acknowledgement:true});
+    state.dirty=false;await refresh(false);if(type==='project')location.hash='#/dashboard';else await draw();toast('Deleted '+type+'.');
   }
 }
 async function submit(form) {
@@ -1196,16 +1619,28 @@ async function submit(form) {
    if(state.creatingPlan)return;
    const targetProject=state.projects.find(p=>p.id===form.dataset.projectId);
    if(!targetProject)throw Error('Project not found.');
-   if(!form.elements.sku_id.disabled&&!form.elements.sku_id.value)throw Error('Choose a SKU.');
+   if(form.elements.sku_id.required&&!form.elements.sku_id.value)throw Error('Choose a SKU.');
    const name=values.name.trim();
    if(!name){form.elements.name.focus();throw Error('Enter a name.');}
    if(name.length>100)throw Error('Plan name must be 100 characters or fewer.');
-   if(targetProject.plans.some(p=>p.name===name)){form.elements.name.focus();throw Error('A Plan with this name already exists. Please change the Plan name.');}
+   if(targetProject.plans.some(p=>p.id!==form.dataset.planId&&p.name===name)){form.elements.name.focus();throw Error('A Plan with this name already exists. Please change the Plan name.');}
    state.creatingPlan=true;
    try{
-     try{const created=await api('/api/create_plan','POST',{project:targetProject.name,plan_name:name,sku_id:values.sku_id||null});selectPlanFor(targetProject,created.plan_id);state.caseId=null;state.definition=null;state.importSource=null;state.planSearch='';}
-     catch(error){if(error.status===409)throw Error('A Plan with this name already exists. Please change the Plan name.');throw error;}
-     state.dirty=false;state.panel=null;$('#plan-create-dialog').close();await refresh();toast('Saved.');
+     let selectedId=form.dataset.planId;
+     if(selectedId){
+       const sku=values.sku_id||'',url='/api/plans/'+encodeURIComponent(selectedId);
+       if(sku===form.dataset.originalSku)await api(url,'PATCH',{name});
+       else await api(url+'/settings','PATCH',{name,sku_id:sku||null});
+     }else{
+       const created=await api('/api/create_plan','POST',{project:targetProject.name,plan_name:name,sku_id:values.sku_id||null});
+       selectedId=created.plan_id;state.caseId=null;state.definition=null;state.importSource=null;state.planSearch='';
+     }
+     selectPlanFor(targetProject,selectedId);
+     state.dirty=false;state.panel=null;$('#plan-create-dialog').close();
+     if(state.route[2]==='plan'&&selectedId!==state.route[3]){
+       await refresh(false);location.hash=path(targetProject,{id:selectedId});
+     }else await refresh();
+     toast('Saved.');
    }finally{state.creatingPlan=false;}
  }else if(form.id==='name-form'){
    const name=values.name.trim();if(!name)throw Error('Enter a name.');const type=form.dataset.type;
@@ -1246,10 +1681,30 @@ async function submit(form) {
  }
 }
 function inputForm(session,text){return `<form id="input-form" class="input-request" data-session="${escape(session)}"><label for="run-input">${escape(text)}</label><div class="actions"><input id="run-input" name="value" autocomplete="off" required><button class="primary">Submit response</button></div><p class="help">Execution waits here until you respond or stop it.</p></form>`;}
-function stream(session,taskId) { return new Promise((resolve,reject)=>{
+// Keep the display on a one-second clock. A heartbeat or summary refresh is not case activity.
+let streamActivity = null;
+function updateRunningLabel(){
+ const button = document.querySelector('.execution-case-table button.status.running');
+ if(!button)return;
+ const task = context().task;
+ const observed = task?.activity;
+ const live = streamActivity?.taskId===task?.id && streamActivity.caseId===button.dataset.id ? streamActivity : null;
+ const snapshot = observed?.case_id===button.dataset.id && (!live || observed.session_id===live.session) ? observed.at_ms : 0;
+ const last = Math.max(snapshot || 0, live?.at || 0);
+ const idle = last ? Math.floor((Date.now()-last)/1000) : 0;
+ const label = idle >= 3 ? 'IDLE: '+idle+'s' : 'Running';
+ if(button.textContent!==label)button.textContent=label;
+}
+setInterval(updateRunningLabel,1000);
+function stream(session,taskId,caseId) {
+ const activity = {taskId,session,caseId,at:context().task?.activity?.session_id===session ? context().task.activity.at_ms : Date.now()};
+ streamActivity = activity; return new Promise((resolve,reject)=>{
  const source=new EventSource(`/api/stream/${session}`);let finished=false;
- source.onmessage=event=>{const msg=JSON.parse(event.data);if(msg.type==='end'){finished=true;source.close();resolve();return;}if(msg.type==='heartbeat')return;if(msg.type==='input_resolved'){state.prompt=null;if(context().task?.id===taskId&&$('#input-slot'))$('#input-slot').replaceChildren();}
+ source.onmessage=event=>{const msg=JSON.parse(event.data);if(msg.type==='end'){finished=true;source.close();updateExecutionLog();resolve();return;}if(msg.type==='heartbeat')return;activity.at=msg.activity_at_ms || Date.now();if(msg.type==='input_resolved'){state.prompt=null;if(context().task?.id===taskId&&$('#input-slot'))$('#input-slot').replaceChildren();}
    if(msg.text||msg.error)state.log+=(msg.text||msg.error)+'\n';if(msg.type==='case_done')state.log+='Test Case: '+msg.result+'\n';
+   if(msg.type==='input_required')state.prompt={session,text:msg.text};
+   if(msg.type==='input_required'||msg.type==='input_resolved')updateExecutionLog();else scheduleExecutionLogUpdate();
+   if(msg.type==='input_required'&&context().task?.id===taskId&&!executionDialog){const running=context().task.testcases.find(c=>c.status==='Running');if(running)openExecutionDialog('log',running.id).catch(e=>toast(e.message,true));}
    if(context().task?.id===taskId){const out=$('#log-output');if(out){out.textContent=state.log;out.scrollTop=out.scrollHeight;}if(msg.type==='input_required'){state.prompt={session,text:msg.text};if($('#input-slot'))$('#input-slot').innerHTML=inputForm(session,msg.text);}}
  };
  source.onerror=()=>{if(finished)return; source.close();reject(Error('Live connection interrupted. Use Resume monitoring to reconnect to the active Task.'));};
@@ -1257,19 +1712,30 @@ function stream(session,taskId) { return new Promise((resolve,reject)=>{
 async function runTask(id,ids,token,session=null){
  if(state.activeTask)throw Error('This window is already monitoring an execution.');state.activeTask=id;
  try{
-   if(session){state.log='';await stream(session,id);}
-   for(const tcId of ids){const current=await api(`/api/tasks/${id}/execution`);if(!current.execution_active||current.stop_requested)break;const summary=await api(`/api/tasks/${id}/summary`);const tc=summary.testcases.find(c=>c.id===tcId);if(!tc||tc.status==='Passed'||tc.status==='Failed'||tc.status==='C-PASS')continue;
-     const run=await api('/api/run','POST',{task_id:id,testcase_id:tcId,execution_token:token});state.log='';for(const view of Object.values(state.executionViews||{}))if(view.ids.includes(id))view.cases[id]=tcId;if(context().task?.id===id)state.caseId=tcId;await refresh();await stream(run.session_id,id);
+   if(session){state.log='';await stream(session,id,context().task?.testcases.find(c=>c.status==='Running')?.id);}
+   for(const tcId of ids){const current=await api(`/api/tasks/${id}/execution`);if(!current.execution_active||current.stop_requested)break;if(current.completed_testcase_ids?.includes(tcId))continue;const summary=await api(`/api/tasks/${id}/summary`);const tc=summary.testcases.find(c=>c.id===tcId);if(!tc||tc.status==='Passed'||tc.status==='Failed'||tc.status==='C-PASS')continue;
+     const run=await api('/api/run','POST',{task_id:id,testcase_id:tcId,execution_token:token});state.log='';for(const view of Object.values(state.executionViews||{}))if(view.ids.includes(id))view.cases[id]=tcId;if(context().task?.id===id)state.caseId=tcId;await refresh();await stream(run.session_id,id,tcId);
    }
    const current=await api(`/api/tasks/${id}/execution`);if(current.execution_active&&!current.session_id)await api(`/api/tasks/${id}/execution/finish`,'POST',{execution_token:token});
    toast('Task execution finished. Current results are available.');
- }finally{state.activeTask=null;await refresh();}
+ }finally{streamActivity=null;state.activeTask=null;state.prompt=null;await refresh();updateExecutionLog();}
 }
 document.addEventListener('keydown',event=>{
  const tab=event.target.closest('.execution-tabs [role=tab]');if(!tab||!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;
  event.preventDefault();const items=$$('.execution-tabs [role=tab]'),index=items.indexOf(tab);
  const next=event.key==='Home'?items[0]:event.key==='End'?items.at(-1):items[(index+(event.key==='ArrowRight'?1:-1)+items.length)%items.length];next.focus();next.click();
 });
+document.addEventListener('click',event=>{
+ const link=event.target.closest('a[href^="#/tasks/info/"]');
+ if(!link||event.button!==0||event.ctrlKey||event.metaKey||event.shiftKey||event.altKey)return;
+ event.preventDefault();event.stopImmediatePropagation();
+ if(!discard())return;
+ state.dirty=false;
+ (async()=>{
+   if(state.panel){state.panel=null;await draw();}
+   await TaskInfoDrawer.open(decodeURIComponent(link.getAttribute('href').split('/')[3]));
+ })().catch(error=>toast(error.message,true));
+},true);
 document.addEventListener('click',event=>{const element=event.target.closest('[data-action]');if(!element||element.disabled)return;doAction(element.dataset.action,element).catch(e=>toast(e.message,true));});
 document.addEventListener('submit',event=>{const form=event.target;if(form.closest('dialog')&&!['plan-create-form','repository-create-folder-form'].includes(form.id))return;event.preventDefault();const buttons=$$('button[type=submit],button:not([type]):not([data-action])',form);buttons.forEach(b=>b.disabled=true);submit(form).catch(e=>{if(form.id==='task-manager-form'){form.querySelector('#manager-form-error').textContent=e.message;}else if(form.id==='plan-create-form'){$('#plan-create-error').textContent=e.message;form.elements.name.focus();}else if(form.id==='repository-create-folder-form'){$('#repository-create-folder-error').textContent=e.message;form.elements.name.focus();}else toast(e.message,true);}).finally(()=>buttons.forEach(b=>b.disabled=false));});
 document.addEventListener('input',event=>{
@@ -1287,7 +1753,7 @@ document.addEventListener('input',event=>{
 });
 $('#plan-create-sku').addEventListener('change',event=>{
   const selector=event.target,name=$('#plan-create-name');
-  name.disabled=!selector.value;name.value=selector.value?selector.selectedOptions[0].textContent:'';
+  if(!selector.form.dataset.planId){name.disabled=!selector.value;name.value=selector.value?selector.selectedOptions[0].textContent:'';}
   $('#plan-create-error').textContent='';state.dirty=true;
 });
 
@@ -1353,6 +1819,7 @@ reportDialog.addEventListener('close',()=>{state.reportDraft=null;state.reportDr
 reportDialog.addEventListener('cancel',event=>{if(state.reportBusy)event.preventDefault();});
 $('#report-compose-cancel').addEventListener('click',()=>reportDialog.close());
 $('#report-compose-generate').addEventListener('click',()=>generateReportSelection());
+$('#report-compose-logs').addEventListener('click',()=>generateReportSelection('logs'));
 reportDialog.addEventListener('click',event=>{
  const control=event.target.closest('[data-report-move]');if(!control||state.reportBusy)return;
  const row=control.closest('[data-report-item]'),area=row.dataset.area,key=row.dataset.reportItem;
@@ -1383,13 +1850,13 @@ reportDialog.addEventListener('drop',event=>{
 reportDialog.addEventListener('dragend',()=>{state.reportDrag=null;clearReportDrop();for(const row of $$('.report-compose-item.is-dragging'))row.classList.remove('is-dragging');});
 document.addEventListener('change',event=>{const el=event.target;
  if(el.hasAttribute('data-list-select-all')){const type=el.dataset.listSelectAll;for(const item of listSelectionItems(type))setItemSelection(type,item,el.checked);syncCaseSelections();return;}
- if(el.classList.contains('plan-selection-check')){changeItemSelection('plan',{kind:el.dataset.kind,id:el.dataset.id},el.checked);syncCaseSelections();return;}
  if(el.hasAttribute('data-import-folder-select')){changeItemSelection('import',{kind:'folder',id:el.dataset.importFolderSelect},el.checked);syncCaseSelections();return;}
  if(el.hasAttribute('data-import-select')){state.importSelection??=new Set();el.checked?state.importSelection.add(el.dataset.importSelect):state.importSelection.delete(el.dataset.importSelect);syncCaseSelections();return;}
  if(el.id==='execution-picker-project'){executionView().pickerProject=el.value;renderExecutionPicker();return;}
  if(el.hasAttribute('data-execution-choice')){const view=executionView();el.checked?view.pending.add(el.dataset.executionChoice):view.pending.delete(el.dataset.executionChoice);renderExecutionPicker();return;}
-if(el.id==='project-switcher'){const p=state.projects.find(p=>p.id===el.value);if(p){const section=!state.route[2]?'info':['info','reports','bugs'].includes(state.route[2])?state.route[2]:'plans';location.hash=path(p)+'/'+section;el.value=context().project.id;}return;}if(el.classList.contains('repository-batch-check')){changeItemSelection('repository',{kind:el.dataset.kind,id:el.dataset.id},el.checked);syncCaseSelections();return;}if(el.id==='repository-folder-filter'){state.repositoryFolder=el.value;draw().catch(e=>toast(e.message,true));return;}if(el.classList.contains('repository-move')){api(`/api/repository/testcases/${el.dataset.id}/folder`,'PUT',{folder_id:el.value||null}).then(()=>draw()).catch(e=>toast(e.message,true));return;}if(el.id==='folder-filter')el.dispatchEvent(new Event('input',{bubbles:true}));if(el.dataset.run){if(!executionElementMatches(el))return;const {task}=context();if(!task?.testcases.some(c=>c.id===el.dataset.run))return;task.testcases.find(c=>c.id===el.dataset.run).selected=el.checked;api(`/api/task_testcases/${task.id}/${el.dataset.run}`,'PATCH',{selected:el.checked}).catch(e=>{el.checked=!el.checked;toast(e.message,true);});}});
-document.addEventListener('click',event=>{if(event.target.classList.contains('repository-rename')||event.target.classList.contains('repository-batch-check')||event.target.classList.contains('plan-selection-check'))event.stopPropagation();},true);
+if(el.id==='execution-filter'){const view=executionView();view.filters??={};view.filters[context().task.id]=el.value;syncExecutionControls();return;}
+if(el.id==='project-switcher'){const p=state.projects.find(p=>p.id===el.value);if(p){const section=!state.route[2]?'info':['info','reports','bugs'].includes(state.route[2])?state.route[2]:'plans';location.hash=path(p)+'/'+section;el.value=context().project.id;}return;}if(el.classList.contains('repository-batch-check')){changeItemSelection('repository',{kind:el.dataset.kind,id:el.dataset.id},el.checked);syncCaseSelections();return;}if(el.id==='repository-folder-filter'){state.repositoryFolder=el.value;draw().catch(e=>toast(e.message,true));return;}if(el.classList.contains('repository-move')){api(`/api/repository/testcases/${el.dataset.id}/folder`,'PUT',{folder_id:el.value||null}).then(()=>draw()).catch(e=>toast(e.message,true));return;}if(el.id==='folder-filter')el.dispatchEvent(new Event('input',{bubbles:true}));if(el.dataset.run){if(!executionElementMatches(el))return;const {task}=context();if(!task?.testcases.some(c=>c.id===el.dataset.run))return;saveExecutionSelection(task,[[el.dataset.run,el.checked]]).catch(e=>{syncExecutionControls();toast(e.message,true);});}});
+document.addEventListener('click',event=>{if(event.target.classList.contains('repository-rename')||event.target.classList.contains('repository-batch-check'))event.stopPropagation();},true);
 document.addEventListener('keydown',event=>{
  const tab=event.target.closest('[data-task-info-tab]');if(!tab||!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;
  event.preventDefault();const tabs=$$('[data-task-info-tab]'),index=tabs.indexOf(tab);
@@ -1426,19 +1893,13 @@ document.addEventListener('keydown',event=>{
  if(next===undefined)return;event.preventDefault();resizeRepositoryPreview(handle,next);
 });
 
-document.addEventListener('keydown',async event=>{
- const input=event.target;if(!input.classList.contains('plan-folder-rename'))return;
- if(event.key==='Escape'){event.preventDefault();state.planRename=null;$('#plan-case-list').innerHTML=planCaseTable(context().plan);syncCaseSelections();return;}
- if(event.key!=='Enter')return;event.preventDefault();input.disabled=true;
- try{await api(`/api/folders/${input.dataset.id}`,'PATCH',{name:input.value});state.planRename=null;await refresh();toast('Folder renamed.');}
- catch(error){input.disabled=false;input.focus();toast(error.message,true);}
-});
+
 async function resolveImportConflicts(conflicts){
  const dialog=$('#import-conflict-dialog'),form=$('#import-conflict-form');
  let index=0;const decisions={};
  const render=()=>{
   const c=conflicts[index];
-  $('#import-conflict-items').innerHTML=`<div class="conflict-case-name"><span>Test Case Name</span><strong data-no-translate>${escape(c.name)}</strong></div>${c.targets.length>1?`<label class="field"><span>Created at</span><select id="conflict-target">${c.targets.map(t=>`<option value="${escape(t.id)}" data-no-translate>${escape(version(t.source_created_at))}</option>`).join('')}</select></label>`:''}<div class="conflict-actions"><button type="button" data-conflict-choice="overwrite">${c.same_version?'Overwrite':'Overwrite and update'}</button>${c.same_version?'':'<button type="button" data-conflict-choice="coexist">Keep both</button>'}<button type="button" data-conflict-choice="skip">Skip this Case</button><button type="button" data-action="cancel-import-conflicts">Cancel</button></div>${conflicts.length>1?`<p class="help">${index+1} / ${conflicts.length}</p>`:''}`;
+  $('#import-conflict-items').innerHTML=`<div class="conflict-case-name"><span>Test Case Name</span><strong data-no-translate>${escape(c.name)}</strong></div>${c.targets.length>1?`<label class="field"><span>Latest source date</span><select id="conflict-target">${c.targets.map(t=>`<option value="${escape(t.id)}" data-no-translate>${escape(version(latestSourceDate(t)))}</option>`).join('')}</select></label>`:''}<div class="conflict-actions"><button type="button" data-conflict-choice="overwrite">${c.same_version?'Overwrite':'Overwrite and update'}</button>${c.same_version?'':'<button type="button" data-conflict-choice="coexist">Keep both</button>'}<button type="button" data-conflict-choice="skip">Skip this Case</button><button type="button" data-action="cancel-import-conflicts">Cancel</button></div>${conflicts.length>1?`<p class="help">${index+1} / ${conflicts.length}</p>`:''}`;
  };
  render();dialog.showModal();form.querySelector('[data-conflict-choice]')?.focus();
  return new Promise(resolve=>{
@@ -1570,38 +2031,15 @@ document.addEventListener('drop',event=>{
  for(const taskId of ids)row.insertBefore(document.getElementById('execution-tab-'+taskId).closest('[data-execution-tab]'),add);
 });
 document.addEventListener('dragend',()=>{draggedExecutionTab=null;clearExecutionTabDrop();});
-let draggedPlanTab=null;
-document.addEventListener('dragstart',event=>{
- const tab=event.target.closest('[data-plan-tab]');if(!tab)return;
- draggedPlanTab={id:tab.dataset.planTab,projectId:context().project.id};event.stopImmediatePropagation();event.dataTransfer.effectAllowed='move';event.dataTransfer.setData('text/plain',tab.dataset.planTab);
-});
-document.addEventListener('dragover',event=>{
- if(!draggedPlanTab)return;
- const target=event.target.closest('[data-plan-tab],#plan-tab-add');if(!target)return;
- event.preventDefault();event.stopImmediatePropagation();event.dataTransfer.dropEffect='move';
- document.querySelectorAll('.plan-tabs [data-tab-drop]').forEach(el=>el.removeAttribute('data-tab-drop'));
- const after=event.clientX>target.getBoundingClientRect().left+target.getBoundingClientRect().width/2;
- target.dataset.tabDrop=target.id==='plan-tab-add'?'before':after?'after':'before';
-});
-document.addEventListener('drop',event=>{
- if(!draggedPlanTab)return;
- const target=event.target.closest('[data-plan-tab],#plan-tab-add'),project=context().project,drag=draggedPlanTab;draggedPlanTab=null;
- document.querySelectorAll('.plan-tabs [data-tab-drop]').forEach(el=>el.removeAttribute('data-tab-drop'));
- if(!target||!project||project.id!==drag.projectId)return;
- event.preventDefault();event.stopImmediatePropagation();if(target.dataset.planTab===drag.id)return;
- const ids=planTabIds(project).filter(id=>id!==drag.id);
- const after=event.clientX>target.getBoundingClientRect().left+target.getBoundingClientRect().width/2;
- const index=target.id==='plan-tab-add'?ids.length:ids.indexOf(target.dataset.planTab)+(after?1:0);
- ids.splice(index,0,drag.id);state.planTabOrders[project.id]=ids;
- try{localStorage.setItem('bmc-plan-tabs-'+project.id,JSON.stringify(ids));}catch{toast('Unable to save Plan tab order.',true);}
- const row=target.parentElement;
- for(const id of ids)row.insertBefore(document.getElementById('plan-tab-'+id),document.getElementById('plan-tab-add'));
-});
-document.addEventListener('dragend',()=>{draggedPlanTab=null;document.querySelectorAll('.plan-tabs [data-tab-drop]').forEach(el=>el.removeAttribute('data-tab-drop'));});
-document.addEventListener('keydown',event=>{
- const tab=event.target.closest('.plan-tabs [role=tab]');if(!tab||!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;
- event.preventDefault();const items=[...document.querySelectorAll('.plan-tabs [role=tab]')],index=items.indexOf(tab);
- const next=event.key==='Home'?items[0]:event.key==='End'?items.at(-1):items[(index+(event.key==='ArrowRight'?1:-1)+items.length)%items.length];next.focus();next.click();
+document.addEventListener('change',async event=>{
+ const selector=event.target;if(selector.id!=='plan-picker')return;
+ const {project,plan}=context();
+ if(!discard()){selector.value=plan.id;return;}
+ selectPlanFor(project,selector.value);
+ state.caseId=null;state.definition=null;state.planSearch='';state.planCollapsed=new Set();state.planFolder=null;
+ state.importSource=null;state.panel=null;state.dirty=false;state.tab='cases';
+ if(state.route[2]==='plan'){location.hash=path(project,{id:selector.value});return;}
+ try{await draw();$('#plan-picker')?.focus();}catch(error){toast(error.message,true);}
 });
 document.addEventListener('dragstart',event=>{
  const inPlan=document.body.classList.contains('plan-workspace');
@@ -1618,7 +2056,7 @@ document.addEventListener('dragstart',event=>{
    const row=event.target.closest('[data-plan-case][draggable="true"]'),folder=event.target.closest('[data-plan-folder][draggable="true"]');
    if(!row&&!folder)return;if(!discard()){event.preventDefault();return;}state.dirty=false;
    const kind=row?'case':'folder',id=row?.dataset.planCase||folder.dataset.planFolder,selection=planSelectionData();
-   planDrag=(planSelection().has(kind+':'+id)&&(selection.case_ids.length+selection.folder_ids.length>1)||folder?.querySelector('.plan-selection-check')?.indeterminate)?{kind:'batch',id,...selection,planId:context().plan.id}:{kind,id,planId:context().plan.id};
+   planDrag=(planSelection().has(kind+':'+id)&&(selection.case_ids.length+selection.folder_ids.length>1))?{kind:'batch',id,...selection,planId:context().plan.id}:{kind,id,planId:context().plan.id};
   }
   event.dataTransfer.effectAllowed=planDrag.kind==='import'?'copy':'move';
   event.dataTransfer.setData('text/plain',JSON.stringify({kind:planDrag.kind,id:planDrag.id}));
@@ -1659,7 +2097,7 @@ document.addEventListener('drop',async event=>{
   try{
    if(drag.kind==='import'){
     if(state.importBusy)return;state.importBusy=true;
-    try{const result=await importDroppedCases(plan,drag,folderId,insertion);if(!result)return;for(const id of drag.caseIds||[drag.id])state.importSelection?.delete(id);for(const id of drag.folderIds||[])state.importFolderSelection?.delete(id);state.planCollapsed?.delete(folderId);saveFolderExpansions();await refresh();toast(`Imported: ${result.added.length}; updated: ${result.updated.length}; skipped: ${result.skipped.length}.`);}
+    try{const result=await importDroppedCases(plan,drag,folderId,insertion);if(!result)return;for(const id of drag.caseIds||[drag.id])state.importSelection?.delete(id);for(const id of drag.folderIds||[])state.importFolderSelection?.delete(id);state.planCollapsed?.delete(folderId);saveFolderExpansions();state.planImportResult=`Imported: ${result.added.length}; updated: ${result.updated.length}; skipped: ${result.skipped.length}.`;await refresh();}
     finally{state.importBusy=false;}return;
    }
    if(drag.kind==='batch'){await api(`/api/plans/${plan.id}/items/move`,'POST',{folder_ids:drag.folder_ids,case_ids:drag.case_ids,folder_id:folderId,...insertion});planSelection().clear();}
@@ -1687,6 +2125,7 @@ $('#repository-file-picker').addEventListener('change',async event=>{
   if(!files.length||state.repositoryImporting)return;
   state.repositoryImporting=true;
   const results=files.map(file=>({file,status:'Pending',detail:''}));
+  const historyBatch=planId&&files.length>1?crypto.randomUUID():null;
   const dialog=document.createElement('dialog');dialog.id='repository-import-results';dialog.setAttribute('aria-labelledby','repository-import-results-title');
   dialog.innerHTML='<h2 id="repository-import-results-title">Import Test Cases</h2><p data-import-progress role="status" aria-live="polite"></p><div class="table-wrap"><table><thead><tr><th>File</th><th>Result</th><th>Details</th></tr></thead><tbody></tbody></table></div><div class="actions"><button type="button" data-import-close class="execution-icon-button" title="Close" aria-label="Close" disabled>'+icon('close')+'</button></div>';
   const close=()=>{if(state.repositoryImporting)return;dialog.close();dialog.remove();};
@@ -1702,7 +2141,7 @@ $('#repository-file-picker').addEventListener('change',async event=>{
       result.status='Importing';render();
       try{
         if(!result.file.name.toLowerCase().endsWith('.py'))throw Error('Choose a .py file.');
-        const saved=await api(planId?'/api/plans/'+planId+'/testcases/import-python':'/api/repository/testcases','POST',{source:await result.file.text(),folder_id:folder||null});
+        const saved=await api(planId?'/api/plans/'+planId+'/testcases/import-python':'/api/repository/testcases','POST',{source:await result.file.text(),folder_id:folder||null,...(historyBatch?{history_batch:historyBatch}:{})});
         result.status='Imported';result.detail=saved.name||saved.tc_name||'';
       }catch(error){result.status='Failed';result.detail=error.message;}
       render();
@@ -1716,7 +2155,7 @@ $('#repository-file-picker').addEventListener('change',async event=>{
 });
 $('#plan-create-dialog').addEventListener('cancel',event=>{if(state.creatingPlan)event.preventDefault();else state.dirty=false;});
 window.addEventListener('hashchange',()=>navigate().catch(e=>toast(e.message,true)));
-window.addEventListener('beforeunload',event=>{if(state.dirty){event.preventDefault();event.returnValue='';}});
+window.addEventListener('beforeunload',event=>{if(state.dirty||state.repositoryImporting){event.preventDefault();event.returnValue='';}});
 async function selectFloatingCase(row){
  if(!CaseWindows.isOpen())return;
  if(state.dirty&&!discard())return;state.dirty=false;
@@ -1751,7 +2190,7 @@ function schedulePlanListSize(){
   planListSizeFrame=0;
   const layout=document.querySelector('body.plan-workspace #workspace .repository-layout');
   if(!layout||layout.closest('[inert],dialog'))return;
-  const height=Math.max(120,window.innerHeight-layout.getBoundingClientRect().top-24)+'px';
+  const height=Math.max(0,window.innerHeight-layout.getBoundingClientRect().top-10)+'px';
   if(layout.style.getPropertyValue('--plan-list-height')!==height)layout.style.setProperty('--plan-list-height',height);
  });
 }

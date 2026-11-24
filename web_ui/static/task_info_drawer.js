@@ -253,44 +253,6 @@ window.TaskInfoDrawer = (() => {
     origin?.focus({preventScroll:true});
   }
 
-  async function deleteTask() {
-    if (!task?.id || saving || loading || task.locked) return;
-    if (!await permitLeave()) return;
-    if (dirty()) await render();
-    const id = task.id, dialog = document.createElement('dialog');
-    dialog.className = 'task-drawer-confirm';
-    dialog.setAttribute('aria-labelledby','drawer-delete-title');
-    dialog.innerHTML = '<form><h2 id="drawer-delete-title">Delete Task?</h2><p>The Task will be marked Deleted and hidden. Its data and results will be retained.</p><label class="field"><span>Deletion reason (recorded in Note)</span><textarea name="reason" rows="4" maxlength="4000" required></textarea></label><p role="alert"></p><div class="form-actions"><button type="submit" class="danger">Delete Task</button><button type="button" data-cancel>Cancel</button></div></form>';
-    document.body.append(dialog);
-    dialog.addEventListener('input', event => {event.stopPropagation();dialog.querySelector('[role=alert]').textContent = '';});
-    dialog.addEventListener('change', event => event.stopPropagation());
-    dialog.oncancel = event => {if (saving) event.preventDefault();};
-    dialog.onclose = () => {dialog.remove();query('[data-drawer-delete]')?.focus();};
-    dialog.querySelector('[data-cancel]').onclick = () => dialog.close();
-    dialog.querySelector('form').onsubmit = async event => {
-      event.preventDefault();event.stopPropagation();
-      const reason = dialog.querySelector('textarea').value.trim();
-      if (saving) return;
-      if (!reason) {dialog.querySelector('[role=alert]').textContent = 'Enter a deletion reason.';return;}
-      saving = true;sync();
-      dialog.querySelectorAll('button,textarea').forEach(control => control.disabled = true);
-      try {
-        await services.api(`/api/tasks/${id}`, 'DELETE', {reason});
-        dialog.close();remove();
-        await services.updated();
-        services.toast('Task marked Deleted. Reason recorded in Note.');
-      } catch (error) {
-        if (dialog.isConnected) dialog.querySelector('[role=alert]').textContent = error.message;
-        else services.toast(error.message, true);
-      } finally {
-        saving = false;
-        dialog.querySelectorAll('button,textarea').forEach(control => control.disabled = false);
-        if (host) sync();
-      }
-    };
-    dialog.showModal();dialog.querySelector('textarea').focus();
-  }
-
   async function open(id) {
     if (opening) return;
     opening = true;
@@ -314,12 +276,6 @@ window.TaskInfoDrawer = (() => {
     host.innerHTML = `<header class="task-drawer-heading"><div><h1 id="task-drawer-title" data-no-translate>${escape(task.name)}</h1><span class="help" data-no-translate>${escape(task.task_type)} Task · ${escape(task.project_name)} / ${escape(task.sku_name || '—')}</span></div><button type="button" data-drawer-close aria-label="Close Task Info">Close</button></header><div class="task-drawer-body"><nav role="tablist" aria-label="Task Info" aria-orientation="vertical">${visiblePages.map(([key,label]) => `<button type="button" id="drawer-tab-${key}" role="tab" data-drawer-tab="${key}" aria-selected="${key === page}" aria-controls="task-drawer-content">${label}</button>`).join('')}</nav><section id="task-drawer-content" data-drawer-content role="tabpanel"></section></div><div data-drawer-error role="alert" class="task-drawer-error"></div><footer><span data-drawer-status role="status" class="help"></span><div class="actions"><button type="button" data-drawer-discard>Discard changes</button><button type="button" class="primary" data-drawer-save>Save changes</button></div></footer>`;
     document.body.append(host);
     if (!task.id) query('.task-drawer-heading .help').textContent = 'Choose Task Type, Project and assignment';
-    if (task.id) {
-      const deleteButton = document.createElement('button');
-      deleteButton.type = 'button';deleteButton.className = 'danger';deleteButton.dataset.drawerDelete = '';
-      deleteButton.textContent = 'Delete Task';deleteButton.disabled = Boolean(task.locked);
-      query('[data-drawer-close]').before(deleteButton);
-    }
     host.addEventListener('input', event => {event.stopPropagation();if (!event.target.hasAttribute('data-scope-folder')) updateCount();sync();});
     host.addEventListener('change', event => {
       event.stopPropagation();
@@ -367,7 +323,6 @@ window.TaskInfoDrawer = (() => {
     }
     if (button.hasAttribute('data-drawer-close')) return close();
     if (button.hasAttribute('data-drawer-save')) return save();
-    if (button.hasAttribute('data-drawer-delete')) return deleteTask();
     if (button.hasAttribute('data-drawer-discard')) {
       if (!task.id) return render();
       const latest = (await services.api('/api/tasks')).tasks.find(item => item.id === task.id);
@@ -389,5 +344,5 @@ window.TaskInfoDrawer = (() => {
   async function close() {if (await permitLeave()) remove();}
   async function leave() {if (!host) return true;if (!await permitLeave()) return false;remove();return true;}
   window.addEventListener('beforeunload', event => {if (dirty() || saving) {event.preventDefault();event.returnValue = '';}});
-  return {configure: value => {services = value;}, open, leave, dirty, deleteTask};
+  return {configure: value => {services = value;}, open, leave, dirty};
 })();

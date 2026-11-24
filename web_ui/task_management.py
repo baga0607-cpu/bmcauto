@@ -16,6 +16,8 @@ TASK_STATUSES = ('Not Scheduled', 'New', 'On-Going', 'Complete', 'Cancel', 'Pend
 
 
 def effective_status(setup):
+    if setup.get('task_status') == 'Deleted':
+        return 'Deleted'
     if not setup.get('start_date') or not setup.get('end_date'):
         return 'Not Scheduled'
     status = setup.get('task_status', 'New')
@@ -129,7 +131,11 @@ def merge_setup(current, incoming, task_type=None):
     return result
 
 
-def task_list(session):
+def is_deleted(task):
+    return effective_status(json.loads(task.task_metadata or '{}')) == 'Deleted'
+
+
+def task_list(session, status=None):
     rows = session.query(Task, ProjectPlan, Project).join(ProjectPlan, Task.plan_id == ProjectPlan.id).join(Project, ProjectPlan.project_id == Project.id).all()
     counts = {}
     for (task_id,) in session.query(TaskTestCase.task_id):
@@ -162,6 +168,7 @@ def task_list(session):
         row['working_days'], row['calendar_complete'] = working_days(start, end, changes) if start and end else (None, True)
         actual_start, actual_end = setup.get('actual_start_date'), setup.get('actual_end_date')
         row['actual_working_days'], row['actual_calendar_complete'] = working_days(actual_start, actual_end, changes) if actual_start and actual_end else (None, True)
+    result = [row for row in result if (row['setup']['task_status'] == status if status else row['setup']['task_status'] != 'Deleted')]
     return sorted(result, key=lambda r: (r['project_name'], r['task_type'], r['name'], r['id']))
 
 
@@ -190,7 +197,11 @@ def bind_plan_sku(session, plan, sku_id):
     if not skus and sku_id:
         raise StateError('This Project has no SKUs.')
     if sku_id:
-        session.add(PlanSKU(plan_id=plan.id, sku_id=sku_id))
+        link = session.get(PlanSKU, plan.id)
+        if link:
+            link.sku_id = sku_id
+        else:
+            session.add(PlanSKU(plan_id=plan.id, sku_id=sku_id))
 
 
 def options(session):
@@ -359,7 +370,7 @@ def immutable_name(task, value):
         raise StateError('Task names are generated automatically and cannot be changed.')
 
 
-def manage(session, task_id, data, delete=False):
+def manage(session, task_id, data):
     if {'history_list', 'schedule_history'} & data.keys():
         raise StateError('History is read-only.')
     if 'history' in data and not ('setup' in data or 'task_metadata' in data):
@@ -367,12 +378,11 @@ def manage(session, task_id, data, delete=False):
     task = session.get(Task, task_id) or session.get(PlanningTask, task_id)
     if task is None:
         raise StateError('Task not found.', 404)
+    if is_deleted(task):
+        raise StateError('This Task is Deleted and cannot be edited.', 409)
     planning = isinstance(task, PlanningTask)
     if not planning:
         unlocked(session, task.plan_id)
-    if delete:
-        session.delete(task)
-        return
     if 'name' in data:
         immutable_name(task, data['name'])
     identity = session.get(TaskNameReservation, task_id)
@@ -477,6 +487,8 @@ def reschedule(session, task_id, data):
     task = session.get(Task, task_id) or session.get(PlanningTask, task_id)
     if task is None:
         raise StateError('Task not found.', 404)
+    if is_deleted(task):
+        raise StateError('This Task is Deleted and cannot be edited.', 409)
     if isinstance(task, Task):
         unlocked(session, task.plan_id)
     if not isinstance(data, dict):

@@ -5,10 +5,11 @@ const tasks=[task('new-task','New'),task('pending-task','Pending'),task('unsched
 let html=c.window.TaskManagement.content(tasks,'','list');
 for(const t of tasks)assert.ok(html.includes('>'+t.name+'</a>'));
 assert.ok(!html.includes('data-task-status-filter'));assert.ok(!html.includes('Filter Status'));
-assert.ok(html.includes('class="task-list-label"'));assert.ok(html.includes('Assignee: '));assert.ok(html.includes('· Status: '));
-assert.equal((html.match(/<th[ >]/g)||[]).length,8);
-html=c.window.TaskManagement.content(tasks,'pending','my-task');assert.ok(html.includes('>pending-task</a>'));assert.ok(!html.includes('>new-task</a>'));
-html=c.window.TaskManagement.content(tasks,'no-match','list');assert.ok(html.includes('colspan="8"'));assert.ok(html.includes('No matching Tasks'));
+assert.ok(html.includes('class="task-list-label"'));assert.ok(html.includes('<th>Assignee</th>'));assert.ok(html.includes('<th>Status</th>'));
+assert.ok(!html.includes('task-list-assignment'));
+assert.equal((html.match(/<th[ >]/g)||[]).length,10);
+html=c.window.TaskManagement.content(tasks,'pending','list');assert.ok(html.includes('>pending-task</a>'));assert.ok(!html.includes('>new-task</a>'));
+html=c.window.TaskManagement.content(tasks,'no-match','list');assert.ok(html.includes('colspan="10"'));assert.ok(html.includes('No matching Tasks'));
 
 const dated=(end,start='2026-01-01')=>({setup:{start_date:start,end_date:end}});
 assert.equal(c.window.TaskManagement.calendarRange([dated('2026-10-29')]).end,'2027-01-31');

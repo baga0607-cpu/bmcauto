@@ -50,18 +50,22 @@ class TaskManagementTest(unittest.TestCase):
         self.assertEqual(self.client.post('/api/tasks',json={'task_type':'Other','plan_id':'a'}).status_code,400)
         self.assertEqual(len(self.rows()),2)
 
-    def test_delete_only_task_scope_preserves_plan_cases_and_peer_evidence(self):
+    def test_delete_preserves_task_scope_plan_cases_and_all_evidence(self):
         tc=self.add_case()
         with self.Session() as s:
             for tid in ['task1','task2']:
                 s.add(TaskTestCase(task_id=tid,testcase_id=tc['id'],status='Passed',result_json='{"kept":true}',log_text='retained peer evidence'))
             s.commit()
         self.assertEqual(self.rows()['task1']['scope_count'],1)
-        self.assertEqual(self.client.delete('/api/tasks/task1').status_code,200)
+        self.assertEqual(self.client.delete('/api/tasks/task1',json={'reason':'No longer needed'}).status_code,405)
         with self.Session() as s:
-            self.assertIsNone(s.get(Task,'task1'));self.assertIsNotNone(s.get(TestCase,tc['id']))
-            rows=s.query(TaskTestCase).all();self.assertEqual(len(rows),1)
-            self.assertEqual(rows[0].task_id,'task2');self.assertEqual(rows[0].log_text,'retained peer evidence')
+            self.assertIsNotNone(s.get(Task,'task1'))
+            self.assertIsNotNone(s.get(TestCase,tc['id']))
+            rows=s.query(TaskTestCase).all();self.assertEqual(len(rows),2)
+            for row in rows:
+                self.assertEqual(row.log_text,'retained peer evidence')
+                self.assertEqual(row.result_json,'{"kept":true}')
+        self.assertIn('task1',self.rows())
 
     def test_active_plan_locks_management_and_plan_cannot_be_reassigned(self):
         self.assertEqual(self.client.patch('/api/tasks/task1',json={'plan_id':'b'}).status_code,400)
@@ -69,7 +73,7 @@ class TaskManagementTest(unittest.TestCase):
         with self.Session() as s:s.get(Task,'task1').execution_active=True;s.commit()
         rows=self.rows();self.assertTrue(rows['task1']['execution_active'])
         self.assertTrue(rows['task1']['locked']);self.assertTrue(rows['task2']['locked'])
-        for method,url,data in [('PATCH','/api/tasks/task1',{'name':'Blocked'}),('DELETE','/api/tasks/task1',None),('POST','/api/tasks',{'name':'Blocked','plan_id':'a'}),('PATCH','/api/tasks/task2',{'setup':{'notes':'Blocked'}})]:
+        for method,url,data in [('PATCH','/api/tasks/task1',{'name':'Blocked'}),('POST','/api/tasks',{'name':'Blocked','plan_id':'a'}),('PATCH','/api/tasks/task2',{'setup':{'notes':'Blocked'}})]:
             response=self.client.open(url,method=method,json=data)
             self.assertEqual(response.status_code,409,response.get_json())
 

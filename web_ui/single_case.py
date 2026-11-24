@@ -36,8 +36,11 @@ def metadata(source):
     if 'automation' in meta and meta['automation'] not in ('automatic','semi_automatic','manual'):
         raise ps.StateError('TEST_CASE.automation must be automatic, semi_automatic or manual.')
     meta.setdefault('automation','unclassified')
-    if 'created_at' in meta:
-        meta['created_at'] = normalize_created_at(meta['created_at'])
+    for key in ('created_at', 'modified_at'):
+        if key in meta:
+            meta[key] = normalize_source_time(meta[key], key)
+    if meta.get('created_at') and meta.get('modified_at') and meta['modified_at'] < meta['created_at']:
+        raise ps.StateError('TEST_CASE.modified_at cannot precede created_at.')
     parameters = meta.get('parameters', {})
     if not isinstance(parameters, dict):
         raise ps.StateError('TEST_CASE.parameters must be a dictionary')
@@ -61,34 +64,56 @@ def metadata(source):
     return meta
 
 
-def normalize_created_at(value):
+def normalize_source_time(value, key):
     """Original source file birth time, carried in the .py; never import/mtime."""
     if value is None:
         return None
     if not isinstance(value, str):
-        raise ps.StateError('TEST_CASE.created_at must be an ISO timestamp with a timezone.')
+        raise ps.StateError(f'TEST_CASE.{key} must be an ISO timestamp with a timezone.')
     try:
         stamp = datetime.fromisoformat(value.replace('Z', '+00:00'))
         if stamp.utcoffset() is None:
             raise ValueError('Missing timezone')
         return stamp.astimezone(timezone.utc).isoformat(timespec='microseconds')
     except ValueError as error:
-        raise ps.StateError('TEST_CASE.created_at must be an ISO timestamp with a timezone.') from error
+        raise ps.StateError(f'TEST_CASE.{key} must be an ISO timestamp with a timezone.') from error
 
 
-def creation_time_for_case(root, tc):
+def source_dates(meta):
+    return dict(source_created_at=meta.get('created_at'), source_modified_at=meta.get('modified_at'))
+
+
+def stamp_source_edit(source):
+    """Edit only the literal date, preserving authored formatting and comments."""
+    tree = ast.parse(source)
+    fields = next(node.value for node in tree.body if isinstance(node, ast.Assign)
+                  and any(isinstance(t, ast.Name) and t.id == 'TEST_CASE' for t in node.targets))
+    raw = source.encode('utf-8')
+    lines = raw.splitlines(keepends=True)
+    def offset(line, column):
+        return sum(map(len, lines[:line-1])) + column
+    stamp = repr(datetime.now(timezone.utc).isoformat(timespec='microseconds')).encode()
+    for key, value in zip(fields.keys, fields.values):
+        if isinstance(key, ast.Constant) and key.value == 'modified_at':
+            start, end = offset(value.lineno, value.col_offset), offset(value.end_lineno, value.end_col_offset)
+            return (raw[:start] + stamp + raw[end:]).decode()
+    start = offset(fields.lineno, fields.col_offset) + 1
+    return (raw[:start] + b"'modified_at': " + stamp + b", " + raw[start:]).decode()
+
+
+def source_dates_for_case(root, tc):
     if not root or tc.script_kind != 'single':
-        return None
+        return source_dates({})
     try:
-        return metadata(script_file(root,tc).read_text(encoding='utf-8')).get('created_at')
+        return source_dates(metadata(script_file(root,tc).read_text(encoding='utf-8')))
     except (OSError, UnicodeError, SyntaxError, ps.StateError):
-        return None
+        return source_dates({})
 
 
 def repository_info(row):
     meta = metadata(row.source_text)
     return dict(id=row.id, name=row.name, source_version=row.source_version,
-                source_created_at=meta.get('created_at'), metadata=meta)
+                **source_dates(meta), metadata=meta)
 
 
 def validate_settings(meta, settings):
@@ -138,7 +163,7 @@ def parameter_state_for_case(root, tc):
 def definition(root, tc):
     source = script_file(root, tc).read_text(encoding='utf-8')
     meta = metadata(source)
-    return dict(**tc.to_dict(), source=source, metadata=meta, source_created_at=meta.get('created_at'), settings=json.loads(tc.settings_json or '{}'))
+    return dict(**tc.to_dict(), source=source, metadata=meta, **source_dates(meta), settings=json.loads(tc.settings_json or '{}'))
 
 
 def execute_script(root, module_path, client, context, preset):
@@ -231,7 +256,7 @@ def register(app, runtime):
         folder=ps.require(s,RepositoryFolder,data.get('folder_id') or rt.ROOT)
         s.add(RepositoryFolderCase(repository_id=row.id,folder_id=folder.id))
         s.flush()
-        return jsonify(id=row.id, name=row.name, source_version=row.source_version, source_created_at=meta.get('created_at')), 201
+        return jsonify(id=row.id, name=row.name, source_version=row.source_version, **source_dates(meta)), 201
 
     @route('/api/repository/testcases/<repository_id>', ['GET'])
     def repository_read(s, data, repository_id):
@@ -457,7 +482,7 @@ def register(app, runtime):
         for tc in s.query(TestCase).filter_by(plan_id=plan_id).order_by(TestCase.system_id):
             try: source=script_file(runtime['MAIN_PROGRAM_DIR'],tc).read_text(encoding='utf-8');canonical=metadata(source)['name'].strip().casefold()
             except (OSError,UnicodeError,SyntaxError,ps.StateError): source='';canonical=tc.normalized_name
-            existing.append(dict(id=tc.system_id,name=tc.display_name,canonical=canonical,source_version=tc.source_version,source_created_at=creation_time_for_case(runtime['MAIN_PROGRAM_DIR'],tc),
+            existing.append(dict(id=tc.system_id,name=tc.display_name,canonical=canonical,source_version=tc.source_version,**source_dates_for_case(runtime['MAIN_PROGRAM_DIR'],tc),
                                  token=fingerprint(source,json.loads(tc.settings_json or '{}'),tc.source_version)))
             actual[tc.system_id]=tc
         conflicts=[];used_names={x['name'].casefold() for x in existing}
@@ -486,6 +511,9 @@ def register(app, runtime):
             if item['action']=='overwrite':
                 tc=actual[item['target_id']];path=script_file(runtime['MAIN_PROGRAM_DIR'],tc)
                 originals.setdefault(path,path.read_text(encoding='utf-8'))
+                if originals[path] != item['source']:
+                    s.info.setdefault('plan_source_changes', []).append(dict(kind='Test Case', item=tc.display_name,
+                        before={'source': 'Previous Python source'}, after={'source': 'Replaced during import'}))
                 tc.settings_revision=(tc.settings_revision or 0)+1
                 for membership in s.query(TaskTestCase).filter_by(testcase_id=tc.system_id):
                     if membership.executed_at or membership.result_json or membership.manual_override_json or membership.status in ('Passed','Failed','Block','CP','C-PASS'):
@@ -545,7 +573,13 @@ def register(app, runtime):
         if not isinstance(source, str):
             raise ps.StateError('Python source must be text')
         meta = metadata(source)
-        if meta['automation'] != metadata(original)['automation']:
+        original_meta = metadata(original)
+        if meta.get('created_at') != original_meta.get('created_at'):
+            raise ps.StateError('The original source creation time must be preserved.')
+        if source != original:
+            source = stamp_source_edit(source)
+            meta = metadata(source)
+        if meta['automation'] != original_meta['automation']:
             raise ps.StateError('Automation classification belongs to the source method. Import a new Repository version to change it.')
         settings = validate_settings(meta, data.get('settings', json.loads(tc.settings_json or '{}')))
         changed = source != original or settings != json.loads(tc.settings_json or '{}')

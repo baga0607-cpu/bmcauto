@@ -66,7 +66,7 @@ class TaskEnvironmentTest(unittest.TestCase):
                 self.save(tid,host=host,username=tid,password=tid,cs_host='console-'+tid,verify_ssl=True)
                 self.client.post('/api/tasks/'+tid+'/testcases/import',json={'testcases':[tc['id']]})
                 token=self.client.post('/api/tasks/'+tid+'/execution/start',json={'testcase_ids':[tc['id']]}).get_json()['execution_token']
-                with patch.object(api,'ConsoleClient') as console:
+                with patch('case_client.ConsoleClient') as console:
                     def execute(root,module,client,context,preset):
                         self.assertEqual(context['redfish']['host'],host)
                         self.assertEqual(context['console_server']['host'],'console-'+tid)

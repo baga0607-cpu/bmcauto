@@ -23,6 +23,7 @@ from sqlalchemy.orm import sessionmaker
 from models import Base, TestCase, PlanSubfolder, Task, TaskTestCase, Project, ProjectPlan, Category, PlanningTask
 import sqlite3
 import plan_state as ps
+import plan_history
 import single_case as sc
 from case_log import CaseLog, PrintLogWriter, open_log_files
 
@@ -224,345 +225,12 @@ run_sessions = {}  # session_id -> { "queue": Queue, "status": str, "thread": Th
 
 
 # ── 身分：API 透明代理 (輕量版 LoggingRedfishClient) ───────────────────
-class IpmiResponse:
-    def __init__(self, stdout, stderr, returncode, data=None):
-        self.stdout = stdout
-        self.stderr = stderr
-        self.returncode = returncode
-        self.status = returncode
-        self.data = data or []
-        self.completion_code = 0x00 if returncode == 0 else None
-        self.dict = {
-            "stdout": stdout, 
-            "stderr": stderr, 
-            "returncode": returncode, 
-            "data": self.data,
-            "completion_code": self.completion_code
-        }
-
 import task_environment as te
 import task_management as tm
 import schedule_calendar as calendar
+from case_client import WebLoggingRedfishClient
+from case_process import run_case_worker
 
-class WebLoggingRedfishClient:
-    """API 透明代理：
-    - 摘要與完整 response 共用 Test log，並推送 SSE
-    - 完整 Response Body 直接寫入同一檔案，不經過 stdout
-    """
-    def __init__(self, client, api_file=None, msg_queue=None, environment=None):
-        self._environment = environment or {}
-        self._c       = client
-        self._api_f   = api_file
-        self._mq      = msg_queue   # SSE 佇列，用來推送完整 api_body 事件
-        self._console_client = None
-
-    def _get_console_client(self):
-        if self._console_client is None:
-            config = self._environment
-            cs = config.get("console_server", {})
-            if cs.get("host"):
-                print("  [Console] Console Server configured; establishing connection...")
-                self._console_client = ConsoleClient(config)
-                self._console_client.connect()
-                print("  [Console] Connected to Console Server.")
-        return self._console_client
-
-    def run_ipmitool(self, command_args, interface_options=None, ipmitool_args=None, **kwargs):
-        """實作非 raw 的 ipmitool 執行代理，供步驟呼叫"""
-        if ipmitool_args is None and interface_options:
-            ipmitool_args = interface_options.get("ipmitool_args", [])
-        if ipmitool_args is None:
-            ipmitool_args = []
-            
-        interface_type = interface_options.get("type", "iol") if interface_options else "iol"
-        
-        # 決定是否走 Console Server 遠端執行
-        use_remote = False
-        if self._environment.get("console_server", {}).get("host") and interface_type in ("kcs", "serial"):
-            use_remote = True
-
-        cmd = ["ipmitool"] + ipmitool_args + command_args
-        cmd_str = " ".join(cmd)
-
-        if use_remote:
-            print(f"  [Console][IPMI] Executing remote command: {cmd_str}")
-            if self._api_f:
-                import datetime as _dt
-                now_str = _dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S,%f")[:-3]
-                self._api_f.write(f"{now_str} - DEBUG - [IPMI  ] [Console] {cmd_str}\n")
-                self._api_f.flush()
-            if self._mq is not None:
-                import datetime as _dt
-                now_str = _dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S,%f")[:-3]
-                header_line = f"{now_str} - DEBUG - [IPMI  ] [Console] {cmd_str}"
-                self._mq.put({"type": "api_body", "text": header_line})
-
-            try:
-                console = self._get_console_client()
-                if console:
-                    if interface_type == "kcs":
-                        remote_cmd = " ".join(["ipmitool"] + command_args)
-                    else:
-                        remote_cmd = " ".join(["ipmitool"] + ipmitool_args + command_args)
-                        
-                    stdout_str = console.exec_command(remote_cmd)
-                    return {
-                        "stdout": stdout_str,
-                        "stderr": "",
-                        "returncode": 0
-                    }
-            except Exception as e:
-                print(f"         Remote IPMI execution failed: {e}")
-                if self._api_f:
-                    self._api_f.write(f"  Remote IPMI execution failed, error: {e}\n\n")
-                    self._api_f.flush()
-                if self._mq is not None:
-                    self._mq.put({"type": "api_body", "text": f"  Remote IPMI execution failed, error: {e}"})
-                return {
-                    "stdout": "",
-                    "stderr": str(e),
-                    "returncode": 1
-                }
-        else:
-            print(f"  [IPMI] Executing local command: {cmd_str}")
-            if self._api_f:
-                import datetime as _dt
-                now_str = _dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S,%f")[:-3]
-                self._api_f.write(f"{now_str} - DEBUG - [IPMI  ] {cmd_str}\n")
-                self._api_f.flush()
-            if self._mq is not None:
-                import datetime as _dt
-                now_str = _dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S,%f")[:-3]
-                header_line = f"{now_str} - DEBUG - [IPMI  ] {cmd_str}"
-                self._mq.put({"type": "api_body", "text": header_line})
-
-            try:
-                res = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
-                return {
-                    "stdout": res.stdout,
-                    "stderr": res.stderr,
-                    "returncode": res.returncode
-                }
-            except Exception as e:
-                print(f"         Local IPMI execution failed: {e}")
-                if self._api_f:
-                    self._api_f.write(f"  Local IPMI execution failed, error: {e}\n\n")
-                    self._api_f.flush()
-                if self._mq is not None:
-                    self._mq.put({"type": "api_body", "text": f"  Local IPMI execution failed, error: {e}"})
-                return {
-                    "stdout": "",
-                    "stderr": str(e),
-                    "returncode": 1
-                }
-
-    def raw(self, netfn, command, data=None, interface_options=None, ipmitool_args=None, **kwargs):
-        """實作 IPMI raw 指令的代理，供積木呼叫 ipmitool"""
-        if data is None:
-            data = []
-        
-        if ipmitool_args is None and interface_options:
-            ipmitool_args = interface_options.get("ipmitool_args", [])
-        if ipmitool_args is None:
-            ipmitool_args = []
-
-        interface_type = interface_options.get("type", "iol") if interface_options else "iol"
-        
-        # 決定是否走 Console Server 遠端執行
-        use_remote = False
-        if self._environment.get("console_server", {}).get("host") and interface_type in ("kcs", "serial"):
-            use_remote = True
-
-        raw_args = ["raw", f"0x{netfn:02X}", f"0x{command:02X}"] + [f"0x{b:02X}" for b in data]
-        cmd = ["ipmitool"] + ipmitool_args + raw_args
-        cmd_str = " ".join(cmd)
-
-        if use_remote:
-            print(f"  [Console][IPMI] Executing remote command: {cmd_str}")
-            if self._api_f:
-                import datetime as _dt
-                now_str = _dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S,%f")[:-3]
-                self._api_f.write(f"{now_str} - DEBUG - [IPMI  ] [Console] {cmd_str}\n")
-                self._api_f.flush()
-            if self._mq is not None:
-                import datetime as _dt
-                now_str = _dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S,%f")[:-3]
-                header_line = f"{now_str} - DEBUG - [IPMI  ] [Console] {cmd_str}"
-                self._mq.put({"type": "api_body", "text": header_line})
-
-            try:
-                console = self._get_console_client()
-                if console:
-                    if interface_type == "kcs":
-                        remote_cmd = " ".join(["ipmitool"] + raw_args)
-                    else:
-                        remote_cmd = " ".join(["ipmitool"] + ipmitool_args + raw_args)
-                        
-                    stdout_str = console.exec_command(remote_cmd)
-                    
-                    parsed_data = []
-                    if stdout_str:
-                        for token in stdout_str.strip().split():
-                            try:
-                                parsed_data.append(int(token, 16))
-                            except ValueError:
-                                pass
-                    print(f"         IPMI succeeded: {parsed_data}")
-                    if self._api_f:
-                        self._api_f.write(f"  IPMI succeeded, response: {parsed_data}\n\n")
-                        self._api_f.flush()
-                    if self._mq is not None:
-                        self._mq.put({"type": "api_body", "text": f"  IPMI succeeded, response: {parsed_data}"})
-                    return IpmiResponse(stdout_str, "", 0, parsed_data)
-            except Exception as e:
-                print(f"         Remote IPMI execution failed: {e}")
-                if self._api_f:
-                    self._api_f.write(f"  Remote IPMI execution failed, error: {e}\n\n")
-                    self._api_f.flush()
-                if self._mq is not None:
-                    self._mq.put({"type": "api_body", "text": f"  Remote IPMI execution failed, error: {e}"})
-                return IpmiResponse("", str(e), 1, [])
-        else:
-            print(f"  [API][IPMI  ] {cmd_str}")
-            if self._api_f:
-                import datetime as _dt
-                now_str = _dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S,%f")[:-3]
-                self._api_f.write(f"{now_str} - DEBUG - [IPMI  ] {cmd_str}\n")
-                self._api_f.flush()
-            if self._mq is not None:
-                import datetime as _dt
-                now_str = _dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S,%f")[:-3]
-                header_line = f"{now_str} - DEBUG - [IPMI  ] {cmd_str}"
-                self._mq.put({"type": "api_body", "text": header_line})
-
-            try:
-                res = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
-                parsed_data = []
-                if res.stdout and res.returncode == 0:
-                    for token in res.stdout.strip().split():
-                        try:
-                            parsed_data.append(int(token, 16))
-                        except ValueError:
-                            pass
-                resp = IpmiResponse(res.stdout, res.stderr, res.returncode, parsed_data)
-                
-                # Log output
-                if res.returncode == 0:
-                    print(f"         IPMI succeeded: {parsed_data}")
-                    if self._api_f:
-                        self._api_f.write(f"  IPMI succeeded, response: {parsed_data}\n\n")
-                        self._api_f.flush()
-                    if self._mq is not None:
-                        self._mq.put({"type": "api_body", "text": f"  IPMI succeeded, response: {parsed_data}"})
-                else:
-                    print(f"         IPMI failed: {res.stderr.strip()}")
-                    if self._api_f:
-                        self._api_f.write(f"  IPMI failed, error: {res.stderr.strip()}\n\n")
-                        self._api_f.flush()
-                    if self._mq is not None:
-                        self._mq.put({"type": "api_body", "text": f"  IPMI failed, error: {res.stderr.strip()}"})
-                    
-                return resp
-            except Exception as e:
-                print(f"         IPMI exception: {e}")
-                if self._api_f:
-                    self._api_f.write(f"  IPMI exception: {e}\n\n")
-                    self._api_f.flush()
-                if self._mq is not None:
-                    self._mq.put({"type": "api_body", "text": f"  IPMI exception: {e}"})
-                return IpmiResponse("", str(e), -1)
-
-    def _log(self, method, uri, status, resp_dict=None):
-        import datetime as _dt
-        now_str = _dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S,%f")[:-3]
-        icon = "[OK]" if status and str(status).isdigit() and int(status) < 300 else "[!!]"
-        
-        # 摘要行：透過 stdout 到 SSE + Test log
-        print(f"  [API][{method:<6}] {uri} -> {status} {icon}")
-        
-        # 嘗試從 resp_dict 或 response 對象中提取 body
-        body_to_log = resp_dict
-        if not body_to_log:
-            # 如果傳進來的是 None，嘗試從 context 獲取 (這取決於呼叫者，但這裡維持原樣)
-            pass
-
-        # 完整 body：直接寫入 Test log (只有首行帶時間戳記，Body 維持純淨縮排)
-        if self._api_f:
-            self._api_f.write(f"{now_str} - DEBUG - [{method:<6}] {uri} -> {status} {icon}\n")
-            if body_to_log:
-                import json as _json
-                try:
-                    body_str = _json.dumps(body_to_log, indent=2, ensure_ascii=False)
-                    for line in body_str.splitlines():
-                        self._api_f.write(f"  {line}\n")
-                except:
-                    self._api_f.write(f"  [Error serialization body]\n")
-            self._api_f.write("\n")
-            self._api_f.flush()
-        # Push the full response body to SSE for task-side api_body events.
-        if self._mq is not None:
-            import json as _json
-            header_line = f"{now_str} - DEBUG - [{method:<6}] {uri} -> {status} {icon}"
-            body_lines = []
-            if body_to_log:
-                try:
-                    body_str = _json.dumps(body_to_log, indent=2, ensure_ascii=False)
-                    body_lines = [f"  {l}" for l in body_str.splitlines()]
-                except:
-                    body_lines = ["  [Error serialization body]"]
-            full_text = "\n".join([header_line] + body_lines)
-            self._mq.put({"type": "api_body", "text": full_text})
-
-    def get(self, uri, **kw):
-        r = self._c.get(uri, **kw)
-        # 優先嘗試 .dict, 其次 .obj (有些版本 redfish 使用 .obj)
-        body = getattr(r, "dict", None) or getattr(r, "obj", None)
-        self._log("GET", uri, getattr(r, "status", "?"), body)
-        return r
-
-    def post(self, uri, **kw):
-        r = self._c.post(uri, **kw)
-        body = getattr(r, "dict", None) or getattr(r, "obj", None)
-        self._log("POST", uri, getattr(r, "status", "?"), body)
-        return r
-
-    def patch(self, uri, **kw):
-        r = self._c.patch(uri, **kw)
-        body = getattr(r, "dict", None) or getattr(r, "obj", None)
-        self._log("PATCH", uri, getattr(r, "status", "?"), body)
-        return r
-
-    def put(self, uri, **kw):
-        r = self._c.put(uri, **kw)
-        body = getattr(r, "dict", None) or getattr(r, "obj", None)
-        self._log("PUT", uri, getattr(r, "status", "?"), body)
-        return r
-
-    def delete(self, uri, **kw):
-        r = self._c.delete(uri, **kw)
-        body = getattr(r, "dict", None) or getattr(r, "obj", None)
-        self._log("DELETE", uri, getattr(r, "status", "?"), body)
-        return r
-
-    def head(self, uri, **kw):
-        r = self._c.head(uri, **kw)
-        body = getattr(r, "dict", None) or getattr(r, "obj", None)
-        self._log("HEAD", uri, getattr(r, "status", "?"), body)
-        return r
-
-    def login(self, **kw): return self._c.login(**kw)
-    def logout(self):
-        if self._console_client:
-            try:
-                print("  [Console] Closing Console Server connection...")
-                self._console_client.close()
-            except Exception:
-                pass
-            self._console_client = None
-        return self._c.logout()
-
-
-# ============================================================================
 # API 1: 掃描積木庫，回傳所有可用 Step 的 Metadata
 # ============================================================================
 
@@ -637,8 +305,8 @@ def get_projects():
         for project in s.query(Project).order_by(Project.name):
             plans = []
             for plan in project.plans:
-                cases = [dict(tc.to_dict(), automation=sc.automation_for_case(MAIN_PROGRAM_DIR,tc), **sc.parameter_state_for_case(MAIN_PROGRAM_DIR,tc), source_created_at=sc.creation_time_for_case(MAIN_PROGRAM_DIR,tc)) for tc in ps.co.plan_rows(s,plan.id,plan.testcases)]
-                tasks = [ps.summary(s, task.id, MAIN_PROGRAM_DIR) for task in plan.tasks]
+                cases = [dict(tc.to_dict(), automation=sc.automation_for_case(MAIN_PROGRAM_DIR,tc), **sc.parameter_state_for_case(MAIN_PROGRAM_DIR,tc), **sc.source_dates_for_case(MAIN_PROGRAM_DIR,tc)) for tc in ps.co.plan_rows(s,plan.id,plan.testcases)]
+                tasks = [ps.summary(s, task.id, MAIN_PROGRAM_DIR, include_evidence=False) for task in plan.tasks if not tm.is_deleted(task)]
                 for task in tasks:
                     for case in task['testcases']:
                         case.pop('log_text', None); case.pop('api_log_text', None)
@@ -687,6 +355,7 @@ def create_plan():
             name=plan_name,
             folders_migrated=True
         )
+        plan_history.watch(session, new_plan_id, 'Create Plan')
         session.add(new_plan)
         session.flush()
         tm.bind_plan_sku(session, new_plan, data.get("sku_id"))
@@ -713,28 +382,6 @@ def delete_project():
         proj = session.query(Project).filter_by(name=project_name).first()
         if proj:
             session.delete(proj)
-            session.commit()
-        return jsonify({"status": "ok"})
-    except Exception as e:
-        session.rollback()
-        return jsonify({"error": str(e)}), getattr(e, "code", 500)
-    finally:
-        session.close()
-
-@app.route("/api/delete_plan", methods=["POST"])
-def delete_plan():
-    data = request.json
-    project_name = data.get("project")
-    plan_id = data.get("plan_id")
-    
-    if not plan_id:
-        return jsonify({"error": "Missing plan_id"}), 400
-        
-    session = ps.request_session(DbSession)
-    try:
-        plan = session.query(ProjectPlan).filter_by(id=plan_id).first()
-        if plan:
-            session.delete(plan)
             session.commit()
         return jsonify({"status": "ok"})
     except Exception as e:
@@ -808,6 +455,7 @@ def rename_plan():
         if not plan:
             return jsonify({"error": f"Plan '{old_plan_name}' not found in project '{project_name}'"}), 404
             
+        plan_history.watch(session, plan.id, 'Rename Plan')
         plan.name = validate_plan_name(session, proj.id, new_plan_name, plan.id)
         session.commit()
         return jsonify({"status": "ok", "plan_id": plan.id, "new_name": new_plan_name})
@@ -892,7 +540,7 @@ def schedule_calendar_day(day):
 def create_task():
     if request.method == 'GET':
         session = DbSession()
-        try: return jsonify(tasks=tm.task_list(session))
+        try: return jsonify(tasks=tm.task_list(session, request.args.get('status')))
         finally: session.close()
     session = ps.request_session(DbSession)
     try:
@@ -930,11 +578,11 @@ def update_task_schedule(task_id):
         session.close()
 
 
-@app.route("/api/tasks/<task_id>", methods=["PATCH", "DELETE"])
+@app.route("/api/tasks/<task_id>", methods=["PATCH"])
 def handle_task(task_id, entity_label="Task"):
     session = ps.request_session(DbSession)
     try:
-        tm.manage(session, task_id, request.get_json(silent=True) or {}, delete=request.method == 'DELETE')
+        tm.manage(session, task_id, request.get_json(silent=True) or {})
         session.commit()
         return jsonify(status='ok')
     except Exception as exc:
@@ -969,13 +617,13 @@ def generate_selected_reports(project_id):
             db_path = session.get_bind().url.database
         logs = request.path.endswith('/reports/logs')
         output_format = request.args.get('format', 'html')
-        if output_format not in ('html', 'pdf'):
-            raise ps.StateError('Choose HTML or PDF report format.')
+        if output_format != 'html':
+            raise ps.StateError('Only HTML reports are supported.')
         if logs:
             content, filename = generate_log_archive(db_path, project_id, request.get_json(silent=True))
         else:
-            content, filename = generate_selection(db_path, project_id, request.get_json(silent=True), output_format=output_format)
-        return send_file(BytesIO(content), mimetype='application/zip' if logs or output_format == 'html' else 'application/pdf', as_attachment=True, download_name=filename)
+            content, filename = generate_selection(db_path, project_id, request.get_json(silent=True))
+        return send_file(BytesIO(content), mimetype='application/zip', as_attachment=True, download_name=filename)
     except Exception as exc:
         code = getattr(exc, 'code', 500)
         return jsonify(error=str(exc)), code if isinstance(code, int) and 400 <= code < 600 else 500
@@ -984,11 +632,19 @@ def generate_selected_reports(project_id):
 @app.route("/api/tasks/<task_id>/report", methods=["GET"])
 def download_task_report(task_id):
     try:
-        from report_generator import generate_task_pdf_report
-        out_filename = f"report_{task_id}.pdf"
-        out_path = os.path.join(WORKSPACE_DIR, "results", out_filename)
-        generate_task_pdf_report(task_id, out_path, db_path=DB_PATH)
-        return send_file(out_path, as_attachment=True, download_name=f"BMC_Test_Report_{task_id}.pdf")
+        from io import BytesIO
+        from report_exports import generate_selection
+        if request.args.get('format', 'html') != 'html':
+            raise ps.StateError('Only HTML reports are supported.')
+        with DbSession() as session:
+            task = session.get(Task, task_id)
+            if task is None:
+                raise ps.StateError('Task not found.', 404)
+            project_id = session.get(ProjectPlan, task.plan_id).project_id
+            db_path = session.get_bind().url.database
+        content, _ = generate_selection(db_path, project_id, {'task_ids': [task_id]})
+        return send_file(BytesIO(content), mimetype='application/zip', as_attachment=True,
+                         download_name=f'BMC_Test_Report_{task_id}.zip')
     except Exception as e:
         return jsonify({"error": str(e)}), getattr(e, "code", 500)
 
@@ -1021,6 +677,7 @@ def reorder_task_testcases(task_id):
 
 
 @app.route("/api/plans/<plan_id>", methods=["PATCH"])
+@app.route("/api/plans/<plan_id>/settings", methods=["PATCH"])
 def patch_plan(plan_id):
     data = request.json
     session = ps.request_session(DbSession)
@@ -1029,6 +686,8 @@ def patch_plan(plan_id):
         if not plan:
             return jsonify({"error": "Plan not found"}), 404
             
+        if "sku_id" in data and data["sku_id"] != tm.plan_sku(session, plan):
+            tm.bind_plan_sku(session, plan, data["sku_id"])
         if "name" in data:
             plan.name = validate_plan_name(session, plan.project_id, data["name"], plan.id)
 
@@ -1246,6 +905,8 @@ def run_testcase():
         "status": "running",
         "thread": None,
         "stop_requested": False,
+        "activity_at": time.time(),
+        "cancel_event": threading.Event(),
         "project_id": project_id,
         "listeners": [],
         "log_history": [],
@@ -1264,32 +925,13 @@ def run_testcase():
         def put_msg(msg):
             if session_id in run_sessions:
                 if msg is not None:
+                    run_sessions[session_id]["activity_at"] = time.time()
+                    msg["activity_at_ms"] = int(run_sessions[session_id]["activity_at"] * 1000)
                     run_sessions[session_id]["log_history"].append(msg)
                 for q in list(run_sessions[session_id]["listeners"]):
                     q.put(msg)
             original_put(msg)
         msg_queue.put = put_msg
-        def web_input(prompt=''):
-            # 檢查是否已中斷
-            if run_sessions[session_id].get("stop_requested"):
-                raise TestInterrupted()
-                
-            run_sessions[session_id]['input_prompt'] = prompt
-            msg_queue.put({"type": "input_required", "text": prompt})
-            val = input_queue.get()
-            run_sessions[session_id]['input_prompt'] = None
-            msg_queue.put({'type': 'input_resolved'})
-            
-            # 如果抓到的是中斷哨兵值，拋出例外
-            if val == "__STOP__":
-                raise TestInterrupted()
-            return val
-
-        original_stdout = sys.stdout
-        import builtins
-        original_input = builtins.input
-        builtins.input = web_input
-
         # ── 建立 log 目錄與本次執行的 log 檔 ────────────────────────────
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         safe_tc_name = "".join([c if c.isalnum() or c in "-_" else "_" for c in tc_name]).strip("_")
@@ -1304,107 +946,41 @@ def run_testcase():
                       f"TestCase: {tc_name}\nTestCase ID: {testcase_id}\nTimestamp: {timestamp}\n"
                       + "=" * 40 + "\n\n")
         result_file.write(log_header)
-        print_writer = PrintLogWriter(result_file, msg_queue.put)
-        case_log = CaseLog(result_file, msg_queue.put)
-        sys.stdout = print_writer
-        case_log.section("Platform connection")
-
+        result_file.close()
+        run = run_sessions[session_id]
+        config = dict(environment=environment, settings=case_settings, module=case_module,
+                      session_id=session_id, name=tc_name, root=MAIN_PROGRAM_DIR,
+                      framework_root=str(Path(BASE_DIR).parent / 'main_program'), log_path=result_log_path)
+        context = {}
         try:
-            import urllib3
-            import redfish
-            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
-            conf = environment["redfish"]
-
-            msg_queue.put({"type": "status", "text": f"Connecting to BMC: {conf['host']}..."})
-
-            try:
-                real_client = redfish.redfish_client(
-                    base_url=conf["host"],
-                    username=conf["username"],
-                    password=conf["password"],
-                    default_prefix="/redfish/v1",
-                    cafile=True if conf.get('verify_ssl') else None,
-                    timeout=15,
-                    max_retry=3
-                )
-                real_client.login(auth="basic")
-                msg_queue.put({"type": "status", "text": f"[OK] Connected to BMC: {conf['host']}"})
-                # 套上透明代理，將 Test log 與 msg_queue 傳進去，同時寫 full body 並推送 SSE
-                client = WebLoggingRedfishClient(real_client, api_file=result_file, msg_queue=msg_queue, environment=environment)
-            except Exception as e:
-                msg_queue.put({"type": "error", "text": f"[FAIL] Connection failed: {e}"})
-                run_sessions[session_id]["status"] = "error"
-                return
-
-            context = {
-                "_session_id": session_id,
-                "_tc_status": "PASS",
-                "redfish": conf
-            }
-            context['log'] = case_log
-            context['console_server'] = environment['console_server']
-            context['dut_console'] = environment['dut_console']
-            context['dut_os'] = environment['dut_os']
-            if single_execution:
-                context['case_settings'] = case_settings
-            
-            if run_sessions[session_id].get('stop_requested'): raise TestInterrupted()
-            module_path = case_module
-            msg_queue.put({'type': 'case_start', 'case_name': tc_name})
-            try:
-                sc.execute_script(MAIN_PROGRAM_DIR, module_path, client, context, case_settings.get('preset'))
-                result = {'PASS':'PASS', 'CP':'C-PASS','C-PASS':'C-PASS', 'BLOCK':'BLOCK'}.get(context.get('_tc_status'), 'FAIL')
-                msg_queue.put({'type': 'case_done', 'case_name': tc_name, 'result': result})
-            except TestInterrupted: raise
-            except Exception as error:
-                context['_tc_status'] = 'FAIL'
-                msg_queue.put({'type': 'case_done', 'case_name': tc_name, 'result': 'FAIL', 'error': str(error)})
-
-            msg_queue.put({"type": "done", "text": "Test Case execution finished."})
-            run_sessions[session_id]["status"] = "done"
-
-        except TestInterrupted:
-            msg_queue.put({"type": "status", "text": "Execution was stopped by the operator."})
-            msg_queue.put({"type": "done", "text": "Execution stopped."})
-            run_sessions[session_id]["status"] = "stopped"
-
-        except Exception as e:
-            msg_queue.put({"type": "error", "text": f"Execution error: {e}"})
-            run_sessions[session_id]["status"] = "error"
+            state, verdict = run_case_worker(config, run, msg_queue.put)
+            run['status'] = state
+            context['_tc_status'] = verdict
+        except Exception as error:
+            run['status'] = 'error'
+            msg_queue.put({'type': 'error', 'text': f'Execution worker failed: {error}'})
         finally:
-            # 確保代理用戶端的登出與連線關閉被執行
-            if 'client' in locals() and client:
-                try:
-                    print("  [Console] Logging out and closing connections...")
-                    client.logout()
-                except Exception:
-                    pass
-            elif 'real_client' in locals() and real_client:
-                try:
-                    real_client.logout()
-                except Exception:
-                    pass
-
-            print_writer.flush()
-            if not case_log.finished:
-                state = run_sessions[session_id]["status"]
-                stopped = state == "stopped" or run_sessions[session_id].get("stop_requested")
-                status = "Stopped" if stopped else ({"PASS":"Pass","CP":"C-PASS","C-PASS":"C-PASS","BLOCK":"Block"}.get(locals().get("context", {}).get("_tc_status"), "Fail") if state == "done" else "Fail")
-                errors = [event.get("error") or event.get("text") for event in run_sessions[session_id]["log_history"]
-                          if event.get("type") == "error" or event.get("error")]
-                case_log.finish(status, next((error for error in reversed(errors) if error),
-                                             "Execution stopped by operator" if stopped else "Execution finished"))
-            sys.stdout = original_stdout
-            builtins.input = original_input
-            result_file.write("\n" + "=" * 40 + "\n=== End of Log ===\n")
-            result_file.close()
+            stopped = run['stop_requested']
+            if stopped:
+                run['status'] = 'stopped'
+                msg_queue.put({'type': 'status', 'text': 'Execution was stopped by the operator.'})
+            with open(result_log_path, 'a', encoding='utf-8') as output:
+                case_log = CaseLog(output, msg_queue.put)
+                case_log.records = [e['log_record'] for e in run['log_history'] if 'log_record' in e]
+                if stopped or not any(r['kind'] == 'finish' for r in case_log.records):
+                    verdict = context.get('_tc_status') if run['status'] == 'done' else None
+                    status = 'Stopped' if stopped else {'PASS':'Pass','BLOCK':'Block','CP':'C-PASS','C-PASS':'C-PASS'}.get(verdict, 'Fail')
+                    errors = [e.get('error') or e.get('text') for e in run['log_history'] if e.get('error') or e['type'] == 'error']
+                    reason = 'Execution stopped by operator' if stopped else next((e for e in reversed(errors) if e), 'Execution finished')
+                    case_log.finish(status, reason)
+                output.write('\n' + '=' * 40 + '\n=== End of Log ===\n')
             if task_id:
                 result_session = DbSession()
                 try:
                     ps.begin_write(result_session)
                     stopped = run_sessions[session_id].get("stop_requested") or run_sessions[session_id]["status"] == "stopped"
-                    outcome = "TBD" if stopped else ({"PASS":"Passed","CP":"C-PASS","C-PASS":"C-PASS","BLOCK":"Block"}.get(locals().get("context", {}).get("_tc_status"), "Failed") if run_sessions[session_id]["status"] == "done" else "Failed")
+                    verdict = locals().get("context", {}).get("_tc_status") if run_sessions[session_id]["status"] == "done" else None
+                    outcome = "TBD" if stopped else {"PASS":"Passed","BLOCK":"Block","CP":"C-PASS","C-PASS":"C-PASS"}.get(verdict, "Failed")
                     with open(result_log_path, encoding="utf-8") as result_log:
                         latest_log = result_log.read()
                     # Persist this testcase's current structured evidence before the stream closes.
@@ -1428,7 +1004,7 @@ def run_testcase():
                         result_data = json.loads(saved.result_json)
                         result_data.update(source_version=case_source_version, plan_settings_revision=case_revision,
                                            settings=case_settings, log_files=log_files,
-                                           report_definition={key:definition['metadata'].get(key) for key in ('description', 'test_method')})
+                                           report_definition={key:definition['metadata'].get(key) for key in ('description', 'test_method', 'spec_ref', 'test_type', 'compliance')})
                         saved.result_json = json.dumps(result_data, ensure_ascii=False)
                     result_session.commit()
                 except Exception as persistence_error:
@@ -1460,13 +1036,13 @@ def run_testcase():
             ps.check_execution_token(task, execution_token)
             if task.execution_worker_id != session_id: raise ps.StateError("Worker admission changed", 409)
             task.execution_worker_id = None
-            if task.execution_stop_requested or run_sessions[session_id].get("stop_requested") or run_sessions[session_id]["status"] == "error":
+            run = run_sessions[session_id]
+            if (task.execution_stop_requested or run["status"] == "error"
+                    or (run.get("stop_requested") and run.get("stop_scope") != "case")):
                 ps.finish_execution(release_session, task_id, execution_token)
             release_session.commit()
 
     def guarded_execute():
-        import builtins
-        saved_stdout, saved_input = sys.stdout, builtins.input
         try:
             if task_id:
                 with DbSession() as admission_session:
@@ -1474,11 +1050,9 @@ def run_testcase():
                     ps.check_execution_token(task, execution_token)
                     if task.execution_stop_requested:
                         run_sessions[session_id]["stop_requested"] = True
-                        run_sessions[session_id]["status"] = "stopped"
-                        return
+
             execute_in_thread()
         except Exception as error:
-            sys.stdout, builtins.input = saved_stdout, saved_input
             run_sessions[session_id]["status"] = "error"
             if task_id:
                 with DbSession() as failed_session:
@@ -1548,9 +1122,7 @@ def stop_testcase():
                     if data.get("execution_token") != run.get("execution_token"): raise ps.StateError("Stale execution", 409)
                 except ps.StateError as error:
                     return jsonify(error=str(error)), error.code
-        run_sessions[session_id]["stop_requested"] = True
-        # 餵入哨兵值解除 input_queue.get() 阻塞
-        run_sessions[session_id]["input_queue"].put("__STOP__")
+        ps.request_worker_stop(run)
         return jsonify({"status": "ok"})
     return jsonify({"error": "Session not found"}), 404
 

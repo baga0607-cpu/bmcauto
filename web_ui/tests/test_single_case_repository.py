@@ -10,6 +10,7 @@ from sqlalchemy.orm import sessionmaker
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import app as api
+from worker_fixture import install_inline_worker
 import single_case as sc
 import plan_state as ps
 from models import Base, Project, ProjectPlan, TestCase, Task, TaskTestCase, RepositoryCase
@@ -27,6 +28,7 @@ def execute(client, context=None, preset=None):
 
 class SingleCaseRepositoryTest(unittest.TestCase):
     def setUp(self):
+        install_inline_worker(self, api)
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
@@ -238,7 +240,7 @@ class SingleCaseRepositoryTest(unittest.TestCase):
             s.commit()
         self.assertEqual(self.update(tc, dict(settings={'preset':'changed','expected':200},settings_revision=0)).status_code, 200)
         for task_id in ('task1','task2'):
-            data = self.client.get(f'/api/tasks/{task_id}/summary').get_json()['testcases'][0]
+            data = self.client.get(f'/api/tasks/{task_id}/results').get_json()['testcases'][0]
             self.assertTrue(data['needs_retest']); self.assertTrue(data['retest_message'])
             self.assertEqual(data['status'],'Passed'); self.assertEqual(data['log_text'],'old log')
             self.assertEqual(data['result'],{'old':True})
@@ -341,7 +343,7 @@ class SingleCaseRepositoryTest(unittest.TestCase):
             self.assertEqual(response.status_code,200,response.get_json())
             sid=response.get_json()['session_id']; api.run_sessions[sid]['thread'].join(timeout=10)
             self.assertFalse(api.run_sessions[sid]['thread'].is_alive())
-        result=self.client.get('/api/tasks/task1/summary').get_json()['testcases'][0]
+        result=self.client.get('/api/tasks/task1/results').get_json()['testcases'][0]
         self.assertEqual(calls,['/redfish/v1/'])
         self.assertEqual(result['status'],'Passed',result['result'])
         self.assertEqual(result['result']['settings'],{'preset':'/redfish/v1/','expected':200})

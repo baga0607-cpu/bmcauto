@@ -8,7 +8,6 @@ import re
 import unittest
 from unittest.mock import patch
 import requests
-import pypdf
 from sqlalchemy import create_engine
 from case_log import CaseLog
 from result_policy import validate_method
@@ -153,18 +152,13 @@ class ConditionalReportTest(exports.ReportExportsTest):
         for text in [preview,html]:
             self.assertIn('data-status="C-PASS"',text)
             self.assertNotIn('<dt>Note</dt>',text)
-            self.assertIn('Note: DUT returned HTTP 404',text)
-            self.assertIn('>Skip</td>',text)
+            self.assertIn('Note: DUT returned HTTP 404',re.sub(r'<[^>]+>', '', text))
+            self.assertIn('>Skip</span>',text)
         table=lambda text: re.search(r'<table class="method-table">.*?</table>',text,re.S)[0]
         self.assertEqual(table(preview),table(html))
-        pdf=self.export(plan_ids=['a'])
-        self.assertEqual(pdf.status_code,200)
-        extracted='\n'.join(p.extract_text() for p in pypdf.PdfReader(io.BytesIO(pdf.data)).pages)
-        self.assertIn('C-PASS',extracted); self.assertIn('Skip',extracted)
         target=os.environ.get('BMC_REPORT_QA_DIR')
         if target:
             Path(target,'cp-preview.html').write_text(preview,encoding='utf-8')
-            Path(target,'cp-report.pdf').write_bytes(pdf.data)
 
     def test_legacy_cp_status_and_manual_note_render_as_c_pass(self):
         self.prepare()
