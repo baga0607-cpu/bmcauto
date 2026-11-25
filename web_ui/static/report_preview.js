@@ -47,7 +47,7 @@ window.ReportPreview = (() => {
     const dialog = document.createElement('dialog');
     dialog.className = 'report-preview-dialog';
     dialog.setAttribute('aria-labelledby', 'report-preview-title');
-    dialog.innerHTML = '<header class="report-preview-header"><div><h2 id="report-preview-title">Report preview</h2><p class="help" data-preview-identity data-no-translate></p></div><div class="report-preview-actions"><button type="button" data-preview-refresh>Refresh</button><button type="button" data-preview-close autofocus>Close</button></div></header><p class="help report-preview-status" role="status"></p><p class="report-preview-error" role="alert"></p><iframe class="report-preview-frame" title="Test Case report preview" sandbox="allow-same-origin" referrerpolicy="no-referrer" hidden></iframe>';
+    dialog.innerHTML = '<header class="report-preview-header"><div><h2 id="report-preview-title">Report preview</h2><p class="help" data-preview-identity data-no-translate></p></div><div class="report-preview-actions"><button type="button" data-preview-refresh>Refresh</button><button type="button" data-preview-close autofocus aria-label="Close" title="Close" class="execution-icon-button"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="/action-icons.svg#close"/></svg></button></div></header><p class="help report-preview-status" role="status"></p><p class="report-preview-error" role="alert"></p><iframe class="report-preview-frame" title="Test Case report preview" sandbox="allow-same-origin" referrerpolicy="no-referrer" hidden></iframe>';
     dialog.querySelector('[data-preview-identity]').textContent = taskName+' / '+caseName;
     const view = {dialog, taskId, caseId, opener,
       refresh:dialog.querySelector('[data-preview-refresh]'),

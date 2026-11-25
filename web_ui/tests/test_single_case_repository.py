@@ -60,15 +60,17 @@ class SingleCaseRepositoryTest(unittest.TestCase):
     def update(self, tc, data, plan='a'):
         return self.client.put(f'/api/plans/{plan}/testcases/{tc["id"]}/definition', json=data)
 
-    def test_direct_plan_import_root_move_and_restart(self):
-        response=self.client.post('/api/plans/a/testcases/import-python',json={'source':SOURCE,'folder_id':None})
+    def test_repository_import_root_move_and_restart(self):
+        response=self.client.post('/api/plans/a/import-cases',json={
+            'source_type':'repository','kind':'case','id':self.repository['id']})
         self.assertEqual(response.status_code,201,response.get_json())
-        case=response.get_json()
+        case=response.get_json()['added'][0]
+        self.assertNotIn('family_id', case)
         self.assertIsNone(case['folder_id'])
         self.assertEqual(self.definition(case)['settings']['expected'],200)
         with self.Session() as session:
             self.assertEqual(session.query(RepositoryCase).count(),1)
-            self.assertIsNone(session.get(TestCase,case['id']).repository_id)
+            self.assertEqual(session.get(TestCase,case['id']).repository_id,self.repository['id'])
         folder=self.client.post('/api/plans/a/folders',json={'name':'Folder'}).get_json()['id']
         for destination in (folder,None):
             response=self.client.post('/api/plans/a/testcases/move',json={'testcase_ids':[case['id']],'folder_id':destination})
@@ -78,21 +80,13 @@ class SingleCaseRepositoryTest(unittest.TestCase):
             self.assertIsNone(session.get(TestCase,case['id']).folder_id)
         self.assertEqual(self.definition(case)['source'],SOURCE)
 
-    def test_direct_import_folder_validation_and_lock(self):
-        folder=self.client.post('/api/plans/a/folders',json={'name':'Folder'}).get_json()['id']
-        foreign=self.client.post('/api/plans/b/folders',json={'name':'Other'}).get_json()['id']
-        for source,target,status in [('bad syntax !',folder,400),(SOURCE,foreign,400),(SOURCE,folder,201),(SOURCE,folder,409)]:
-            response=self.client.post('/api/plans/a/testcases/import-python',json={'source':source,'folder_id':target})
-            self.assertEqual(response.status_code,status,response.get_json())
+    def test_direct_python_import_is_unavailable(self):
+        payload = dict(plan_id='a', source=SOURCE, script_kind='single', source_version='v1')
+        self.assertIn(self.client.post('/api/plans/a/testcases/import-python',json=payload).status_code,(404,405))
+        self.assertEqual(self.client.post('/api/import_tc',json=payload).status_code,410)
         with self.Session() as session:
-            self.assertEqual(session.query(TestCase).count(),1)
-            self.assertEqual(session.query(RepositoryCase).count(),1)
-            self.assertEqual(session.query(TestCase).one().folder_id,folder)
-            session.get(Task,'task1').execution_active=True
-            session.commit()
-        response=self.client.post('/api/plans/a/testcases/import-python',json={'source':SOURCE.replace('Service entry','Locked')})
-        self.assertEqual(response.status_code,409,response.get_json())
-        self.assertEqual(len(list(self.root.glob('testcase_database/scripts/*/case.py'))),1)
+            self.assertEqual(session.query(TestCase).count(),0)
+        self.assertFalse(list(self.root.glob('testcase_database/scripts/*/case.py')))
 
     def test_source_import_preserves_plan_settings_and_independence(self):
         source=self.add_case('a')
@@ -122,7 +116,7 @@ class SingleCaseRepositoryTest(unittest.TestCase):
         top=self.client.post('/api/plans/a/folders',json={'name':'Top'}).get_json()['id']
         child=self.client.post('/api/plans/a/folders',json={'name':'Child','parent_id':top}).get_json()['id']
         self.client.post('/api/plans/a/folders',json={'name':'Empty','parent_id':child})
-        source=self.client.post('/api/plans/a/testcases/import-python',json={'source':SOURCE,'folder_id':child}).get_json()
+        source=self.client.post('/api/plans/a/repository/testcases',json={'repository_id':self.repository['id'],'folder_id':child}).get_json()
         payload={'source_type':'plan','source_plan_id':'a','kind':'folder','id':top}
         response=self.client.post('/api/plans/b/import-cases',json=payload)
         self.assertEqual(response.status_code,201,response.get_json())
@@ -137,7 +131,8 @@ class SingleCaseRepositoryTest(unittest.TestCase):
         # New source subtree fails after a first file was copied; no partial folders/files survive.
         broken=self.client.post('/api/plans/a/folders',json={'name':'Broken'}).get_json()['id']
         for name in ['First valid','Missing file']:
-            item=self.client.post('/api/plans/a/testcases/import-python',json={'source':SOURCE.replace('Service entry',name),'folder_id':broken}).get_json()
+            repo=self.client.post('/api/repository/testcases',json={'source':SOURCE.replace('Service entry',name)}).get_json()
+            item=self.client.post('/api/plans/a/repository/testcases',json={'repository_id':repo['id'],'folder_id':broken}).get_json()
         with self.Session() as session:sc.script_file(self.root,session.get(TestCase,item['id'])).unlink()
         files=set(self.root.glob('testcase_database/scripts/*/case.py'))
         response=self.client.post('/api/plans/b/import-cases',json={**payload,'id':broken})
@@ -193,6 +188,7 @@ class SingleCaseRepositoryTest(unittest.TestCase):
         with self.Session() as session:
             membership=session.query(TaskTestCase).filter_by(testcase_id=copied['id']).one()
             self.assertEqual(membership.log_text,'preserve log');self.assertTrue(membership.needs_retest)
+            self.assertEqual(membership.retest_reasons, ['Case Modified'])
         self.assertEqual(self.client.post('/api/plans/b/import-cases',json=payload).status_code,409)
 
     def test_folder_import_resolves_versions_within_the_same_batch(self):
@@ -242,8 +238,13 @@ class SingleCaseRepositoryTest(unittest.TestCase):
         for task_id in ('task1','task2'):
             data = self.client.get(f'/api/tasks/{task_id}/results').get_json()['testcases'][0]
             self.assertTrue(data['needs_retest']); self.assertTrue(data['retest_message'])
+            self.assertEqual(data['retest_reasons'], ['Parameter Modified'])
             self.assertEqual(data['status'],'Passed'); self.assertEqual(data['log_text'],'old log')
             self.assertEqual(data['result'],{'old':True})
+        self.update(tc, dict(source=SOURCE+'\n# updated', settings_revision=1))
+        self.client.put('/api/tasks/task1/settings', json={'host':'https://changed.invalid'})
+        case = self.client.get('/api/tasks/task1/results').get_json()['testcases'][0]
+        self.assertEqual(case['retest_reasons'], ['Parameter Modified', 'Case Modified', 'Connection Modified'])
 
     def test_noop_does_not_require_retest_and_never_run_remains_unrun(self):
         tc = self.add_case()
@@ -307,8 +308,7 @@ class SingleCaseRepositoryTest(unittest.TestCase):
         self.assertEqual(self.definition(response.get_json(),'b')['source_version'],self.repository['source_version'])
         response=self.client.post('/api/import_tc',json={'plan_id':'b','tc_name':'Round trip','script_kind':'single',
             'source':SOURCE,'source_version':self.repository['source_version'],'settings':{'preset':'/exported','expected':200}})
-        self.assertEqual(response.status_code,201,response.get_json())
-        self.assertEqual(self.definition(response.get_json(),'b')['settings']['preset'],'/exported')
+        self.assertEqual(response.status_code,410)
 
     def test_execute_reads_plan_file_each_time(self):
         tc=self.add_case(); paths=[]
@@ -327,8 +327,10 @@ class SingleCaseRepositoryTest(unittest.TestCase):
             s.add(TaskTestCase(task_id='task1',testcase_id=tc['id'],status='Passed',needs_retest=True))
             s.commit(); ps.begin_write(s); token=ps.start_execution(s,'task1',[tc['id']]); s.commit()
             row=s.query(TaskTestCase).one(); self.assertTrue(row.needs_retest)
+            self.assertEqual(ps.task_case_dict(row, s.get(TestCase, tc['id']))['retest_message'], 'Rerun needed: Reason unavailable')
             ps.begin_write(s); ps.save_result(s,'task1',{'id':tc['id'],'execution_token':token,'status':'Passed','result':{}})
             s.commit(); self.assertFalse(row.needs_retest)
+            self.assertEqual(row.retest_reasons, [])
 
     def test_task_runner_ignores_submitted_steps_and_settings(self):
         tc=self.add_case()

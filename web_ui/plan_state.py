@@ -10,6 +10,7 @@ import case_order as co
 import plan_history
 import task_environment as te
 import shutil
+import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -151,11 +152,12 @@ def replace_scope(session,task_id,items):
 
 def task_case_dict(row,tc,include_evidence=True):
     case=tc.to_dict()
+    reasons = row.retest_reasons or ['Reason unavailable'] if row.needs_retest else []
     case.update(status=canonical_status(row.status),selected=bool(row.selected),position=row.position,
                 bug_id=row.bug_id or '',executed_at=row.executed_at,note=row.result_note or '',
                 manual_override=json.loads(row.manual_override_json) if row.manual_override_json else None,
-                needs_retest=bool(row.needs_retest),
-                retest_message='Plan test conditions or Task connection settings changed; rerun this Test Case.' if row.needs_retest else '')
+                duration_ms=row.duration_ms, needs_retest=bool(row.needs_retest),
+                retest_reasons=reasons, retest_message='Rerun needed: ' + ', '.join(reasons) if reasons else '')
     if include_evidence:
         case.update(result=json.loads(row.result_json) if row.result_json else None,
                     log_text=test_log_text(row.log_text, row.api_log_text),api_log_text='')
@@ -210,7 +212,7 @@ def start_execution(session,task_id,ids):
     rows={r.testcase_id:r for r in session.query(TaskTestCase).filter_by(task_id=task_id)}
     if any(i not in rows for i in ids): raise StateError('Execution cannot add Task scope')
     for i in ids:
-        row=rows[i]; row.manual_override_json=None; row.status='TBD'; row.result_json=None; row.result_note=None; row.log_text=None; row.api_log_text=None; row.executed_at=None
+        row=rows[i]; row.manual_override_json=None; row.status='TBD'; row.result_json=None; row.result_note=None; row.log_text=None; row.api_log_text=None; row.executed_at=None; row.duration_ms=None
     task.execution_active=True; task.execution_selection=json.dumps(ids); task.execution_token=str(uuid.uuid4())
     task.execution_worker_id=None; task.execution_stop_requested=False
     return task.execution_token
@@ -237,9 +239,11 @@ def save_result(session,task_id,data):
     result['note'] = row.result_note
     row.result_json=json.dumps(result,ensure_ascii=False)
     row.log_text=data.get('log_text',data.get('log','')); row.api_log_text=data.get('api_log_text','')
+    row.duration_ms=data.get('duration_ms')
     row.executed_at=data.get('executed_at'); row.bug_id=data.get('bug_id',row.bug_id)
     if row.status in ('Passed','Failed','C-PASS'):
         row.needs_retest=False
+        row.retest_reasons=[]
     session.flush()
 
 def request_worker_stop(run):
@@ -255,7 +259,7 @@ def finish_execution(session,task_id,execution_token):
     check_execution_token(task,execution_token)
     if task.execution_worker_id: raise StateError('Execution worker is still stopping',409)
     for row in session.query(TaskTestCase).filter_by(task_id=task_id,status='Running'):
-        row.status='TBD'; row.result_json=None; row.result_note=None; row.log_text=None; row.api_log_text=None; row.executed_at=None
+        row.status='TBD'; row.result_json=None; row.result_note=None; row.log_text=None; row.api_log_text=None; row.executed_at=None; row.duration_ms=None
     task.execution_active=False; task.execution_selection=None; task.execution_token=None; task.execution_stop_requested=False
 
 def folder_descendants(session,folder):
@@ -415,11 +419,13 @@ def migrate_current_state(engine,log_path):
                 'testcases': {'script_kind': "TEXT NOT NULL DEFAULT 'steps'", 'source_version': 'TEXT',
                               'repository_id': 'TEXT', 'settings_json': "TEXT NOT NULL DEFAULT '{}'",
                               'settings_revision': 'INTEGER NOT NULL DEFAULT 0'},
-                'task_testcases': {'needs_retest': 'BOOLEAN NOT NULL DEFAULT 0'},
+                'task_testcases': {'duration_ms': 'INTEGER', 'needs_retest': 'BOOLEAN NOT NULL DEFAULT 0', 'retest_reasons': 'JSON'},
             }.items():
                 present={r[1] for r in conn.exec_driver_sql(f'PRAGMA table_info({table})')}
                 for name,kind in additions.items():
                     if name not in present: conn.exec_driver_sql(f'ALTER TABLE {table} ADD COLUMN {name} {kind}')
+            if any(row[1] == 'family_id' for row in conn.exec_driver_sql('PRAGMA table_info(testcases)')):
+                conn.exec_driver_sql('ALTER TABLE testcases DROP COLUMN family_id')
             migrate_case_versions(conn)
             RepositoryCase.__table__.create(conn, checkfirst=True)
             PlanFolder.__table__.create(conn,checkfirst=True)
@@ -718,6 +724,22 @@ def install_routes(app, runtime):
     def current_scope(s,data,task_id):
         replace_scope(s,task_id,data.get('testcases',[])); s.commit(); return jsonify(status='ok')
 
+    @route('/api/tasks/<task_id>/selection',['PATCH'])
+    def update_selection(s,data,task_id):
+        task=require(s,Task,task_id)
+        unlocked(s,task.plan_id)
+        changes=data.get('changes')
+        if not isinstance(changes,dict) or any(type(value) is not bool for value in changes.values()):
+            raise StateError('Supply testcase IDs and boolean selections')
+        rows=s.query(TaskTestCase).filter_by(task_id=task_id).all()
+        if changes.keys() - {row.testcase_id for row in rows}:
+            raise StateError('Test Case outside Task scope',409)
+        for row in rows:
+            if row.testcase_id in changes:
+                row.selected=changes[row.testcase_id]
+        s.commit()
+        return jsonify(status='ok')
+
     @route('/api/task_testcases/<task_id>/<tc_id>',['PATCH'],endpoint='patch_task_testcase')
     def current_scope_patch(s,data,task_id,tc_id):
         task=require(s,Task,task_id); unlocked(s,task.plan_id)
@@ -745,6 +767,8 @@ def install_routes(app, runtime):
         if run and not run.get('closed') and run.get('activity_at'):
             result['activity'] = dict(session_id=worker_id, case_id=run['testcase_id'],
                                       at_ms=int(run['activity_at'] * 1000))
+            if 'started_ns' in run:
+                result['activity']['elapsed_ms'] = run.get('duration_ms', (time.monotonic_ns() - run['started_ns']) // 1_000_000)
         return jsonify(result)
 
     @route('/api/tasks/<task_id>/results',['GET'],endpoint='load_task_results')
@@ -761,6 +785,15 @@ def install_routes(app, runtime):
                        completed_testcase_ids=[run['testcase_id'] for run in runtime['run_sessions'].values()
                            if active and run.get('task_id')==task_id and run.get('execution_token')==task.execution_token
                            and run.get('closed') and run.get('testcase_id')])
+
+    @route('/api/tasks/<task_id>/connection-hints',['GET'])
+    def connection_hints(s,data,task_id):
+        require(s,Task,task_id)
+        path = Path(runtime['WORKSPACE_DIR']) / 'connection-hints.json'
+        hints = json.loads(path.read_text(encoding='utf-8')) if path.is_file() else {}
+        response = jsonify(hints)
+        response.headers['Cache-Control'] = 'no-store'
+        return response
 
     @route('/api/tasks/<task_id>/settings',['GET','PUT','POST'])
     def current_task_settings(s,data,task_id):

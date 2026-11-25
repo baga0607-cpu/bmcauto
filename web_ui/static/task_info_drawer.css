@@ -13,6 +13,18 @@
   animation: task-info-arrive .18s ease-out;
 }
 @keyframes task-info-arrive { from { transform: translateX(40px); } to { transform: translateX(0); } }
+dialog.task-info-drawer[open] {
+  inset: 0;
+  margin: auto;
+  width: min(680px, calc(100vw - 24px));
+  height: min(720px, calc(100dvh - 24px));
+  padding: 0;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  animation: none;
+}
+dialog.task-info-drawer::backdrop { background: rgba(10,24,44,.45); }
+dialog.task-info-drawer .task-drawer-body { grid-template-columns: minmax(0,1fr); }
 @media (prefers-reduced-motion: reduce) { .task-info-drawer { animation: none; } }
 .task-drawer-heading { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; padding:16px 18px; border-bottom:1px solid var(--line); }
 .task-drawer-heading h1 { font-size:18px; margin:0 0 4px; overflow-wrap:anywhere; }
@@ -80,3 +92,14 @@
 #task-drawer-content .connection-group > summary { cursor:pointer; font-size:15px; font-weight:600; padding:4px 0; border-bottom:1px solid var(--line); margin-bottom:8px; }
 #task-drawer-content .connection-group > summary:hover { color:var(--accent); }
 #task-drawer-content .connection-group > summary:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
+
+#task-drawer-content .connection-ports{grid-column:1/-1;min-width:0;margin-top:6px}
+#task-drawer-content .connection-lan-row{display:grid;grid-template-columns:156px minmax(0,1fr) minmax(0,calc((100% - 174px)/2 - 18px)) 18px;column-gap:6px;align-items:center;margin-bottom:7.5px}
+#task-drawer-content .connection-lan-row>span{font-size:.9rem;font-weight:600}
+#task-drawer-content .connection-lan-row input{width:100%;min-width:0}
+#task-drawer-content .connection-lan-row button{width:18px;min-height:26px;padding:0;border:0;background:transparent;color:var(--muted);font-size:18px}
+#task-drawer-content .connection-lan-row button:hover{color:var(--bad);background:var(--bad-bg)}
+#task-drawer-content [data-add-port]{justify-self:start;font-size:12px;padding:4px 8px}
+@media(max-width:700px){
+ #task-drawer-content .connection-lan-row{grid-template-columns:max-content minmax(0,1fr) minmax(7ch,.55fr) 18px}
+}

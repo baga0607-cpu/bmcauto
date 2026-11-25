@@ -2,7 +2,6 @@
 import json
 from collections import Counter
 from datetime import datetime, timezone
-from uuid import UUID
 
 from flask import request
 from sqlalchemy import event
@@ -18,7 +17,7 @@ OPERATIONS = {
     'current_delete_selection': 'Remove items', 'remove_with_folder_policy': 'Remove items',
     'current_move_selection': 'Move items', 'move_plan_testcases': 'Move Test Cases',
     'reorder_plan_testcases': 'Reorder Test Cases', 'current_case_resort': 'Sort Test Cases',
-    'plan_import_python': 'Import Test Cases', 'repository_add_to_plan': 'Import Test Cases',
+    'repository_add_to_plan': 'Import Test Cases',
     'repository_folder_add_to_plan': 'Import Test Cases', 'import_cases': 'Import Test Cases',
     'import_tc': 'Import Test Cases', 'delete_tc': 'Remove Test Cases',
     'single_update': 'Update parameters',
@@ -93,23 +92,20 @@ def watch(session, plan_id, operation):
     order = operation in ('Move items', 'Move Test Cases', 'Reorder Test Cases', 'Sort Test Cases')
     before = snapshot(session, plan_id, order)
     operator = request.environ.get('REMOTE_USER')
-    batch_id = None
-    if request.endpoint == 'plan_import_python':
-        value = (request.get_json(silent=True) or {}).get('history_batch')
-        if isinstance(value, str):
-            try:
-                batch_id = str(UUID(value))
-            except ValueError:
-                pass
-
     @event.listens_for(session, 'before_commit', once=True)
     def record(transaction):
         transaction.flush()
         changes = differences(before, snapshot(transaction, plan_id, order))
         changes.extend(session.info.get('plan_source_changes', []))
+        recorded_cases = {change['item'] for change in changes if change['kind'] == 'Test Case'}
+        for name in sorted(session.info.get('plan_import_overwrites', set()) - recorded_cases):
+            changes.append(dict(kind='Test Case', item=name, before={}, after={'action': 'Overwrite'}))
         if changes:
+            origin = session.info.get('plan_import_origin')
+            if origin:
+                changes[0]['import_origin'] = origin
             transaction.add(PlanHistory(plan_id=plan_id, recorded_at=datetime.now(timezone.utc).isoformat(),
-                operator=operator, operation=operation, batch_id=batch_id, changes=json.dumps(changes, ensure_ascii=False)))
+                operator=operator, operation=operation, changes=json.dumps(changes, ensure_ascii=False)))
 
 
 def entries(session, plan_id):
@@ -118,10 +114,14 @@ def entries(session, plan_id):
     for row in rows:
         key = (row.batch_id, row.operator)
         changes = json.loads(row.changes)
+        origin = changes[0].pop('import_origin', None) if changes else None
+        key = (*key, json.dumps(origin, sort_keys=True))
         if row.batch_id and key in batches:
             batches[key]['changes'].extend(changes)
             continue
         entry = dict(time=row.recorded_at, operator=row.operator, operation=row.operation, changes=changes)
+        if origin:
+            entry['import_origin'] = origin
         result.append(entry)
         if row.batch_id:
             batches[key] = entry

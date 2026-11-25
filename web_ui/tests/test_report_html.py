@@ -27,6 +27,7 @@ class HTMLReportTest(unittest.TestCase):
         log='RAW_LOG_ONLY </script><script>alert(1)</script> 中文\n'*100000
         with self.Session() as session:
             row=session.query(TaskTestCase).filter_by(task_id='task1',testcase_id='case-0').one()
+            row.needs_retest=True
             row.log_text=log
             row.executed_at='2026-10-30T07:27:04.323336+00:00'
             row.result_json=json.dumps({'report_definition':{'description':'<img src=x onerror=alert(1)>'},'log_records':[{'kind':'finish','reason':'Recorded reason'}]})
@@ -39,6 +40,7 @@ class HTMLReportTest(unittest.TestCase):
             html=archive.read('BMC_Report.html').decode()
             self.assertNotIn('<dt>Result Summary</dt>',html)
             self.assertIn('2026/10/30 15:27:04 (UTC+08:00)',html)
+            self.assertNotIn('Rerun needed',html)
             self.assertNotIn('RAW_LOG_ONLY',html)
             self.assertNotIn('<img src=x',html)
             self.assertIn('&lt;img src=x',html)

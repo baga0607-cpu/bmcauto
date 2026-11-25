@@ -758,18 +758,16 @@ def import_tc():
     try:
         plan = ps.require(s, ProjectPlan, data.get('plan_id'))
         ps.unlocked(s, plan.id)
-        if data.get('system_id'):
-            original = ps.require(s, TestCase, data['system_id'])
-            if original.script_kind != 'single': raise ps.StateError('Step-based import is retired', 410)
-            definition = sc.definition(MAIN_PROGRAM_DIR, original)
-            source, version, settings = definition['source'], original.source_version, definition['settings']
-            repository_id, family_id = original.repository_id, original.family_id
-        else:
-            if data.get('script_kind') != 'single' or not isinstance(data.get('source'), str):
-                raise ps.StateError('Import a single .py through Test Case Repository; step import is retired', 410)
-            source, version, settings = data['source'], data.get('source_version'), data.get('settings', {})
-            if not version: raise ps.StateError('Source version is required')
-            repository_id, family_id = None, str(uuid.uuid4())
+        if not data.get('system_id'):
+            raise ps.StateError('Import from Test Case Repository or another Plan', 410)
+        original = ps.require(s, TestCase, data['system_id'])
+        if original.plan_id == plan.id: raise ps.StateError('Choose another Plan as the source')
+        if original.script_kind != 'single': raise ps.StateError('Step-based import is retired', 410)
+        definition = sc.definition(MAIN_PROGRAM_DIR, original)
+        source, version, settings = definition['source'], original.source_version, definition['settings']
+        repository_id = original.repository_id
+        origin_plan = ps.require(s, ProjectPlan, original.plan_id)
+        s.info['plan_import_origin'] = dict(type='plan', id=origin_plan.id, name=origin_plan.name)
         meta = sc.metadata(source)
         settings = sc.validate_settings(meta, settings)
         name = str(data.get('tc_name') or meta['name']).strip()
@@ -778,7 +776,7 @@ def import_tc():
             raise ps.StateError('A Test Case with this name already exists in the Plan', 409)
         folder = ps.resolve_folder(s, plan.id, data)
         identity = str(uuid.uuid4())
-        tc = TestCase(system_id=identity, family_id=family_id, display_name=name, plan_id=plan.id,
+        tc = TestCase(system_id=identity, display_name=name, plan_id=plan.id,
             script_kind='single', script_path=f'testcase_database.scripts.{identity}',
             source_version=version, repository_id=repository_id, settings_json=json.dumps(settings))
         s.add(tc); s.flush(); ps.assign_folder(s, tc, folder)
@@ -952,10 +950,18 @@ def run_testcase():
                       session_id=session_id, name=tc_name, root=MAIN_PROGRAM_DIR,
                       framework_root=str(Path(BASE_DIR).parent / 'main_program'), log_path=result_log_path)
         context = {}
+        duration_ms = None
         try:
-            state, verdict = run_case_worker(config, run, msg_queue.put)
-            run['status'] = state
-            context['_tc_status'] = verdict
+            if not run['stop_requested']:
+                started_ns = time.monotonic_ns()
+                run['started_ns'] = started_ns
+                try:
+                    state, verdict = run_case_worker(config, run, msg_queue.put)
+                finally:
+                    duration_ms = (time.monotonic_ns() - started_ns) // 1_000_000
+                    run['duration_ms'] = duration_ms
+                run['status'] = state
+                context['_tc_status'] = verdict
         except Exception as error:
             run['status'] = 'error'
             msg_queue.put({'type': 'error', 'text': f'Execution worker failed: {error}'})
@@ -998,7 +1004,7 @@ def run_testcase():
                                 evidence.append(f"Test Case: {event.get('result')} {event.get('case_name', '')} {event.get('error', '')}".rstrip())
                         evidence.extend(f"[ERROR] {error}" for error in errors)
                         latest_log += "\n".join(evidence) + "\n"
-                    ps.save_result(result_session, task_id, {"id": testcase_id, "execution_token": execution_token, "status": outcome, "executed_at": datetime.datetime.now(datetime.timezone.utc).isoformat(), "result": {"status": outcome, "events": case_details, "errors": errors, "log_records": case_log.records}, "log_text": latest_log, "api_log_text": ""})
+                    ps.save_result(result_session, task_id, {"id": testcase_id, "execution_token": execution_token, "status": outcome, "duration_ms": duration_ms, "executed_at": datetime.datetime.now(datetime.timezone.utc).isoformat(), "result": {"status": outcome, "events": case_details, "errors": errors, "log_records": case_log.records}, "log_text": latest_log, "api_log_text": ""})
                     if single_execution:
                         saved = result_session.query(TaskTestCase).filter_by(task_id=task_id, testcase_id=testcase_id).one()
                         result_data = json.loads(saved.result_json)
@@ -1013,7 +1019,7 @@ def run_testcase():
                     msg_queue.put({"type": "error", "text": f"Result persistence failed: {persistence_error}"})
                     try:
                         ps.begin_write(result_session)
-                        ps.save_result(result_session, task_id, {"id": testcase_id, "execution_token": execution_token, "status": "Failed", "result": {"error": str(persistence_error)}})
+                        ps.save_result(result_session, task_id, {"id": testcase_id, "execution_token": execution_token, "status": "Failed", "result": {"error": str(persistence_error)}, "duration_ms": duration_ms})
                         result_session.commit()
                     except Exception:
                         result_session.rollback()

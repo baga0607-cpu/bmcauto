@@ -335,7 +335,7 @@ def register(app, runtime):
 
     def copy_case(s,row,plan_id,folder,paths):
         identity=str(uuid.uuid4());meta=metadata(row.source_text)
-        tc=TestCase(system_id=identity,family_id=row.id or str(uuid.uuid4()),display_name=row.name,plan_id=plan_id,
+        tc=TestCase(system_id=identity,display_name=row.name,plan_id=plan_id,
                     script_path=f'testcase_database.scripts.{identity}',script_kind='single',repository_id=row.id,
                     source_version=row.source_version,settings_json=json.dumps({k:v['default'] for k,v in meta.get('parameters',{}).items()}),settings_revision=0)
         if folder is None: tc.position=s.query(TestCase).filter_by(plan_id=plan_id,folder_id=None).count()
@@ -349,26 +349,9 @@ def register(app, runtime):
         for path in reversed(paths):
             path.unlink(missing_ok=True);path.parent.rmdir()
 
-    @route('/api/plans/<plan_id>/testcases/import-python', ['POST'])
-    def plan_import_python(s,data,plan_id):
-        ps.unlocked(s,plan_id)
-        ps.require(s,ps.ProjectPlan,plan_id).folders_migrated=True
-        source=data.get('source')
-        if not isinstance(source,str) or not source.strip(): raise ps.StateError('Provide Python source from a .py file')
-        meta=metadata(source); name=meta['name'].strip()
-        if s.query(TestCase).filter_by(plan_id=plan_id,normalized_name=name.casefold()).first():
-            raise ps.StateError('A Test Case with this name already exists in the Plan',409)
-        folder=ps.resolve_folder(s,plan_id,data) if data.get('folder_id') else None
-        row=RepositoryCase(name=name,source_text=source,source_version=datetime.now(timezone.utc).isoformat(timespec='microseconds'))
-        paths=[]
-        try:
-            tc=copy_case(s,row,plan_id,folder,paths);s.commit()
-        except Exception:
-            s.rollback();remove_copies(paths);raise
-        return jsonify(tc.to_dict()),201
-
     @route('/api/plans/<plan_id>/repository/testcases', ['POST'])
     def repository_add_to_plan(s,data,plan_id):
+        s.info['plan_import_origin'] = {'type': 'repository'}
         ps.unlocked(s,plan_id);row=ps.require(s,RepositoryCase,data.get('repository_id'))
         if s.query(TestCase).filter_by(plan_id=plan_id,normalized_name=row.name.casefold()).first():
             raise ps.StateError('A Test Case with this name already exists in the Plan',409)
@@ -381,6 +364,7 @@ def register(app, runtime):
 
     @route('/api/plans/<plan_id>/repository/folders/<folder_id>', ['POST'])
     def repository_folder_add_to_plan(s,data,plan_id,folder_id):
+        s.info['plan_import_origin'] = {'type': 'repository'}
         ps.unlocked(s,plan_id);source_folder=ps.require(s,RepositoryFolder,folder_id)
         rows=s.query(RepositoryCase).join(RepositoryFolderCase,RepositoryFolderCase.repository_id==RepositoryCase.id).filter(RepositoryFolderCase.folder_id.in_(rt.subtree(s,folder_id))).order_by(RepositoryCase.source_version.desc()).all()
         names={tc.normalized_name for tc in s.query(TestCase).filter_by(plan_id=plan_id)}
@@ -427,8 +411,11 @@ def register(app, runtime):
                 raise ps.StateError('Choose a Test Case in the destination folder and before/after insertion.')
         source_plan=data.get('source_plan_id')
         if source_type=='plan':
-            ps.require(s,ps.ProjectPlan,source_plan)
+            origin_plan = ps.require(s,ps.ProjectPlan,source_plan)
+            s.info['plan_import_origin'] = dict(type='plan', id=origin_plan.id, name=origin_plan.name)
             if source_plan==plan_id: raise ps.StateError('Choose another Plan as the source')
+        else:
+            s.info['plan_import_origin'] = {'type': 'repository'}
         decisions=data.get('decisions') or {}
         if not isinstance(decisions,dict): raise ps.StateError('Invalid conflict decisions')
         incoming=[]
@@ -436,13 +423,13 @@ def register(app, runtime):
             if source_type=='repository':
                 meta=metadata(row.source_text)
                 item=dict(id=row.id,name=row.name,source=row.source_text,version=row.source_version,
-                          settings={k:v['default'] for k,v in meta.get('parameters',{}).items()},repository_id=row.id,family_id=row.id)
+                          settings={k:v['default'] for k,v in meta.get('parameters',{}).items()},repository_id=row.id)
             else:
                 if row.plan_id!=source_plan: raise ps.StateError('Case belongs to another source Plan')
                 if row.script_kind!='single': raise ps.StateError('Only single-file Test Cases can be imported')
                 definition_data=definition(runtime['MAIN_PROGRAM_DIR'],row);meta=definition_data['metadata']
                 item=dict(id=row.system_id,name=row.display_name,source=definition_data['source'],version=row.source_version,
-                          settings=validate_settings(meta,definition_data['settings']),repository_id=row.repository_id,family_id=row.family_id)
+                          settings=validate_settings(meta,definition_data['settings']),repository_id=row.repository_id)
             item['canonical']=meta['name'].strip().casefold();incoming.append(item);return item
         def read_folder(identity):
             if source_type=='repository':
@@ -510,19 +497,26 @@ def register(app, runtime):
             if item['action']=='skip':skipped.append(item['name']);return
             if item['action']=='overwrite':
                 tc=actual[item['target_id']];path=script_file(runtime['MAIN_PROGRAM_DIR'],tc)
-                originals.setdefault(path,path.read_text(encoding='utf-8'))
+                s.info.setdefault('plan_import_overwrites', set()).add(tc.display_name)
+                previous_source = path.read_text(encoding='utf-8')
+                originals.setdefault(path, previous_source)
+                reasons = []
+                if json.loads(tc.settings_json or '{}') != item['settings']:
+                    reasons.append('Parameter Modified')
+                if previous_source != item['source']:
+                    reasons.append('Case Modified')
                 if originals[path] != item['source']:
                     s.info.setdefault('plan_source_changes', []).append(dict(kind='Test Case', item=tc.display_name,
                         before={'source': 'Previous Python source'}, after={'source': 'Replaced during import'}))
                 tc.settings_revision=(tc.settings_revision or 0)+1
                 for membership in s.query(TaskTestCase).filter_by(testcase_id=tc.system_id):
                     if membership.executed_at or membership.result_json or membership.manual_override_json or membership.status in ('Passed','Failed','Block','CP','C-PASS'):
-                        membership.needs_retest=True
+                        membership.mark_for_retest(*(reasons or ['Case Overwritten']))
                 path.write_text(item['source'],encoding='utf-8');updated.append(tc)
             else:
                 row=RepositoryCase(name=item['display_name'],source_text=item['source'],source_version=item['version'])
                 tc=copy_case(s,row,plan_id,folder,paths);actual['incoming:'+item['id']]=tc;added.append(tc)
-            tc.repository_id=item['repository_id'];tc.family_id=item['family_id'];tc.source_version=item['version']
+            tc.repository_id=item['repository_id'];tc.source_version=item['version']
             tc.settings_json=json.dumps(item['settings'],ensure_ascii=False)
         def apply_folder(node,parent):
             parent_id=parent.id if parent else None
@@ -582,13 +576,17 @@ def register(app, runtime):
         if meta['automation'] != original_meta['automation']:
             raise ps.StateError('Automation classification belongs to the source method. Import a new Repository version to change it.')
         settings = validate_settings(meta, data.get('settings', json.loads(tc.settings_json or '{}')))
-        changed = source != original or settings != json.loads(tc.settings_json or '{}')
-        if changed:
+        reasons = []
+        if settings != json.loads(tc.settings_json or '{}'):
+            reasons.append('Parameter Modified')
+        if source != original:
+            reasons.append('Case Modified')
+        if reasons:
             tc.settings_json = json.dumps(settings, ensure_ascii=False)
             tc.settings_revision = (tc.settings_revision or 0) + 1
             for membership in s.query(TaskTestCase).filter_by(testcase_id=tc_id):
                 if membership.executed_at or membership.result_json or membership.manual_override_json or membership.status in ('Passed', 'Failed', 'CP', 'C-PASS'):
-                    membership.needs_retest = True
+                    membership.mark_for_retest(*reasons)
             try:
                 path.write_text(source, encoding='utf-8')
                 s.commit()

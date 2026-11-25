@@ -9,7 +9,7 @@ const notify=message=>options.onError?.(new Error(message));
 function frame(type){
  if(windows.has(type))return windows.get(type);
  const el=document.createElement('section');el.className='case-floating-window case-docked-window';el.dataset.caseWindow=type;el.setAttribute('role','region');el.setAttribute('aria-label',labels[type]);
- el.innerHTML='<header class="case-window-bar"><h2>'+labels[type]+'</h2><div class="case-window-actions"><button type="button" data-window-close>Close</button></div></header><div class="case-window-body"></div>';
+ el.innerHTML='<header class="case-window-bar"><h2>'+labels[type]+'</h2><div class="case-window-actions"><button type="button" data-window-close aria-label="Close" title="Close" class="execution-icon-button"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="/action-icons.svg#close"/></svg></button></div></header><div class="case-window-body"></div>';
  const model={type,el,body:el.querySelector('.case-window-body'),ref:null,def:null,dirty:false,saving:false};windows.set(type,model);
  dockHost().append(el);updateDock();
  el.querySelector('[data-window-close]').addEventListener('click',()=>close(type));

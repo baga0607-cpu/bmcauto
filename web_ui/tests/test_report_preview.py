@@ -75,7 +75,8 @@ class ReportPreviewTest(unittest.TestCase):
         response = self.get_preview()
         self.assertEqual(response.status_code, 200)
         html = response.get_json()['html']
-        for text in ('Execution in progress', 'Rerun needed', 'Operator explanation', 'data-status="Running"'):
+        self.assertNotIn('Rerun needed', html)
+        for text in ('Execution in progress', 'Operator explanation', 'data-status="Running"'):
             self.assertIn(text, html)
 
     def test_empty_results_and_foreign_or_missing_membership(self):

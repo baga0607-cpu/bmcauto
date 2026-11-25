@@ -82,6 +82,17 @@ class TaskEnvironmentTest(unittest.TestCase):
         self.assertEqual([c['base_url'] for c in captured],['https://one.invalid','https://two.invalid'])
         self.assertTrue(all(c['cafile'] for c in captured))
 
+    def test_multiport_roundtrip_and_legacy_update(self):
+        ports=[{'ip':'bmc-one.invalid','ipmi_channel':1},{'ip':'bmc-two.invalid','ipmi_channel':8}]
+        response=self.save('task1',lan_ports=ports,dut_os_ssh_port=2200)
+        self.assertEqual(response.status_code,200)
+        settings=self.client.get('/api/tasks/task1/settings').get_json()
+        self.assertEqual(settings['lan_ports'],ports)
+        self.assertEqual(settings['host'],'https://bmc-one.invalid')
+        self.assertEqual(te.configuration(settings)['dut_os']['ssh_port'],2200)
+        self.assertEqual(self.save('task1',host='https://changed.invalid').get_json()['lan_ports'][1],ports[1])
+        self.assertEqual(self.save('task1',lan_ports=[ports[0],ports[0]]).status_code,400)
+
     def test_nested_environment_can_be_preserved_and_edited(self):
         settings=te.normalize({'redfish':{'host':'https://existing.invalid'},'console_server':{'port':23,'protocol':'telnet'}})
         self.assertEqual(settings['host'],'https://existing.invalid');self.assertEqual(settings['cs_port'],23)

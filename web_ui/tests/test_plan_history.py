@@ -1,5 +1,4 @@
 import unittest
-from uuid import uuid4
 
 import test_single_case_repository as fixtures
 
@@ -26,17 +25,37 @@ class PlanHistoryTest(unittest.TestCase):
         self.assertEqual(renamed['changes'][0]['before'], {'name':'New'})
         self.assertEqual(self.history('b'), [])
 
+    def test_import_origin_survives_source_plan_rename(self):
+        url = '/api/plans/{}/import-cases'
+        copied = self.client.post(url.format('b'), json={
+            'kind':'case', 'source_type':'repository', 'id':self.repository['id']})
+        self.assertEqual(copied.status_code, 201, copied.get_json())
+        self.assertEqual(self.history('b')[0]['import_origin'], {'type':'repository'})
+        source = dict(kind='case', source_type='plan', source_plan_id='b',
+                      id=copied.get_json()['added'][0]['id'])
+        self.assertEqual(self.client.post(url.format('a'), json=source).status_code, 201)
+        conflict = self.client.post(url.format('a'), json=source).get_json()['conflicts'][0]
+        target = conflict['targets'][0]
+        decision = dict(target_id=target['id'], target_token=target['token'], action='skip')
+        source['decisions'] = {source['id']:decision}
+        self.assertEqual(self.client.post(url.format('a'), json=source).status_code, 201)
+        self.assertEqual(len(self.history()), 1)
+        decision['action'] = 'overwrite'
+        self.assertEqual(self.client.post(url.format('a'), json=source).status_code, 201)
+        self.assertEqual(self.client.patch('/api/plans/b',json={'name':'Renamed'}).status_code, 200)
+        entries = self.history()
+        self.assertEqual(len(entries), 2)
+        for entry in entries:
+            self.assertEqual(entry['import_origin'], {'type':'plan','id':'b','name':'Plan B'})
+
     def test_batch_parameters_and_folder_policy(self):
         folder = self.client.post('/api/plans/a/folders',json={'name':'Group'}).get_json()['id']
-        batch = str(uuid4())
-        cases = []
-        for name in ['One', 'Two', 'Two']:
-            response = self.client.post('/api/plans/a/testcases/import-python',json={
-                'folder_id': folder, 'source': fixtures.SOURCE.replace('Service entry',name), 'history_batch':batch})
-            if response.status_code == 201:
-                cases.append(response.get_json()['id'])
-            else:
-                self.assertEqual(response.status_code,409)
+        sources = [self.client.post('/api/repository/testcases', json={
+            'source': fixtures.SOURCE.replace('Service entry',name)}).get_json()['id'] for name in ('One','Two')]
+        response = self.client.post('/api/plans/a/import-cases',json={
+            'kind':'case','source_type':'repository','case_ids':sources,'target_folder_id':folder})
+        self.assertEqual(response.status_code,201,response.get_json())
+        cases = [item['id'] for item in response.get_json()['added']]
         imported, created = self.history()
         self.assertEqual({c['item'] for c in imported['changes']},{'One','Two'})
         url = '/api/plans/a/testcases/'+cases[0]+'/definition'
@@ -58,9 +77,9 @@ class PlanHistoryTest(unittest.TestCase):
     def test_sort_records_displayed_order_only_when_changed(self):
         ids = []
         for name in ['Case 2', 'Case 10']:
-            case = self.client.post('/api/plans/a/testcases/import-python',
-                json={'source':fixtures.SOURCE.replace('Service entry', name)})
-            ids.append(case.get_json()['id'])
+            repo = self.client.post('/api/repository/testcases', json={'source':fixtures.SOURCE.replace('Service entry', name)}).get_json()
+            case = self.client.post('/api/plans/a/import-cases', json={'source_type':'repository','kind':'case','id':repo['id']})
+            ids.append(case.get_json()['added'][0]['id'])
         url = '/api/plans/a/testcases/'
         self.assertEqual(self.client.post(url+'reorder',json={'folder_id':None,'ids':ids[::-1]}).status_code,200)
         reordered = self.history()[0]['changes']

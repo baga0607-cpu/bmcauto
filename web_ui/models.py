@@ -8,7 +8,7 @@ V10 架構終極正規化重點：
 4. 全面採用 UUID 作為 Foreign Key 關聯 (包含 `plan_id`, `project_id`, `category_id`, `subfolder_id`)。
 """
 
-from sqlalchemy import DDL, Column, String, Boolean, Integer, ForeignKey, Text, UniqueConstraint, CheckConstraint, Index, text, event
+from sqlalchemy import JSON, DDL, Column, String, Boolean, Integer, ForeignKey, Text, UniqueConstraint, CheckConstraint, Index, text, event
 from sqlalchemy.orm import declarative_base, relationship
 import uuid
 
@@ -114,7 +114,6 @@ class TestCase(Base):
         Index('uq_testcases_plan_name_version', 'plan_id', 'normalized_name', text("coalesce(source_version, '')"), unique=True),
     )
     system_id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    family_id = Column(String(36), nullable=False, default=lambda: str(uuid.uuid4()))
     display_name = Column(String(255), nullable=False)
     normalized_name = Column(String(255), nullable=False)
 
@@ -137,7 +136,6 @@ class TestCase(Base):
     def to_dict(self):
         return {
             "id": self.system_id,
-            "family_id": self.family_id,
             "folder_id": self.folder_id,
             "folder_path": self.folder_obj.path if self.folder_obj else "",
             "tc_name": self.display_name,
@@ -203,7 +201,14 @@ class TaskTestCase(Base):
     api_log_text = Column(Text, nullable=True)
     bug_id = Column(String(100), nullable=True)
     executed_at = Column(String(50), nullable=True)
+    duration_ms = Column(Integer, nullable=True)
     needs_retest = Column(Boolean, nullable=False, default=False)
+    retest_reasons = Column(JSON)
+
+    def mark_for_retest(self, *reasons):
+        previous = self.retest_reasons or (['Earlier reason unavailable'] if self.needs_retest else [])
+        self.retest_reasons = list(dict.fromkeys([*previous, *reasons]))
+        self.needs_retest = True
 
 
 class PlanHistory(Base):

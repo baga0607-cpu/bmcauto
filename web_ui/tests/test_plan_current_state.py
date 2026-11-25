@@ -22,16 +22,22 @@ class CurrentStateTest(unittest.TestCase):
         self.client = api.app.test_client()
     def tearDown(self):
         self.patch.stop(); self.main_patch.stop(); self.engine.dispose(); self.tmp.cleanup()
+    def import_case(self, plan, name, folder):
+        source = "TEST_CASE={'name':%r}\ndef execute(client, context=None, preset=None): pass\n" % name
+        row = self.client.post('/api/repository/testcases',json={'source':source}).get_json()
+        return self.client.post('/api/plans/'+plan+'/repository/testcases',
+                                json={'repository_id':row['id'],'folder_path':folder})
+
     def test_delete_then_append_preserves_contiguous_folder_order(self):
         with patch.object(api,'MAIN_PROGRAM_DIR',self.tmp.name):
             for mode in ('single','bulk'):
                 with self.subTest(mode=mode):
                     cases={}
                     for name in ('A','B','C','D'):
-                        response=self.client.post('/api/import_tc',json={'plan_id':'p','tc_name':mode+name,'folder_path':mode,'script_kind':'single','source':"TEST_CASE={'name':'Fixture'}\ndef execute(client, context=None, preset=None): pass\n",'source_version':'fixture-v1','settings':{}})
+                        response=self.import_case('p',mode+name,mode)
                         self.assertEqual(response.status_code,201,response.get_json())
                         cases[name]=response.get_json()['id']
-                    untouched=self.client.post('/api/import_tc',json={'plan_id':'q','tc_name':mode+'untouched','folder_path':mode,'script_kind':'single','source':"TEST_CASE={'name':'Fixture'}\ndef execute(client, context=None, preset=None): pass\n",'source_version':'fixture-v1','settings':{}}).get_json()['id']
+                    untouched=self.import_case('q',mode+'untouched',mode).get_json()['id']
                     with self.Session() as session:
                         session.get(TestCase,untouched).position=7;session.commit()
                     if mode=='single':
@@ -46,7 +52,7 @@ class CurrentStateTest(unittest.TestCase):
                         rows=session.query(TestCase).filter_by(folder_id=folder_id).order_by(TestCase.position).all()
                         self.assertEqual([(r.system_id,r.position) for r in rows],[(cases[n],i) for i,n in enumerate(remaining)])
                         self.assertEqual(session.get(TestCase,untouched).position,7)
-                    appended=self.client.post('/api/import_tc',json={'plan_id':'p','tc_name':mode+'New','folder_path':mode,'script_kind':'single','source':"TEST_CASE={'name':'Fixture'}\ndef execute(client, context=None, preset=None): pass\n",'source_version':'fixture-v1','settings':{}})
+                    appended=self.import_case('p',mode+'New',mode)
                     self.assertEqual(appended.status_code,201,appended.get_json())
                     expected=[cases[n] for n in remaining]+[appended.get_json()['id']]
                     with self.Session() as session:
@@ -57,7 +63,7 @@ class CurrentStateTest(unittest.TestCase):
         with patch.object(api,'MAIN_PROGRAM_DIR',self.tmp.name):
             cases=[]
             for name in ('A','B','C'):
-                response=self.client.post('/api/import_tc',json={'plan_id':'p','tc_name':name,'folder_path':'Ordered','script_kind':'single','source':"TEST_CASE={'name':'Fixture'}\ndef execute(client, context=None, preset=None): pass\n",'source_version':'fixture-v1','settings':{}})
+                response=self.import_case('p',name,'Ordered')
                 self.assertEqual(response.status_code,201,response.get_json());cases.append(response.get_json()['id'])
             with patch.object(self.Session.class_,'commit',side_effect=RuntimeError('commit failed')):
                 response=self.client.delete('/api/testcases/'+cases[1],json={'confirm':True})
@@ -144,6 +150,19 @@ class CurrentStateTest(unittest.TestCase):
         migrate_current_state(self.engine,log)
         self.assertEqual(self.client.get('/api/plans/p/folders').get_json(),[])
 
+
+    def test_execution_selection_is_atomic_and_locked_while_running(self):
+        self.seed_scope()
+        url='/api/tasks/t/selection'
+        def selected():
+            return {c['id'] for c in self.client.get('/api/tasks/t/summary').get_json()['testcases'] if c['selected']}
+        self.assertEqual(self.client.patch(url,json={'changes':{'a':True,'b':False}}).status_code,200)
+        self.assertEqual(selected(),{'a'})
+        self.assertEqual(self.client.patch(url,json={'changes':{'a':False,'missing':True}}).status_code,409)
+        self.assertEqual(selected(),{'a'})
+        self.client.post('/api/tasks/t/execution/start',json={'testcase_ids':['a']})
+        self.assertEqual(self.client.patch(url,json={'changes':{'b':True}}).status_code,409)
+        self.assertEqual(selected(),{'a'})
 
     def test_worker_admission_blocks_finish_before_thread_start(self):
         import threading

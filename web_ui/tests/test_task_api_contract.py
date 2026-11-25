@@ -35,10 +35,10 @@ class TaskApiContractTest(unittest.TestCase):
             session.add_all([
                 project,
                 plan,
-                TestCase(system_id="tc_one", family_id="f1", display_name="Straße V2", plan_id=plan.id, script_path="one"),
+                TestCase(system_id="tc_one", display_name="Straße V2", plan_id=plan.id, script_path="one"),
             ])
             session.commit()
-            session.add(TestCase(system_id="tc_two", family_id="f2", display_name="  STRASSE V2  ", plan_id=plan.id, script_path="two"))
+            session.add(TestCase(system_id="tc_two", display_name="  STRASSE V2  ", plan_id=plan.id, script_path="two"))
             with self.assertRaises(IntegrityError):
                 session.commit()
         finally:
@@ -117,7 +117,6 @@ class TaskApiContractTest(unittest.TestCase):
             cases = [
                 TestCase(
                     system_id=f"tc_{index}",
-                    family_id=f"family_{index}",
                     display_name=f"Case {index}",
                     plan_id=plan.id,
                     script_path=f"case_{index}.py",
@@ -164,7 +163,6 @@ class TaskApiContractTest(unittest.TestCase):
             plan = ProjectPlan(id="plan_validation", project_id=project.id, name="Validation Plan")
             testcase = TestCase(
                 system_id="tc_validation",
-                family_id="family_validation",
                 display_name="Validation Case",
                 plan_id=plan.id,
                 script_path="validation.py",
@@ -214,8 +212,8 @@ class TaskApiContractTest(unittest.TestCase):
             Category(id="cat_chassis", name="Resource_Chassis"),
             Category(id="cat_custom", name="Custom"),
             PlanSubfolder(id="folder_ibm", plan_id="plan_move", subfolder_name="IBM"),
-            TestCase(system_id="tc_move", family_id="family_move", display_name="Move Me", plan_id="plan_move", category_id="cat_chassis", script_path="move.py"),
-            TestCase(system_id="tc_skip", family_id="family_skip", display_name="Already There", plan_id="plan_move", category_id="cat_custom", subfolder_id="folder_ibm", script_path="skip.py"),
+            TestCase(system_id="tc_move", display_name="Move Me", plan_id="plan_move", category_id="cat_chassis", script_path="move.py"),
+            TestCase(system_id="tc_skip", display_name="Already There", plan_id="plan_move", category_id="cat_custom", subfolder_id="folder_ibm", script_path="skip.py"),
         ])
         session.commit()
         session.close()
@@ -251,8 +249,8 @@ class TaskApiContractTest(unittest.TestCase):
             ProjectPlan(id="plan_other", project_id="proj_atomic", name="Other Plan"),
             Category(id="cat_source", name="Source"),
             Category(id="cat_target", name="Target"),
-            TestCase(system_id="tc_valid", family_id="family_valid", display_name="Valid", plan_id="plan_atomic", category_id="cat_source", script_path="valid.py"),
-            TestCase(system_id="tc_foreign", family_id="family_foreign", display_name="Foreign", plan_id="plan_other", category_id="cat_source", script_path="foreign.py"),
+            TestCase(system_id="tc_valid", display_name="Valid", plan_id="plan_atomic", category_id="cat_source", script_path="valid.py"),
+            TestCase(system_id="tc_foreign", display_name="Foreign", plan_id="plan_other", category_id="cat_source", script_path="foreign.py"),
         ])
         session.commit()
         session.close()
@@ -281,7 +279,7 @@ class TaskApiContractTest(unittest.TestCase):
             Project(id="proj_guard", name="Guard Project"),
             ProjectPlan(id="plan_guard", project_id="proj_guard", name="Guard Plan"),
             Category(id="cat_guard", name="Guard"),
-            TestCase(system_id="tc_guard", family_id="family_guard", display_name="Guarded", plan_id="plan_guard", category_id="cat_guard", script_path="guard.py"),
+            TestCase(system_id="tc_guard", display_name="Guarded", plan_id="plan_guard", category_id="cat_guard", script_path="guard.py"),
         ])
         session.commit()
         session.close()
@@ -473,7 +471,6 @@ class TaskApiContractTest(unittest.TestCase):
             task = Task(environment_config='{"host":"https://example.invalid","username":"test","password":"test"}', id="task_1", plan_id="plan_1", name="Task 1")
             testcase = TestCase(
                 system_id="tc_1",
-                family_id="fam_1",
                 display_name="Case 1",
                 plan_id="plan_1",
                 script_path="case_1.py",

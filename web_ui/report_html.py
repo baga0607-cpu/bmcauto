@@ -169,7 +169,7 @@ def generate_html_report(db_path, reports, preview_case_id=None):
             if task is None:
                 from plan_state import StateError
                 raise StateError('Task not found.', 404)
-            columns = ('m.testcase_id,m.status,m.result_json,m.manual_override_json,m.needs_retest,m.executed_at,'
+            columns = ('m.testcase_id,m.status,m.result_json,m.manual_override_json,m.executed_at,'
                        "(length(coalesce(m.log_text,''))>0 OR length(coalesce(m.api_log_text,''))>0) AS has_log"
                        if preview else 'm.*')
             where = ' AND m.testcase_id=?' if preview else ''
@@ -219,8 +219,6 @@ def generate_html_report(db_path, reports, preview_case_id=None):
                 notes = []
                 if preview and row['status'] == 'Running':
                     notes.append('Execution in progress. This preview shows currently saved results. Refresh after execution finishes.')
-                if row['needs_retest']:
-                    notes.append('Rerun needed: retained evidence predates changes to the Plan or Task connection settings.')
                 if manual:
                     notes.append('Manual result: '+display('C-PASS' if manual.get('status') == 'CP' else manual.get('status'))+' · '+display(manual.get('reason')))
                 fields = [('Task Name', source.get('name')), ('Tester', setup.get('owner')), ('Execution Time', execution_date(row['executed_at'])), ('FW Package', firmware(setup)), ('Configuration', None)]

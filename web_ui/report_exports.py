@@ -148,7 +148,7 @@ def prepare_report(session, plan, tasks, final):
         source_tasks = {}
         source_details = {}
         for position, (tc, winner, source) in enumerate(final_memberships(session, plan, tasks)):
-            values = {key:getattr(winner,key) for key in ('status','bug_id','executed_at','result_json','log_text','api_log_text','manual_override_json','needs_retest')} if winner else {'status':'TBD'}
+            values = {key:getattr(winner,key) for key in ('status','bug_id','executed_at','result_json','log_text','api_log_text','manual_override_json','needs_retest','retest_reasons')} if winner else {'status':'TBD'}
             session.add(TaskTestCase(task_id=report_task.id, testcase_id=tc.system_id, position=position, selected=True, **values))
             if source:
                 source_tasks[tc.system_id] = source.name
