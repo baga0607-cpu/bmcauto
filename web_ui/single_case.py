@@ -179,6 +179,9 @@ def execute_script(root, module_path, client, context, preset):
     try:
         exec(compile(path.read_text(encoding='utf-8'), str(path), 'exec'), module.__dict__)
         inspect.signature(module.execute).bind(client, context=context, preset=preset)
+        log = (context or {}).get('log')
+        if hasattr(log, 'declare_methods'):
+            log.declare_methods(getattr(module, 'TEST_CASE', {}).get('test_method') or [])
         module.execute(client, context=context, preset=preset)
     finally:
         if previous is None:

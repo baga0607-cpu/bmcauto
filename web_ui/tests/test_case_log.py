@@ -11,6 +11,40 @@ from case_log import CaseLog, PrintLogWriter, log_filenames, open_log_files, tes
 
 
 class CaseLogTest(unittest.TestCase):
+    def test_failure_summary_follows_declaration_order_and_counts_distinct_checks(self):
+        from case_log import ReportedCase
+        context = {'log': CaseLog(io.StringIO(), lambda event: None)}
+        report = ReportedCase(context, {'test_method': [{
+            'step_number': 1, 'type': 'Action', 'step': 'Check values',
+            'checkpoints': {'first': {'expected': 'First value'}, 'second': {'expected': 'Second value'}}
+        }]})
+        report.begin_step(1)
+        for key in ('second', 'first', 'second'):
+            report.checkpoint(key, 'FAIL', actual=0, reason=key + ' failed')
+        with self.assertRaises(AssertionError):
+            report.finish({})
+        self.assertEqual(context['case_result']['reason'].splitlines(), [
+            '2 checkpoints failed.', 'Step 1 | Checkpoint A | first failed',
+            'Step 1 | Checkpoint B | second failed'])
+        self.assertEqual(context['log'].records[-1]['reason'], context['case_result']['reason'])
+
+    def test_recovery_preserves_reported_operation_actual(self):
+        stream, events = io.StringIO(), []
+        worker = CaseLog(stream, events.append)
+        worker.declare_methods([{'type': 'Action', 'step_number': 1, 'step': 'Parse JSON'}])
+        worker.begin_step(1)
+        worker.operation_result(actual={'top_level_type': 'dict'})
+        self.assertNotIn('Step 1 | Outcome', stream.getvalue())
+        recovered = CaseLog(stream, lambda event: None)
+        recovered.records = [e['log_record'] for e in events if 'log_record' in e]
+        recovered.recover_open_step('Execution stopped', stopped=True)
+        recovered.finish('Stopped', 'Execution stopped')
+        self.assertEqual(stream.getvalue().count('Step 1 | Outcome'), 1)
+        outcome, = [r['result'] for r in recovered.records if r.get('method_type') == 'Action']
+        self.assertEqual(outcome['actual'], {'top_level_type': 'dict'})
+        self.assertEqual(outcome['status'], 'COMPLETED')
+        self.assertEqual(recovered.records[-1]['status'], 'Stopped')
+
     def test_readable_names_are_safe_unique_and_bounded(self):
         names = log_filenames('Regression task', 'RF-01-003 OData Service Document Endpoint', 'task1', 'case1')
         self.assertIn('Regression task__RF-01-003', names['test'])

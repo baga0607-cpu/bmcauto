@@ -1,6 +1,21 @@
 """Current method judgement contract; historical display normalization is read-only."""
 
 
+def declared_method_items(methods):
+    """Yield legacy positions and stable keys in the captured declaration order."""
+    keys = set()
+    for index, item in enumerate(methods):
+        yield index, item
+        if not isinstance(item, dict):
+            continue
+        for key, declaration in item.get('checkpoints', {}).items():
+            if not isinstance(key, str) or not key or key in keys:
+                raise ValueError('Checkpoint identifiers must be unique non-empty strings')
+            keys.add(key)
+            yield key, dict(step_number=item['step_number'], type='Checkpoint',
+                            checkpoint_id=key, step=declaration['expected'])
+
+
 def method_status(status):
     return {'CP': 'C-PASS', 'NOT_RUN': 'Skip', 'NOT_EVALUATED': 'Skip', 'NOT_RECORDED': 'Skip',
             'RECORDED': 'COMPLETED'}.get(status, status)
@@ -8,10 +23,14 @@ def method_status(status):
 
 def validate_method(kind, result):
     status = method_status(result.get('status'))
-    allowed = {'Command': {'COMPLETED', 'FAILED', 'ERROR', 'Skip'},
-               'Action': {'COMPLETED', 'FAILED', 'ERROR', 'Skip'},
+    allowed = {'Command': {'COMPLETED', 'FAILED', 'ERROR', 'Stopped', 'Skip'},
+               'Action': {'COMPLETED', 'FAILED', 'ERROR', 'Stopped', 'Skip'},
                'Checkpoint': {'PASS', 'FAIL', 'C-PASS', 'Skip'},
                'Record': {'COMPLETED', 'ERROR', 'Skip'}}
+    if kind in allowed and status == 'Not executed':
+        if not isinstance(result.get('reason'), str) or not result['reason'].strip():
+            raise ValueError('Not executed requires a Reason')
+        return dict(result, status=status)
     if status not in allowed.get(kind, set()):
         raise ValueError('Invalid status for method item type')
     note = result.get('note')

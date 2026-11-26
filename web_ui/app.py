@@ -970,7 +970,7 @@ def run_testcase():
             if stopped:
                 run['status'] = 'stopped'
                 msg_queue.put({'type': 'status', 'text': 'Execution was stopped by the operator.'})
-            with open(result_log_path, 'a', encoding='utf-8') as output:
+            with open(result_log_path, 'a+', encoding='utf-8') as output:
                 case_log = CaseLog(output, msg_queue.put)
                 case_log.records = [e['log_record'] for e in run['log_history'] if 'log_record' in e]
                 if stopped or not any(r['kind'] == 'finish' for r in case_log.records):
@@ -978,6 +978,7 @@ def run_testcase():
                     status = 'Stopped' if stopped else {'PASS':'Pass','BLOCK':'Block','CP':'C-PASS','C-PASS':'C-PASS'}.get(verdict, 'Fail')
                     errors = [e.get('error') or e.get('text') for e in run['log_history'] if e.get('error') or e['type'] == 'error']
                     reason = 'Execution stopped by operator' if stopped else next((e for e in reversed(errors) if e), 'Execution finished')
+                    case_log.recover_open_step(reason, stopped=stopped)
                     case_log.finish(status, reason)
                 output.write('\n' + '=' * 40 + '\n=== End of Log ===\n')
             if task_id:

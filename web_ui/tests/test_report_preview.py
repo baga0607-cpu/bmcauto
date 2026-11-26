@@ -46,7 +46,7 @@ class ReportPreviewTest(unittest.TestCase):
         self.assertNotIn('<dt>Note</dt>', html)
         self.assertIn('<section class="test-data"><h3>Test Data</h3>', html)
         self.assertIn('<section class="test-information"><h3>Test Information</h3>', html)
-        for value in ('<td>1a</td>', '<td class="result-text"><span class="judgement-text">', 'Actual: 1.20.0', 'Preview tester', 'BMC: 1.0', 'Case &lt;0&gt;'):
+        for value in ('<td>Step 1 | Checkpoint A</td>', '<td class="result-text"><span class="judgement-text">', 'Actual: &quot;1.20.0&quot;', 'Preview tester', 'BMC: 1.0', 'Case &lt;0&gt;'):
             self.assertIn(value, html)
         for value in ('Case &lt;1&gt;', 'Task Two', 'NEVER-EXPORT-THIS-PASSWORD', '<script', 'href="logs/', 'print-report'):
             self.assertNotIn(value, html)

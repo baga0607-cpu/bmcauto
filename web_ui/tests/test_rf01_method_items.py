@@ -15,6 +15,7 @@ import requests
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "web_ui"))
 from case_log import CaseLog
+from result_policy import declared_method_items
 from report_case import method_rows
 
 NAMES = ["rf_01_001_version_discovery_endpoint.py", "rf_01_002_service_root_endpoint.py"]
@@ -68,11 +69,14 @@ class MethodItemsTest(unittest.TestCase):
                     module.execute(None, context)
         self.assertEqual(context["case_result"]["status"], expected)
         rows = [r for r in logger.records if r["kind"] == "step"]
-        declared = module.TEST_CASE["test_method"]
-        self.assertEqual([r["result"]["method_index"] for r in rows], list(range(len(declared))))
+        declared = dict(declared_method_items(module.TEST_CASE["test_method"]))
+        by_key = {r["result"].get("checkpoint_id", r["result"].get("method_index")): r for r in rows}
+        self.assertEqual(set(by_key), set(declared))
+        self.assertEqual(len(rows), len(declared))
+        rows = [by_key[key] for key in declared]
         self.assertEqual(len([r for r in logger.records if r["kind"] == "finish"]), 1)
         self.assertEqual(len(method_rows({"log_records": logger.records}, {})), len(declared))
-        for row, definition in zip(rows, declared):
+        for row, definition in zip(rows, declared.values()):
             self.assertEqual(row["result"]["step_number"], definition["step_number"])
             self.assertEqual(row["result"]["type"], definition["type"])
             self.assertIsNone(row["criteria"])
@@ -104,7 +108,9 @@ class MethodItemsTest(unittest.TestCase):
                 self.assertNotIn("step_id", item)
                 self.assertIn(item["type"], ("Command", "Action", "Checkpoint", "Record"))
                 self.assertIsInstance(item["step_number"], int)
-            self.assertIn("can be parsed as JSON", meta["test_method"][3]["step"])
+            declarations = dict(declared_method_items(meta["test_method"]))
+            parse_key = "json_parseable" if module is CASES[1] else 3
+            self.assertIn("can be parsed as JSON", declarations[parse_key]["step"])
 
     def test_pass_and_no_001_record(self):
         for i in range(2):
@@ -137,12 +143,12 @@ class MethodItemsTest(unittest.TestCase):
             rows, _, _, _ = self.run_case(i, [response("invalid JSON")], "Fail")
             self.assertEqual(rows["S2"]["status"], "FAILED")
             self.assertEqual(rows["C2a"]["status"], "FAIL")
-            self.assertEqual(rows["C2b"]["status"], "Skip")
+            self.assertEqual(rows["C2b"]["status"], "Skip" if i == 0 else "Not executed")
             for body in ([], None, "42", '"hello"'):
                 rows, _, _, _ = self.run_case(i, [response(body)], "Fail")
                 self.assertEqual(rows["C2a"]["status"], "PASS")
                 self.assertEqual(rows["C2b"]["status"], "FAIL")
-                self.assertEqual(rows["S3"]["status"], "Skip")
+                self.assertEqual(rows["S3"]["status"], "Skip" if i == 0 else "Not executed")
 
     def test_independent_002_checks_and_record_survive_failure(self):
         body = {"@odata.type": "#Wrong.Type", "@odata.id": "/wrong", "RedfishVersion": 123}
@@ -151,14 +157,48 @@ class MethodItemsTest(unittest.TestCase):
         self.assertEqual(rows["C4b"]["status"], "FAIL")
         self.assertEqual(rows["R5"]["status"], "COMPLETED")
         self.assertEqual(rows["R5"]["actual"], 123)
-        self.assertIn("Step 3", ctx["case_result"]["reason"])
-        self.assertIn("Step 4", ctx["case_result"]["reason"])
+        expected_reasons = [
+            "The @odata.type value does not match either accepted ServiceRoot type format.",
+            "The @odata.id value must equal /redfish/v1/ exactly, including the trailing slash.",
+        ]
+        self.assertEqual([rows[key]["reason"] for key in ("C3b", "C4b")], expected_reasons)
+        self.assertEqual([rows[key]["actual"] for key in ("C3b", "C4b")], ["#Wrong.Type", "/wrong"])
+        self.assertEqual(ctx["case_result"]["reason"].splitlines(), [
+            "2 checkpoints failed.", "Step 3 | Checkpoint B | " + expected_reasons[0],
+            "Step 4 | Checkpoint B | " + expected_reasons[1]])
+        self.assertEqual(ctx["_tc_status"], "FAIL")
+        self.assertEqual(ctx["case_result"]["observations"]["RedfishVersion"], 123)
         rows, _, _, _ = self.run_case(1, [response({})], "Fail")
         for key in ("C3a", "C4a"):
             self.assertEqual(rows[key]["status"], "FAIL")
         for key in ("C3b", "C4b"):
-            self.assertEqual(rows[key]["status"], "Skip")
+            self.assertEqual(rows[key]["status"], "Not executed")
         self.assertEqual(rows["R5"]["actual"], "Not present")
+
+    def test_002_blocked_items_keep_the_prerequisite_reason(self):
+        scenarios = [
+            (response(GOOD[1], 404), "C1", "404",
+             ("S2", "C2a", "C2b", "S3", "C3a", "C3b", "S4", "C4a", "C4b", "S5", "R5")),
+            (response("invalid JSON"), "C2a", "cannot be parsed as JSON",
+             ("C2b", "S3", "C3a", "C3b", "S4", "C4a", "C4b", "S5", "R5")),
+            (response({"@odata.id": "/redfish/v1/", "RedfishVersion": "1.18.0"}),
+             "C3a", "@odata.type is missing", ("C3b",)),
+        ]
+        for reply, failed, reason, blocked in scenarios:
+            with self.subTest(failed=failed):
+                rows, ctx, _, _ = self.run_case(1, [reply], "Fail")
+                self.assertEqual(ctx["_tc_status"], "FAIL")
+                self.assertEqual(rows[failed]["status"], "FAIL")
+                self.assertNotIn("Skip", [row["status"] for row in rows.values()])
+                self.assertEqual(tuple(k for k, r in rows.items() if r["status"] == "Not executed"), blocked)
+                for key in blocked:
+                    self.assertIn(reason, rows[key]["reason"])
+                    self.assertNotIn("actual", rows[key])
+                if failed == "C3a":
+                    for key in ("S3", "S4", "S5", "R5"):
+                        self.assertEqual(rows[key]["status"], "COMPLETED")
+                    self.assertEqual([rows[k]["status"] for k in ("C4a", "C4b")], ["PASS", "PASS"])
+                    self.assertEqual(rows["R5"]["actual"], "1.18.0")
 
     def test_record_never_judges_value_or_presence(self):
         for value in (None, False, 0, "", "1.2.3", {"unusual": True}, float("nan"), float("inf")):
@@ -171,12 +211,12 @@ class MethodItemsTest(unittest.TestCase):
         for kind in ("#ServiceRoot.ServiceRoot", "#ServiceRoot.v99_23_17.ServiceRoot"):
             self.run_case(1, [response(dict(GOOD[1], **{"@odata.type": kind}))])
 
-    def test_http_failure_skips_downstream(self):
+    def test_http_failure_blocks_downstream(self):
         for i in range(2):
             rows, _, _, _ = self.run_case(i, [response(GOOD[i], 404)], "Fail")
             self.assertEqual(rows["S1"]["status"], "COMPLETED")
             self.assertEqual(rows["C1"]["status"], "FAIL")
-            self.assertEqual(rows["S2"]["status"], "Skip")
+            self.assertEqual(rows["S2"]["status"], "Skip" if i == 0 else "Not executed")
 
     def test_redirect_guards_and_request_contract(self):
         for i in range(2):
@@ -189,7 +229,7 @@ class MethodItemsTest(unittest.TestCase):
                 rows, _, _, calls = self.run_case(i, [response("", 302, {"Location": location})], "Fail")
                 self.assertEqual(len(calls), 1)
                 self.assertEqual(rows["S1"]["status"], "FAILED")
-                self.assertEqual(rows["C1"]["status"], "Skip")
+                self.assertEqual(rows["C1"]["status"], "Skip" if i == 0 else "Not executed")
             self.run_case(i, [response("", 301)], "Fail")
 
     def test_failure_error_dependency_and_sensitive_headers(self):
@@ -199,13 +239,19 @@ class MethodItemsTest(unittest.TestCase):
             self.assertEqual(rows["S1"]["status"], "ERROR")
             for settings in ({}, {"host": None}, {"host": "https://bmc.invalid:bad"}):
                 self.run_case(i, [], "Fail", settings)
-            with patch.dict(sys.modules, {"requests": None}):
+            with patch.dict(sys.modules, {"requests" if i == 0 else "redfish_route": None}):
                 self.run_case(i, [], "Error")
             _, context, log, _ = self.run_case(i, [response(GOOD[i], headers={
                 "Authorization": "private-auth", "Set-Cookie": "private-cookie",
                 "X-Auth-Token": "private-token", "Content-Type": "application/json"})])
             self.assertNotIn("private-", log)
-            self.assertEqual(context["case_result"]["evidence"][0]["source_step"], 1)
+            if i == 0:
+                self.assertEqual(context["case_result"]["evidence"][0]["source_step"], 1)
+            else:
+                self.assertNotIn("evidence", context["case_result"])
+                hop, = [r for r in context["log"].records if r["kind"] == "http"]
+                self.assertEqual((hop["step_number"], hop["evidence_id"], hop["status"]), (1, 1, 200))
+                self.assertEqual(json.loads(hop["body"]), GOOD[i])
 
     def test_legacy_log_adapter(self):
         for i in range(2):

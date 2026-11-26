@@ -1,7 +1,7 @@
 """Report fields from declared definitions and explicit execution evidence."""
 import re
 
-from result_policy import method_status
+from result_policy import declared_method_items, method_status
 import json
 from datetime import datetime, timezone, timedelta
 
@@ -148,6 +148,8 @@ def _method_table_rows(result, metadata, number_subitems):
             if key == 'actual' and raw is None and status in ('Skip',):
                 continue
             rendered = 'null' if raw is None else '""' if raw == '' else display(raw)
+            if number_subitems and key in ('actual', 'expected'):
+                rendered = json.dumps(raw, ensure_ascii=False)
             if key == 'actual':
                 start = sum(len(part) + 1 for part in parts)
                 actual_span = (start, start + len('Actual: ') + len(rendered))
@@ -188,10 +190,10 @@ def _method_table_rows(result, metadata, number_subitems):
     def typed(item, value=None, definition_index=None):
         detail = value if isinstance(value, dict) else {}
         kind = item.get('method_type') or item.get('type') or detail.get('type')
-        identity = item.get('method_id') or item.get('id') or detail.get('id')
+        identity = detail.get('checkpoint_id') or item.get('checkpoint_id') or item.get('method_id') or item.get('id') or detail.get('id')
         label = display(item.get('step'))
         label = label.removeprefix(f'{identity} | {kind} | ')
-        if kind == 'Checkpoint':
+        if kind == 'Checkpoint' and not number_subitems:
             # Compact descriptions only; preserve recorded observation formatting.
             label = re.sub(r'\r?\n(?:[ \t]*\r?\n)+', '\n', label)
         number = item.get('step_number', detail.get('step_number'))
@@ -208,6 +210,15 @@ def _method_table_rows(result, metadata, number_subitems):
 
     def detail_of(item):
         return item.get('result') if isinstance(item.get('result'), dict) else {}
+
+    def matches_item(item, index, record):
+        detail = detail_of(record)
+        key = detail.get('checkpoint_id', record.get('checkpoint_id'))
+        if key is not None or 'checkpoint_id' in item:
+            return (key == item.get('checkpoint_id') and detail.get('step_number') == item.get('step_number')
+                    and item.get('type') == 'Checkpoint')
+        return (detail.get('method_index') == index
+                or item.get('id') and (record.get('method_id') or detail.get('id')) == item['id'])
 
     def is_typed(item):
         detail = item.get('result') if isinstance(item.get('result'), dict) else {}
@@ -232,12 +243,11 @@ def _method_table_rows(result, metadata, number_subitems):
     if explicit:
         remaining = list(enumerate(explicit))
         # Only a saved definition may supply missing rows; never join current source.
-        for index, item in enumerate(methods):
+        for index, item in declared_method_items(methods):
             if not isinstance(item, dict) or not is_typed(item):
                 continue
             matches = [(position, r) for position, r in remaining
-                       if detail_of(r).get('method_index') == index
-                       or item.get('id') and (r.get('method_id') or detail_of(r).get('id')) == item['id']]
+                       if matches_item(item, index, r)]
             if matches:
                 for match in matches:
                     remaining.remove(match)
@@ -273,7 +283,7 @@ def _method_table_rows(result, metadata, number_subitems):
         return rows
     definition = definition if isinstance(definition, dict) else metadata
     methods = definition.get('test_method', [])
-    for index, item in enumerate(methods if isinstance(methods, list) else []):
+    for index, item in declared_method_items(methods if isinstance(methods, list) else []):
         if isinstance(item, dict):
             rows.append(typed(item) if is_typed(item) else legacy(item, index + 1))
     return rows or [('', MISSING, 'No test steps recorded', MissingObservation('No recorded result'), MISSING)]

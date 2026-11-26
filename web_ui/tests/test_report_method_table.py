@@ -75,7 +75,7 @@ class MethodTableTest(unittest.TestCase):
             events.append(dict(event='checkpoint_result', step_number=2, checkpoint_id=key,
                                judgement=status, **data))
         html = snapshot_method_body(methods, events)
-        self.assertEqual(html.count('<td>2b</td>'), 1)
+        self.assertEqual(html.count('<td>Step 2 | Checkpoint B</td>'), 1)
         for text in ('No evidence</td><td class="result-text"></td>', 'Actual: false', 'Actual: 0',
                      'x' * 1500 + '&lt;END&gt;', 'FAIL 1</span><details><summary>Detail', 'PASS 1</span><details><summary>Detail', '>Skip</span>Reason: Optional',
                      '>Not executed</span>Reason: No response'):
@@ -121,14 +121,14 @@ class MethodExportTest(unittest.TestCase):
         with zipfile.ZipFile(io.BytesIO(response.data)) as archive:
             html = archive.read('BMC_Report.html').decode()
             self.assertIn('Test Steps &amp; Results', html)
-            self.assertIn('<th scope="col">Step</th>', html)
+            self.assertNotIn('<th scope="col">Step</th>', html)
             self.assertNotIn('<th scope="col">Judgement</th>', html)
             self.assertNotIn('<th scope="col">Type</th>', html)
-            self.assertIn('<td>1a</td>', html)
+            self.assertIn('<td>Step 1 | Checkpoint A</td>', html)
             self.assertNotIn('Source: S2', html)
             self.assertNotIn('C2a', html)
             self.assertNotIn('RECORDED', html)
-            self.assertIn('Actual: 1.20.0', html)
+            self.assertIn('Actual: &quot;1.20.0&quot;', html)
             self.assertIn('&lt;script&gt;', html)
             self.assertNotIn('response <script>', html)
             target = os.environ.get('BMC_REPORT_QA_DIR')

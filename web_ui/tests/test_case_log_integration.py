@@ -5,6 +5,7 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
+from result_policy import declared_method_items
 import test_single_case_repository as fixtures
 import app as api
 
@@ -30,7 +31,7 @@ def execute(client, context=None, preset=None):
         self.assertEqual(row['result']['log_records'][-1]['status'], 'Block')
         self.assertIn('Test Case: BLOCK', row['log_text'])
 
-    def run_source(self, source, body, expected='Passed', sdk_failure=False, existing=None, case_settings=None):
+    def run_source(self, source, body, expected='Passed', sdk_failure=False, existing=None, case_settings=None, http_status=200, http_replies=None):
         if existing is None:
             response = self.client.post('/api/repository/testcases', json={'source': source})
             self.assertEqual(response.status_code, 201, response.get_json())
@@ -48,13 +49,19 @@ def execute(client, context=None, preset=None):
         if sdk_failure:
             def login(**kwargs): raise RuntimeError('Synthetic login failure')
             sdk.login = login
+        replies = iter(http_replies) if http_replies is not None else None
+        self.request_urls = []
+        request_urls = self.request_urls
         class Session:
             def __enter__(self): return self
             def __exit__(self, *args): pass
-            def get(self, *args, **kwargs):
-                if isinstance(body, Exception): raise body
-                text=body if isinstance(body,str) else json.dumps(body)
-                return SimpleNamespace(status_code=200, headers={'Set-Cookie': 'secret-cookie'}, text=text, content=text.encode())
+            def get(self, url, **kwargs):
+                request_urls.append(url)
+                status, headers, payload = next(replies) if replies is not None else (http_status, {}, body)
+                if isinstance(payload, Exception): raise payload
+                text = payload if isinstance(payload, str) else json.dumps(payload)
+                return SimpleNamespace(status_code=status, headers={'Set-Cookie': 'secret-cookie', **headers},
+                                       text=text, content=text.encode())
         with patch.object(socket.socket, 'connect', side_effect=AssertionError('Offline only')), \
              patch('requests.Session', Session), patch('redfish.redfish_client', return_value=sdk):
             response = self.client.post('/api/run', json={'task_id': 'task1', 'testcase_id': tc['id'], 'execution_token': token})
@@ -84,7 +91,7 @@ def execute(client, context=None, preset=None):
             self.assertEqual(current[key], row[key])
         self.assertEqual(current['result']['log_files'], files)
         self.assertEqual(records[-1]['kind'], 'finish')
-        live = [e['text'] for e in api.run_sessions[sid]['log_history'] if 'log_record' in e]
+        live = [e['text'] for e in api.run_sessions[sid]['log_history'] if e['type'] == 'log' and 'text' in e]
         for block in live: self.assertIn(block, row['log_text'])
         self.assertNotIn('secret-cookie', row['log_text'])
         self.assertNotIn('secret-cookie', row['api_log_text'])
@@ -108,10 +115,11 @@ def execute(client, context=None, preset=None):
                 from single_case import metadata
                 authored=metadata(source)
                 steps=[r for r in records if r['kind']=='step']
-                self.assertEqual(len(steps),len(authored['test_method']))
-                self.assertEqual(sorted(r['method_index'] for r in steps), list(range(len(authored['test_method']))))
-                for record in steps:
-                    definition = authored['test_method'][record['method_index']]
+                declarations = dict(declared_method_items(authored['test_method']))
+                identities = [r.get('checkpoint_id', r.get('method_index')) for r in steps]
+                self.assertCountEqual(identities, declarations.keys())
+                for record, identity in zip(steps, identities):
+                    definition = declarations[identity]
                     self.assertEqual(record['step_number'], definition['step_number'])
                     expected = {'Command':'COMPLETED','Action':'COMPLETED','Checkpoint':'PASS','Record':'COMPLETED'}[definition['type']]
                     if number == 6 and definition['type'] == 'Record': expected = 'Skip'
@@ -130,12 +138,64 @@ def execute(client, context=None, preset=None):
     def test_scr_failure_retains_independent_checks_and_record(self):
         source = next((Path(__file__).resolve().parents[2] / 'test_assets/redfish').glob('rf_01_002_*.py')).read_text(encoding='utf-8')
         row = self.run_source(source, {'@odata.type': '#Wrong.Type', '@odata.id': '/wrong', 'RedfishVersion': 123}, expected='Failed')
-        items = {r['method_index']: r['result'] for r in row['result']['log_records'] if r['kind'] == 'step'}
-        self.assertEqual(items[7]['status'], 'FAIL')
-        self.assertEqual(items[10]['status'], 'FAIL')
-        self.assertEqual(items[12]['status'], 'COMPLETED')
-        self.assertEqual(items[12]['actual'], 123)
-        self.assertEqual(items[12]['step_number'], 5)
+        steps = [r for r in row['result']['log_records'] if r['kind'] == 'step']
+        checks = {r['checkpoint_id']: r['result'] for r in steps if 'checkpoint_id' in r}
+        self.assertEqual(checks['service_root_type_format']['status'], 'FAIL')
+        self.assertEqual(checks['service_root_uri_exact']['status'], 'FAIL')
+        record, = [r['result'] for r in steps if r['method_type'] == 'Record']
+        self.assertEqual(record['status'], 'COMPLETED')
+        self.assertEqual(record['actual'], 123)
+        self.assertEqual(record['step_number'], 5)
+
+    def test_completed_get_with_404_keeps_operation_actual_in_both_outputs(self):
+        from html import unescape
+        from report_html import generate_case_preview
+        source = next((Path(__file__).resolve().parents[2] / 'test_assets/redfish').glob('rf_01_002_*.py'))
+        row = self.run_source(source.read_text(encoding='utf-8'), {}, expected='Failed', http_status=404)
+        records = row['result']['log_records']
+        uri = next(r['uri'] for r in records if r['kind'] == 'http')
+        outcome, = [r['result'] for r in records if r.get('method_type') == 'Command']
+        self.assertEqual(outcome['status'], 'COMPLETED')
+        self.assertEqual(outcome['actual'], {'final_uri': uri, 'status': 404})
+        html = generate_case_preview(self.root / 'test.db', 'task1', row['id'])
+        for text in (row['log_text'], unescape(html)):
+            block = text.split('Step 1 | Outcome', 1)[1].split('Step 1 | Checkpoint A', 1)[0]
+            self.assertIn(uri, block)
+            self.assertIn('"status": 404', block)
+            self.assertIn('COMPLETED', block)
+
+    def test_service_root_redirects_gate_json_parsing(self):
+        from urllib.parse import urljoin
+        source = next((Path(__file__).resolve().parents[2] / 'test_assets/redfish').glob('rf_01_002_*.py'))
+        body = {'@odata.type': '#ServiceRoot.ServiceRoot', '@odata.id': '/redfish/v1/'}
+        row = None
+        for follows, location in [(True, '/final'), (False, 'https://external.invalid/final')]:
+            with self.subTest(location=location):
+                replies = [(302, {'Location': location}, 'redirect body')]
+                if follows:
+                    replies.append((200, {}, body))
+                row = self.run_source(source.read_text(encoding='utf8'), body, http_replies=replies, existing=row,
+                                      expected='Passed' if follows else 'Failed')
+                records = row['result']['log_records']
+                outcome, = [r['result'] for r in records if r.get('method_type') == 'Command']
+                check, = [r['result'] for r in records if r.get('checkpoint_id') == 'http_status']
+                self.assertEqual(len(self.request_urls), len(replies))
+                hops = [r for r in records if r['kind'] == 'http']
+                self.assertEqual([r['uri'] for r in hops], self.request_urls)
+                for index, (hop, (status, headers, payload)) in enumerate(zip(hops, replies), 1):
+                    self.assertEqual((hop['evidence_id'], hop['step_number'], hop['status']), (index, 1, status))
+                    self.assertEqual(hop['body'], payload if isinstance(payload, str) else json.dumps(payload))
+                    for key, value in headers.items():
+                        self.assertEqual(hop['headers'][key], value)
+                if follows:
+                    self.assertEqual(self.request_urls[1], urljoin(self.request_urls[0], location))
+                    self.assertEqual(outcome['actual'], {'final_uri': self.request_urls[1], 'status': 200})
+                    self.assertEqual(check['status'], 'PASS')
+                else:
+                    self.assertIn('different origin', outcome['reason'])
+                    self.assertNotIn('actual', outcome)
+                    self.assertEqual(check['status'], 'Not executed')
+                self.assertEqual('Step 2 | Action' in row['log_text'], follows)
 
     def test_scr_parse_failure_is_not_a_cascade_of_failed_checks(self):
         source = next((Path(__file__).resolve().parents[2] / 'test_assets/redfish').glob('rf_01_001_*.py')).read_text(encoding='utf-8')

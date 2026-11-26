@@ -43,7 +43,7 @@ class PresentationExportTest(unittest.TestCase):
     setUp = fixtures.ReportExportsTest.setUp
     prepare = fixtures.ReportExportsTest.prepare
 
-    def test_winner_note_spec_escape_long_note_and_unchanged_data(self):
+    def test_export_omits_case_only_note_preserves_data_and_escapes_spec(self):
         self.prepare()
         note = ('Accepted deviation <safe> 中文.\n' * 100) + 'END_OF_NOTE'
         with self.Session() as session:
@@ -59,7 +59,8 @@ class PresentationExportTest(unittest.TestCase):
         html_response = self.client.post('/api/projects/project/reports', json=selection)
         with zipfile.ZipFile(io.BytesIO(html_response.data)) as archive:
             html = archive.read('BMC_Report.html').decode()
-            self.assertIn('END_OF_NOTE', html)
+            self.assertNotIn('Accepted deviation', html)
+            self.assertNotIn('END_OF_NOTE', html)
             self.assertIn('DSP0266 &lt;recorded&gt;', html)
             self.assertNotIn('IGNORED_NOTE', html)
             self.assertNotIn('<details open', html)

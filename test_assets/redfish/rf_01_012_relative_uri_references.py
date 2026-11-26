@@ -3,7 +3,7 @@ import re
 from collections import deque
 from urllib.parse import urljoin, urlsplit, urlunsplit
 
-TEST_CASE = {'modified_at': '2026-11-16T03:41:57.257218+00:00',
+TEST_CASE = {'modified_at': '2026-11-26T04:03:58.628274+00:00',
  'test_type': 'compliance',
  'spec_ref': ['DSP0266 v1.25.0 sections 6.1 and 6.7 (relative references in response bodies and HTTP headers).',
  'RFC 3986 section 4.2 (relative-reference syntax); Redfish section 6.7 imposes narrower allowed '
@@ -12,164 +12,39 @@ TEST_CASE = {'modified_at': '2026-11-16T03:41:57.257218+00:00',
  'name': 'RF-01-012 Relative URI References',
  'description': 'Inspect discovered Body and GET-response header URI references for the Redfish '
                 'relative-reference form requirement.',
+ 'command_routes': {'bmc_redfish': {'from': 'bmcagent', 'to': 'bmc', 'method': 'redfish',
+                                    'lan_port': 'task.bmc.lan_ports.port1',
+                                    'username': 'task.bmc.username', 'password': 'task.bmc.password'}},
  'test_method': [{'step_number': 1,
                   'type': 'Action',
-                  'step': 'Prepare a read-only traversal of the service.'},
-                 {'step_number': 1,
-                  'type': 'Checkpoint',
-                  'step': 'Verify that a valid HTTP(S) service origin is available.'},
+                  'step': 'Prepare a read-only traversal of the service.',
+                  'checkpoints': {
+                      'service_origin_valid': {'expected': 'Verify that a valid HTTP(S) service origin is available.'},
+                  }},
                  {'step_number': 2,
                   'type': 'Command',
+                  'route': 'bmc_redfish',
                   'step': 'GET discoverable local resources and collection pages from /redfish/v1/. Do not '
-                          'invoke Actions or fetch external services.'},
-                 {'step_number': 2,
-                  'type': 'Checkpoint',
-                  'step': "Verify that traversal completed without:\n- Resources that could not be read.\n- Invalid links.\n- Pagination errors."},
-                 {'step_number': 2,
-                  'type': 'Checkpoint',
-                  'step': 'Verify Link header parameter syntax under RFC 8288 section 3. Values containing non-token characters must be quoted. Record syntax failures while continuing compatible parsing and subsequent URI checks.'},
+                          'invoke Actions or fetch external services. Inspect each response before following '
+                          'same-origin 301, 302, 307 or 308 redirects (maximum five).',
+                  'checkpoints': {
+                      'link_header_syntax': {'expected': 'Verify Link header parameter syntax under RFC 8288 section 3. Values containing non-token characters must be quoted. Record syntax failures while continuing compatible parsing and subsequent URI checks.'},
+                      'traversal_complete': {'expected': "Verify that traversal completed without:\n- Resources that could not be read.\n- Invalid links.\n- Pagination errors."},
+                  }},
                  {'step_number': 3,
                   'type': 'Action',
-                  'step': 'Classify original Body and GET-response header URI references before resolution.'},
-                 {'step_number': 3,
-                  'type': 'Checkpoint',
-                  'step': "Verify that each relative reference uses either accepted form:\n- /path: starts with a single /.\n- //authority/path: starts with // and includes a valid authority.\n\nAbsolute URIs are also allowed."},
-                 {'step_number': 3,
-                  'type': 'Checkpoint',
-                  'step': "Verify that at least one applicable relative reference was found.\n\nProject coverage policy: no applicable references means FAIL for this check."},
-                 {'step_number': 3,
-                  'type': 'Checkpoint',
-                  'step': "Verify that all items within the discovered scope were assessed.\n\nProject coverage policy: incomplete coverage prevents PASS."}],
+                  'step': 'Classify original Body and GET-response header URI references before resolution.',
+                  'checkpoints': {
+                      'uri_reference_form': {'expected': "Verify that each relative reference uses either accepted form:\n- /path: starts with a single /.\n- //authority/path: starts with // and includes a valid authority.\n\nAbsolute URIs are also allowed."},
+                      'relative_reference_present': {'expected': "Verify that at least one applicable relative reference was found.\n\nProject coverage policy: no applicable references means FAIL for this check."},
+                      'discovered_scope_assessed': {'expected': "Verify that all items within the discovered scope were assessed.\n\nProject coverage policy: incomplete coverage prevents PASS."},
+                  }}],
  'automation': 'automatic',
  'parameters': {}}
 
 
 class CaseFailure(AssertionError):
     """Non-program failure with an actionable reason."""
-
-
-_METHOD_CHECKS = [('Link header parameter syntax', 4), ('Task\\ origin\\ available', 1),
- ('Traversal\\ evidence\\ available', 3),
- ('Traversal\\ complete', 3),
- ('Original\\ URI\\ relative\\-reference\\ form', 6),
- ('Applicable\\ relative\\ references\\ found', 7),
- ('Scope\\ sufficient\\ for\\ Pass', 8)]
-
-
-def _method_emit(context, index, status, **detail):
-    item = TEST_CASE["test_method"][index]
-    result = dict(method_index=index, step_number=item["step_number"], type=item["type"],
-                  status=status, **detail)
-    result = json.loads(json.dumps(result, ensure_ascii=False), parse_constant=lambda value: value)
-    context.setdefault("_method_results", []).append(result)
-    logger = context.get("log")
-    if callable(getattr(logger, "method_item", None)):
-        logger.method_item(item, result)
-    elif callable(getattr(logger, "step", None)):
-        logger.step(item["step"], None, result)
-    else:
-        print(json.dumps({"method": item, "result": result}, ensure_ascii=False))
-
-
-def _report_flush(context, status=None, reason=None):
-    phase = context.get("_method_phase")
-    if phase is None:
-        return
-    pending = context.get("_method_pending", [])
-    requests = context.get("_method_http", [])
-    index = next(i for i, item in enumerate(TEST_CASE["test_method"])
-                 if item["step_number"] == phase and item["type"] in ("Command", "Action"))
-    failed_parse = any(label in ("Valid JSON", "Valid XML", "XML parser safety boundary")
-                       and result["status"] == "FAIL" for _, label, result in pending)
-    skipped = context.pop("_method_action_skip", None)
-    outcome = ("Skip" if skipped else "ERROR" if status == "Error" else "FAILED" if failed_parse
-               or status == "Fail" and not pending else "COMPLETED")
-    detail = {"actual": {"responses": requests} if requests else "Operation completed"}
-    if outcome in ("FAILED", "ERROR", "Skip"):
-        detail = {"reason": skipped or reason or "Response parsing did not complete"}
-    _method_emit(context, index, outcome, **detail)
-    for index, label, result in pending:
-        _method_emit(context, index, **result)
-    context["_method_phase"] = None
-    context["_method_pending"], context["_method_http"] = [], []
-
-
-def _report_begin(context, number):
-    if context.get("_method_phase") == number:
-        return
-    _report_flush(context)
-    context["_method_phase"] = number
-    context.setdefault("_method_visited", set()).add(number)
-    context["_method_pending"], context["_method_http"] = [], []
-    item = next(item for item in TEST_CASE["test_method"]
-                if item["step_number"] == number and item["type"] in ("Command", "Action"))
-    if context.get("log") is not None:
-        context["log"].section(f'Step {number} | {item["type"]} | {item["step"]}')
-
-
-def _log(context, method, *args, **kwargs):
-    if method == "section":
-        number = kwargs.pop("report_step", None)
-        if number is not None:
-            _report_begin(context, number)
-        return
-    if method == "check":
-        import re
-        label, passed = args
-        index = next((index for pattern, index in _METHOD_CHECKS if re.fullmatch(pattern, label)), None)
-        if index is None:
-            raise RuntimeError("No declared Checkpoint for " + label)
-        phase = TEST_CASE["test_method"][index]["step_number"]
-        if context.get("_method_phase") != phase:
-            _report_begin(context, phase)
-        note = kwargs.get("note")
-        status = kwargs.pop("judgement", None) or ("C-PASS" if passed and note else "PASS" if passed else "FAIL")
-        result = {"status": status, "expected": kwargs.get("expected", True),
-                  "actual": {"source": label, "value": kwargs.get("actual", bool(passed))}}
-        if note and status == "C-PASS":
-            result["note"] = note
-        if kwargs.get("reason"):
-            result["reason"] = kwargs["reason"]
-        context.setdefault("_method_pending", []).append((index, label, result))
-        return
-    if method == "http":
-        context.setdefault("_method_http", []).append({"method": args[0], "uri": args[1], "status": args[2]})
-    logger = context.get("log")
-    if logger is not None:
-        return getattr(logger, method)(*args, **kwargs)
-    print(json.dumps({"event": method, "details": args, **kwargs}, ensure_ascii=False))
-
-
-def _finish(context, status, reason, evidence, observations):
-    _report_flush(context, status, reason)
-    results = context.setdefault("_method_results", [])
-    for index, item in enumerate(TEST_CASE["test_method"]):
-        if item["type"] == "Record" and item.get("observation") in observations:
-            _method_emit(context, index, "COMPLETED", actual=observations[item["observation"]])
-    observed = {result["method_index"] for result in results}
-    for index, item in enumerate(TEST_CASE["test_method"]):
-        if index not in observed:
-            skip_reason = ("No applicable item was encountered for this check."
-                           if item["step_number"] in context.get("_method_visited", set()) and status == "Pass"
-                           else "Prerequisite was unavailable or execution ended: " + reason)
-            _method_emit(context, index, "Skip", reason=skip_reason)
-    notes = list(dict.fromkeys(result["note"] for result in results if result["status"] == "C-PASS"))
-    if status == "Pass" and any(result["status"] in ("FAIL", "FAILED", "ERROR") for result in results):
-        status, reason = "Fail", "A required method item failed; see its recorded result"
-    elif status == "Pass" and notes:
-        status = "C-PASS"
-    note = "\n".join(notes) if status == "C-PASS" else ""
-    context["case_result"] = dict(status=status, reason=reason, note=note, evidence=evidence,
-                                  observations=observations, method_results=results)
-    context["_tc_status"] = {"Pass": "PASS", "C-PASS": "C-PASS", "Block": "BLOCK"}.get(status, "FAIL")
-    if context.get("log") is not None:
-        context["log"].finish(status, reason, **({"note": note} if note else {}))
-    else:
-        print(json.dumps(context["case_result"], ensure_ascii=False))
-    if status == "Fail":
-        raise CaseFailure(reason)
-    if status == "Error":
-        raise RuntimeError(reason)
 
 
 def _origin(url):
@@ -315,66 +190,16 @@ def _reject_json_constant(value):
     raise ValueError("Non-finite JSON constant: " + value)
 
 
-def _fetch(session, url, conf, origin, context, evidence, cache, inspect_headers):
-    chain = []
-    current = url
+def _resource_body(response):
+    if response.status != 200:
+        raise CaseFailure(f"Expected HTTP status = 200; Received HTTP status = {response.status}")
     try:
-        for hop in range(6):
-            if current in chain:
-                raise CaseFailure("Redirect loop detected")
-            if current in cache:
-                result = cache[current]
-                if isinstance(result, Exception):
-                    raise result
-                for alias in chain:
-                    cache[alias] = result
-                return result
-            chain.append(current)
-            response = session.get(current, headers={"Accept": "application/json"},
-                                   verify=conf.get("verify_ssl", False), timeout=15,
-                                   allow_redirects=False)
-            headers = {k: v for k, v in response.headers.items()
-                       if k.lower() not in ("set-cookie", "authorization", "x-auth-token")}
-            evidence.append({"uri": current, "status": response.status_code,
-                             "headers": headers, "body": response.text})
-            _log(context, "http", "GET", current, response.status_code, headers,
-                 response.text, request_headers={"Accept": "application/json"})
-            location_issues = inspect_headers(response.headers, current)
-            if response.status_code in (301, 302, 307, 308):
-                location = response.headers.get("Location")
-                if not location:
-                    raise CaseFailure("Redirect response has no Location")
-                if location_issues:
-                    raise CaseFailure("Advertised redirect URI violates relative-reference rules")
-                try:
-                    target = _url(location, current)
-                except ValueError:
-                    raise CaseFailure("Redirect URL is invalid") from None
-                if _origin(target) != origin:
-                    raise CaseFailure("Redirect leaves Task origin; credentials were not forwarded")
-                if "/Actions/" in urlsplit(target).path or urlsplit(target).path.endswith("/Actions"):
-                    raise CaseFailure("Redirect to an Action endpoint was not followed")
-                if hop == 5:
-                    raise CaseFailure("Redirect limit exceeded (5 redirects)")
-                current = target
-                continue
-            if response.status_code != 200:
-                raise CaseFailure(f"Expected HTTP status = 200; Received HTTP status = {response.status_code}")
-            try:
-                body = json.loads(response.text, parse_constant=_reject_json_constant)
-            except ValueError:
-                raise CaseFailure("Response body is not valid JSON") from None
-            if not isinstance(body, dict):
-                raise CaseFailure("Response body is not a JSON object")
-            result = current, body
-            for alias in chain:
-                cache[alias] = result
-            return result
-        raise CaseFailure("Redirect could not complete")
-    except Exception as error:
-        for attempted in chain:
-            cache[attempted] = error
-        raise
+        body = json.loads(response.text, parse_constant=_reject_json_constant)
+    except ValueError:
+        raise CaseFailure("Response body is not valid JSON") from None
+    if not isinstance(body, dict):
+        raise CaseFailure("Response body is not a JSON object")
+    return body
 
 
 def _has_page_cycle(edges):
@@ -402,33 +227,33 @@ def execute(client, context=None, preset=None):
     """Inspect service-provided URI strings without synthesizing invalid requests."""
     if not isinstance(context, dict):
         raise RuntimeError("BMCAgent did not supply a dictionary execution context")
-    evidence = []
+    from case_log import ReportedCase
+    report = ReportedCase(context, TEST_CASE, CaseFailure)
     observations = {"resources": [], "uris": [], "violations": [], "excluded": [], "unread": [],
                     "header_errors": [], "header_syntax_errors": [], "header_observations": [],
                     "scope": "Explicit Body URI fields and observed GET Location/Content-Location/Link headers"}
-    _log(context, "section", "Task connection settings", report_step=1)
-    conf = context.get("redfish")
+    report.begin_step(1)
+    from redfish_route import RedfishRoute
+    route_name = next(m["route"] for m in TEST_CASE["test_method"] if m.get("step_number") == 2 and "route" in m)
     try:
-        if not isinstance(conf, dict):
-            raise ValueError("Missing Task settings")
-        host = _url(conf.get("host"), "")
+        route = RedfishRoute(context, TEST_CASE["command_routes"][route_name])
+        host = _url(route.host, "")
         origin = _origin(host)
     except (ValueError, TypeError):
-        return _finish(context, "Fail", "Task BMC URL is missing or invalid", evidence, observations)
-    try:
-        import requests
-    except ImportError:
-        return _finish(context, "Error", "Required requests package is unavailable", evidence, observations)
-    _log(context, "check", "Task origin available", True, expected="HTTP(S) origin",
+        reason = "Task BMC URL is missing or invalid"
+        report.checkpoint("service_origin_valid", "FAIL", reason=reason, expected="HTTP(S) origin",
+             actual="Missing or invalid Task BMC URL")
+        return report.finish(observations, blocked=reason, operation_failure=reason)
+    report.checkpoint("service_origin_valid", "PASS", expected="HTTP(S) origin",
          actual=urlunsplit((urlsplit(host).scheme, urlsplit(host).netloc, "", "", "")))
     root = _url("/redfish/v1/", host)
-    queue, scheduled, cache = deque([root]), {root}, {}
+    queue, scheduled = deque([root]), {root}
     resources, aliases, page_edges = set(), {}, set()
     errors = observations["unread"]
 
     def unread(uri, reason, source=None):
         errors.append({"uri": uri, "source": source, "reason": reason})
-        _log(context, "check", "Traversal evidence available", False,
+        report.checkpoint("traversal_complete", "FAIL", reason=reason,
              expected="Readable in-scope resource or page", actual=errors[-1])
 
     def inspect_uri(raw, source, field, kind):
@@ -440,48 +265,56 @@ def execute(client, context=None, preset=None):
         return issues
 
 
-    def inspect_headers(headers, uri):
-        present = {k.lower(): v for k, v in headers.items()}
+    redirect_statuses = (301, 302, 307, 308)
+
+    def inspect_hop(hop):
+        uri, present = hop.uri, hop.headers
         names = ("location", "content-location", "link")
         observations["header_observations"].append({
             "response_uri": uri, "present": [n for n in names if n in present],
             "absent": [n for n in names if n not in present]})
         location_issues = []
         for name in ("location", "content-location"):
-            if name in present:
-                issues = inspect_uri(present[name], uri, "headers/" + name, "header")
+            for value in present.get(name, []):
+                issues = inspect_uri(value, uri, "headers/" + name, "header")
                 if name == "location":
-                    location_issues = issues
+                    location_issues.extend(issues)
         if "link" in present:
-            syntax_issues = []
-            try:
-                for field, reference in _link_references(present["link"], syntax_issues):
-                    inspect_uri(reference, uri, "headers/" + field, "header")
-            except CaseFailure as error:
-                item = {"source": uri, "header": "Link", "raw": present["link"], "reason": str(error)}
-                observations["header_errors"].append(item)
-                unread(uri, "Link header cannot be completely interpreted", item)
-                syntax_issues.append({"reason": str(error), "raw": present["link"]})
-            details = [dict(issue, source=uri, header="Link") for issue in syntax_issues]
+            details = []
+            for header_index, value in enumerate(present["link"], 1):
+                syntax_issues = []
+                try:
+                    for field, reference in _link_references(value, syntax_issues):
+                        inspect_uri(reference, uri, "headers/" + field, "header")
+                except CaseFailure as error:
+                    item = {"source": uri, "evidence_id": hop.evidence_id, "header_index": header_index, "reason": str(error)}
+                    observations["header_errors"].append(item)
+                    unread(uri, "Link header cannot be completely interpreted", item)
+                    syntax_issues.append({"reason": str(error)})
+                details.extend(dict(issue, header_index=header_index) for issue in syntax_issues)
             observations["header_syntax_errors"].extend(details)
-            _log(context, "check", "Link header parameter syntax", not details,
+            report.checkpoint("link_header_syntax", "FAIL" if details else "PASS",
+                 reason="Link header contains invalid parameter syntax" if details else "",
                  expected="RFC 8288 parameter values use token or quoted-string syntax",
-                 actual={"source": uri, "issues": details})
-        return location_issues
+                 actual={"uri": uri, "evidence_id": hop.evidence_id, "issues": details})
+        if hop.status in redirect_statuses and location_issues:
+            raise CaseFailure("Advertised redirect URI violates relative-reference rules")
 
-    _log(context, "section", "Resource traversal and HTTP evidence", report_step=2)
+    def allow_target(uri):
+        path = urlsplit(uri).path
+        return "/Actions/" not in path and not path.endswith("/Actions")
+
+    report.begin_step(2)
     try:
-        with requests.Session() as session:
-            session.trust_env = False
-            session.auth = (conf.get("username", ""), conf.get("password", ""))
+        with route.traversal(redirect_statuses=redirect_statuses, max_redirects=5,
+                             allow_target=allow_target, inspect_hop=inspect_hop) as get:
             while queue:
                 requested = queue.popleft()
                 try:
-                    final, body = _fetch(session, requested, conf, origin, context, evidence, cache, inspect_headers)
-                except (CaseFailure, requests.RequestException) as error:
-                    reason = str(error) if isinstance(error, CaseFailure) else (
-                        "HTTP request could not complete (" + type(error).__name__ + ")")
-                    cache[requested] = CaseFailure(reason)
+                    response = get(requested)
+                    final, body = response.uri, _resource_body(response)
+                except (CaseFailure, ValueError) as error:
+                    reason = str(error)
                     unread(requested, reason)
                     continue
                 aliases[requested] = final
@@ -525,14 +358,24 @@ def execute(client, context=None, preset=None):
                         queue.append(target)
         if _has_page_cycle({(aliases.get(a, a), aliases.get(b, b)) for a, b in page_edges}):
             unread(root, "Collection pagination cycle detected")
-        _log(context, "check", "Traversal complete", not errors,
+        if not any("link" in item["present"] for item in observations["header_observations"]):
+            if errors:
+                status = "Not executed"
+                reason = "No Link header observed; traversal was incomplete: " + errors[0]["reason"]
+            else:
+                status = "Skip"
+                reason = "No response in the completed traversal contained a Link header."
+            report.checkpoint("link_header_syntax", status, reason=reason)
+        report.checkpoint("traversal_complete", "FAIL" if errors else "PASS",
+             reason=errors[0]["reason"] if errors else "",
              expected="No unread in-scope resources or pages",
-             actual={"resources": len(resources), "unread": errors, "excluded": observations["excluded"]})
+             actual={"source": "Traversal complete", "value": {"resources": len(resources),
+                    "unread": errors, "excluded": observations["excluded"]}})
         if not observations["uris"]:
-            return _finish(context, "Fail", "No service-provided URI evidence was obtained", evidence, observations)
-        _log(context, "section", "Relative URI reference validation", report_step=3)
+            return report.finish(observations, blocked="No service-provided URI evidence was obtained")
+        report.begin_step(3)
         for item in observations["uris"]:
-            _log(context, "check", "Original URI relative-reference form", not item["issues"],
+            report.checkpoint("uri_reference_form", "FAIL" if item["issues"] else "PASS", reason=", ".join(item["issues"]),
                  expected="Absolute URI or relative reference starting with / or //authority", actual=item)
 
         counts = {area: {category: 0 for category in ("relative", "absolute", "unknown")}
@@ -544,25 +387,20 @@ def execute(client, context=None, preset=None):
         observations["relative_reference_count"] = relative_count
         seen_headers = {name for item in observations["header_observations"] for name in item["present"]}
         observations["absent_headers"] = sorted({"location", "content-location", "link"} - seen_headers)
-        _log(context, "check", "Applicable relative references found", relative_count > 0,
+        report.checkpoint("relative_reference_present", "PASS" if relative_count else "FAIL",
+             reason="" if relative_count else "No applicable relative URI references were found",
              expected="At least one relative reference in the observed GET scope",
              actual={"counts": counts, "absent_headers": observations["absent_headers"]})
         observations["resource_response_count"] = len(resources)
         observations["uri_occurrence_count"] = len(observations["uris"])
         observations["traversal_complete"] = not errors
-        _log(context, "check", "Scope sufficient for Pass", not errors,
+        report.checkpoint("discovered_scope_assessed", "FAIL" if errors else "PASS", reason=errors[0]["reason"] if errors else "",
              expected="Complete discovered scope", actual={"unread": errors})
     except CaseFailure:
         raise
     except Exception as error:
         observations["pending"] = list(queue)
-        return _finish(context, "Error", "Unexpected program error (" + type(error).__name__ + ")",
-                       evidence, observations)
-    failed = bool(errors or observations["violations"] or observations["header_syntax_errors"] or relative_count == 0)
-    if relative_count == 0:
-        reason = "No applicable relative URI references were found"
-    elif failed:
-        reason = f"Relative URI violations: {len(observations['violations'])}; Link syntax issues: {len(observations['header_syntax_errors'])}; traversal issues: {len(errors)}"
-    else:
-        reason = f"Validated {relative_count} relative references in the discovered Body and GET-header scope"
-    return _finish(context, "Fail" if failed else "Pass", reason, evidence, observations)
+        return report.finish(observations, error="Unexpected program error (" + type(error).__name__ + ")")
+    summary = (f"Relative references: {relative_count}; relative URI violations: {len(observations['violations'])}; "
+               f"Link syntax issues: {len(observations['header_syntax_errors'])}; traversal issues: {len(errors)}")
+    return report.finish(observations, summary=summary)

@@ -11,7 +11,7 @@ from html import escape
 from pathlib import Path
 from types import SimpleNamespace
 
-from case_log import test_log_text
+from case_log import checkpoint_letter, http_lines, test_log_text
 from report_case import description, display, execution_date, firmware, result_summary, method_table_rows, MethodResult, MissingObservation
 from report_presentation import note_text, specification_reference, result_parts, judgement_class
 
@@ -45,7 +45,7 @@ def table_row(step, description_text, content, judgement='', *, checkpoint=False
     row_class = 'method-' + judgement_class(judgement)
     if checkpoint:
         row_class += ' checkpoint-row'
-    elif step.isdecimal():
+    elif step.isdecimal() or step.endswith(' | Action'):
         row_class += ' main-step-row'
     return ('<tr class="'+row_class+'">'
             + ''.join('<td>'+escape(value)+'</td>' for value in (step, description_text))
@@ -69,31 +69,44 @@ def observations_html(observations):
 
 def legacy_method_body(result, metadata):
     rows = method_table_rows(result, metadata, number_subitems=True)
-    parents = {step for step, kind, *_ in rows if kind in ('Action', 'Command') and step.isdecimal()}
-    records = defaultdict(list)
+    http = defaultdict(list)
+    for index, record in enumerate((r for r in result.get('log_records') or []
+                                    if isinstance(r, dict) and r.get('kind') == 'http'), 1):
+        lines = http_lines(record.get('method'), record.get('uri'), record.get('status'),
+                           record.get('request_headers'), record.get('headers'), record.get('body', ''))
+        if record.get('timestamp'):
+            lines.insert(0, 'Time: ' + record['timestamp'])
+        evidence_id = escape(str(record.get('evidence_id', index)))
+        http[str(record.get('step_number'))].append(
+            f'<details><summary>HTTP evidence #{evidence_id}</summary><pre>'
+            + escape('\n'.join(lines)) + '</pre></details>')
     checkpoints = defaultdict(list)
     for step, kind, _, text, status in rows:
-        if kind == 'Record' and step in parents:
-            records[step].append(evidence_html(text, status))
-        elif kind == 'Checkpoint' and step and not isinstance(text, MissingObservation):
+        if kind == 'Checkpoint' and step and not isinstance(text, MissingObservation):
             checkpoints[step].append((text, status))
     parts = []
     seen = set()
-    for row in rows:
-        step, kind, label, text, status = row
-        if kind == 'Record' and step in parents:
-            continue
-        if kind == 'Checkpoint' and step:
+    for step, kind, label, text, status in rows:
+        if kind in ('Action', 'Command') and step.isdecimal():
+            requests = http.pop(step, [])
+            evidence = ''.join(requests)
+            if len(requests) > 1:
+                evidence = (f'<details><summary>Details · HTTP evidence ({len(requests):,})</summary>'
+                            + evidence + '</details>')
+            parts.append(table_row(f'Step {step} | Action', label, evidence))
+            parts.append(table_row(f'Step {step} | Outcome', '', evidence_html(text, status), status))
+        elif kind == 'Checkpoint' and step and step.rstrip('abcdefghijklmnopqrstuvwxyz').isdecimal():
             if step in seen:
                 continue
             seen.add(step)
-            parts.append(table_row(step, label, observations_html(checkpoints[step]),
+            number = step.rstrip('abcdefghijklmnopqrstuvwxyz')
+            tag = f'Step {number} | Checkpoint {step[len(number):].upper()}'
+            parts.append(table_row(tag, label, observations_html(checkpoints[step]),
                                    status if len(checkpoints[step]) == 1 else '', checkpoint=True))
-        elif kind in ('Action', 'Command') and step in records:
-            content = '<div>'+'</div><div>'.join([evidence_html(text, status), *records.pop(step)])+'</div>'
-            parts.append(table_row(step, label, content, status))
+        elif kind == 'Record' and step.isdecimal():
+            parts.append(table_row(f'Step {step} | Record', label, evidence_html(text, status), status))
         else:
-            parts.append(method_row_html(row))
+            parts.append(method_row_html((step, kind, label, text, status)))
     return ''.join(parts)
 
 
@@ -137,15 +150,13 @@ def snapshot_method_body(methods, events):
         # Show the recorded completion status before the step's observation values.
         step_content = ''.join('<div>'+evidence_html(text, status)+'</div>'
                                for text, status in sorted(evidence, key=lambda item: not item[1]))
-        rows.append(table_row(str(number), method['step'], step_content))
+        rows.append(table_row(f'Step {number} | Action', method['step'], ''))
+        rows.append(table_row(f'Step {number} | Outcome', '', step_content))
         for index, (key, declaration) in enumerate(method.get('checkpoints', {}).items(), 1):
-            suffix = ''
-            while index:
-                index, letter = divmod(index - 1, 26)
-                suffix = chr(ord('a') + letter) + suffix
+            tag = f'Step {number} | Checkpoint {checkpoint_letter(index)}'
             observations = checkpoints[number, key]
             status = observations[0][1] if len(observations) == 1 else ''
-            rows.append(table_row(str(number)+suffix, declaration['expected'],
+            rows.append(table_row(tag, declaration['expected'],
                                   observations_html(observations), status, checkpoint=True))
     return ''.join(rows)
 
@@ -240,8 +251,6 @@ def generate_html_report(db_path, reports, preview_case_id=None):
                                                    MethodResult('Note: '+display(manual.get('reason')), 0), 'C-PASS'))
                 methods = ('<table class="method-table"><caption>Test Steps &amp; Results</caption>'
                            '<colgroup><col class="method-step"><col><col class="method-result"></colgroup>'
-                           '<thead><tr><th scope="col">Step</th>'
-                           '<th scope="col">Description</th><th scope="col">Result</th></tr></thead>'
                            '<tbody>'+method_body+'</tbody></table>')
                 cards.append(f'''<article class="case" id="{key}" data-status="{status}">
 <details class="case-disclosure"><summary class="case-heading"><svg class="case-chevron" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="m6 3 5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="case-title">{escape(row['display_name'] or row['testcase_id'])}</span><span class="status {status.lower()}">{status}</span></summary>
