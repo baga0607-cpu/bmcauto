@@ -932,12 +932,12 @@ body.plan-workspace .plan-step-layout #repository-table.case-list-columns th:las
 #plan-step-preview h2{font-size:16px;line-height:1.35;margin:0;min-width:0;overflow-wrap:anywhere}
 .plan-step-heading button{flex:none;white-space:nowrap}
 .plan-step-scroll{min-height:0;overflow:auto;flex:1}
-.plan-step-scroll table{width:100%;min-width:0;table-layout:fixed}
+.plan-step-scroll table{width:100%;min-width:0;table-layout:auto}
 .plan-step-scroll :is(th,td){text-align:left;vertical-align:top}
 .plan-step-scroll th{position:sticky;top:0;background:var(--ground);font-size:1rem;font-weight:600;line-height:20px;padding:4px 12px;border:0}
-.plan-step-scroll th:first-child{width:48px}
 .plan-step-scroll td{padding:3px 12px;border:0;line-height:1.35;white-space:pre-wrap;overflow-wrap:anywhere;font-weight:400}
-.plan-step-scroll .checkpoint-row td{padding-left:20px}
+.plan-step-scroll :is(th,td){border-bottom:1px solid var(--line)}
+.plan-step-scroll :is(th,td):first-child:not([colspan]){width:1%;padding-inline:6px;white-space:nowrap}
 .plan-step-scroll .checkpoint-row td:first-child{color:var(--muted)}
 .plan-step-heading button[hidden]{display:none}
 #repository-table .case-preview-current>td:first-child{box-shadow:inset 3px 0 var(--accent)}

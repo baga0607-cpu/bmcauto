@@ -413,8 +413,8 @@ function planMethodRows(methods){
  function checkpoint(number,description){
    let n=(counts.get(number)||0)+1,suffix='';
    counts.set(number,n);
-   while(n){n--;suffix=String.fromCharCode(97+n%26)+suffix;n=Math.floor(n/26);}
-   rows.push([number+suffix,description,true]);
+   while(n){n--;suffix=String.fromCharCode(65+n%26)+suffix;n=Math.floor(n/26);}
+   rows.push([`Step ${number} | Checkpoint ${suffix}`,description,true]);
  }
  for(const [index,item] of (Array.isArray(methods)?methods:[]).entries()){
    if(!item||typeof item!=='object')continue;
@@ -423,7 +423,7 @@ function planMethodRows(methods){
    const number=String(item.step_number??(/^S(\d+)$/.exec(item.step_id)?.[1])??index+1);
    const text=item.step??Object.entries(item).find(([key])=>/^step_\d+$/.test(key))?.[1]??'';
    if(type==='Checkpoint'){checkpoint(number,text);continue;}
-   rows.push([number,item.criteria==null?text:text+'\nCriteria: '+item.criteria,false]);
+   rows.push([`Step ${number} | Action`,item.criteria==null?text:text+'\nCriteria: '+item.criteria,false]);
    for(const check of Object.values(item.checkpoints||{}))checkpoint(number,check?.expected??check);
  }
  return rows;
