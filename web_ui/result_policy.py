@@ -5,6 +5,8 @@ def declared_method_items(methods):
     """Yield legacy positions and stable keys in the captured declaration order."""
     keys = set()
     for index, item in enumerate(methods):
+        if isinstance(item, dict) and "type" not in item and "step_number" in item:
+            item = dict(item, type="Command" if "route" in item else "Action")
         yield index, item
         if not isinstance(item, dict):
             continue

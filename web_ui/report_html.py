@@ -245,7 +245,12 @@ def generate_html_report(db_path, reports, preview_case_id=None):
                 is_snapshot = isinstance(declared, list) and declared and all(
                     isinstance(item, dict) and 'step_number' in item and isinstance(item.get('step'), str)
                     and 'type' not in item and 'method_type' not in item for item in declared)
-                method_body = snapshot_method_body(declared, events) if is_snapshot else legacy_method_body(result, metadata)
+                # Imported v1 cases share the snapshot declaration shape, but the production
+                # runner saves their checkpoint evidence in typed log records.
+                has_method_records = any(isinstance(record, dict) and record.get('kind') == 'step'
+                                         and record.get('method_type') for record in result.get('log_records') or [])
+                method_body = (snapshot_method_body(declared, events) if is_snapshot and not has_method_records
+                               else legacy_method_body(result, metadata))
                 if manual and manual.get('status') in ('CP', 'C-PASS'):
                     method_body += method_row_html(('', '—', 'Manual case judgement',
                                                    MethodResult('Note: '+display(manual.get('reason')), 0), 'C-PASS'))

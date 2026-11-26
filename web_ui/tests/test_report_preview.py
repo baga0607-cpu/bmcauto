@@ -63,6 +63,26 @@ class ReportPreviewTest(unittest.TestCase):
         if target:
             (Path(target)/'preview.html').write_text(html, encoding='utf-8')
 
+    def test_v1_declaration_renders_saved_checkpoint_results_in_step_order(self):
+        self.seed()
+        with self.Session() as session:
+            row = session.query(TaskTestCase).filter_by(task_id='task1', testcase_id='case-0').one()
+            result = json.loads(row.result_json)
+            methods = result['report_definition']['test_method']
+            result['report_definition']['test_method'] = [
+                {key: value for key, value in item.items() if key != 'type'}
+                for item in methods if item['type'] != 'Record'
+            ]
+            row.result_json = json.dumps(result)
+            session.commit()
+        html = self.get_preview().get_json()['html']
+        labels = ('Step 1 | Action', 'Step 1 | Outcome', 'Step 1 | Checkpoint A', 'Step 2 | Action')
+        positions = [html.index(f'<td>{label}</td>') for label in labels]
+        self.assertEqual(positions, sorted(positions))
+        checkpoint = html[positions[2]:].split('</tr>', 1)[0]
+        self.assertIn('PASS', checkpoint)
+        self.assertIn('Actual: 200', checkpoint)
+
     def test_running_manual_and_stale_results_remain_readable(self):
         self.seed()
         with self.Session() as session:
