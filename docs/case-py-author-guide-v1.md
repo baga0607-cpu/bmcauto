@@ -2,7 +2,7 @@
 
 2026-11-23｜適用於新版單檔 Case 設計
 
-每個 Case 交付一份 `case.py`。檔案開頭的 `TEST_CASE` 讓審閱者在執行前讀完整個測試流程；BMCAgent 從字典外的 `run(ctx)` 開始執行。整份 Python 使用英文，包括名稱、註解、docstring、測試字串、觀察、Note 與例外訊息。Case ID 由平台建立。
+每個 Case 交付一份 Python 測試程式。除非另有指定，檔名使用「案例編號＋測試名稱」，以小寫英文字母、數字與底線組成，副檔名為 `.py`。例如，RF-01-001 的 Version Discovery Endpoint 使用 `rf_01_001_version_discovery_endpoint.py`。檔案開頭的 `TEST_CASE` 讓審閱者在執行前讀完整個測試流程；BMCAgent 從字典外的 `run(ctx)` 開始執行。整份 Python 使用英文，包括名稱、註解、docstring、測試字串、觀察、Note 與例外訊息。Case ID 由平台建立。
 
 **先選對執行環境。** 下文的範本是 v1 作者介面設計。正式版目前仍檢查 `execute(client, context=None, preset=None)`。本機 RF-01-002 prototype 已能執行 `run(ctx)`，但工具方法與設定鍵仍有差異，詳見文末對照。[正式匯入器](../web_ui/single_case.py)
 
