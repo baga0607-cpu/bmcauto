@@ -1,6 +1,7 @@
 import io
 import json
 import os
+import re
 import unittest
 import zipfile
 from pathlib import Path
@@ -19,6 +20,48 @@ def item(index, kind, number, text, status=None, **values):
 
 
 class MethodTableTest(unittest.TestCase):
+    def test_revisited_actions_share_rows_and_keep_each_outcome(self):
+        from report_html import legacy_method_body
+
+        records = [item(step, 'Action', step, f'Action {step}', 'COMPLETED',
+                        actual=f'file-{index}-step-{step}')
+                   for index in range(3) for step in (3, 4)]
+        body = legacy_method_body({'log_records': records}, {})
+        for step in (3, 4):
+            self.assertEqual(body.count(f'Step {step} | Action'), 1)
+            self.assertEqual(body.count(f'Step {step} | Outcome'), 1)
+            for index in range(3):
+                self.assertIn(f'file-{index}-step-{step}', body)
+
+    def test_grouped_conditional_judgements_use_conditional_color(self):
+        template = Path(__file__).resolve().parents[1] / 'templates' / 'standalone_report.html'
+        css = template.read_text(encoding='utf-8')
+        for selector in ('.judgement-text[data-judgement="conditional"]',
+                         '[data-judgement="conditional"]>.judgement-text'):
+            self.assertRegex(css, re.escape(selector) + r'[^{}]*\{color:#f18c43')
+
+    def test_mixed_schema_dialects_show_one_conditional_verdict(self):
+        from report_html import snapshot_method_body
+
+        key = 'recommended_json_schema_dialect'
+        methods = [{'step_number': 4, 'step': 'Parse schema', 'checkpoints': {
+            'schema_document_recognition': {'expected': 'Recognized structure'},
+            key: {'expected': 'Check dialect'},
+        }}]
+        event = {'event': 'checkpoint_result', 'step_number': 4, 'checkpoint_id': key}
+        events = [dict(event, judgement='PASS', actual={'uri': '/preferred.json'}),
+                  dict(event, judgement='C-PASS', actual={'uri': '/alternate.json'},
+                       note='Alternate dialect accepted')]
+        row = snapshot_method_body(methods, events).split('Step 4 | Checkpoint B')[1]
+        summary, conditional, other = row.split('<details')
+        self.assertIn('>C-PASS</div>', summary)
+        self.assertIn('Conditional items', conditional)
+        self.assertIn('/alternate.json', conditional)
+        self.assertIn('Alternate dialect accepted', conditional)
+        self.assertIn('Other items', other)
+        self.assertIn('/preferred.json', other)
+        self.assertNotIn('PASS', conditional + other)
+
     def test_results_and_judgements_are_separate(self):
         records = [item(0, 'Action', 2, 'Parse JSON.', 'FAILED', reason='Invalid JSON'),
                    item(1, 'Checkpoint', 2, 'Verify JSON.', 'FAIL', expected=True, actual=False),
@@ -76,8 +119,10 @@ class MethodTableTest(unittest.TestCase):
                                judgement=status, **data))
         html = snapshot_method_body(methods, events)
         self.assertEqual(html.count('<td>Step 2 | Checkpoint B</td>'), 1)
+        self.assertNotIn('>PASS</span>', html)
+        self.assertNotIn('>FAIL</span>', html)
         for text in ('No evidence</td><td class="result-text"></td>', 'Actual: false', 'Actual: 0',
-                     'x' * 1500 + '&lt;END&gt;', 'FAIL 1</span><details><summary>Detail', 'PASS 1</span><details><summary>Detail', '>Skip</span>Reason: Optional',
+                     'x' * 1500 + '&lt;END&gt;', 'data-judgement="fail">FAIL</div>', 'Fail items: <span>Detail</span>', 'Other items: <span>Detail</span>', '>Skip</span>Reason: Optional',
                      '>Not executed</span>Reason: No response'):
             self.assertIn(text, html)
 

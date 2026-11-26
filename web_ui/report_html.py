@@ -53,6 +53,21 @@ def table_row(step, description_text, content, judgement='', *, checkpoint=False
 
 
 def observations_html(observations):
+    statuses = {status for _, status in observations}
+    if len(observations) > 1 and ('FAIL' in statuses or statuses == {'PASS', 'C-PASS'}):
+        overall, label = ('FAIL', 'Fail items') if 'FAIL' in statuses else ('C-PASS', 'Conditional items')
+        parts = [f'<div class="judgement-text" data-judgement="{judgement_class(overall)}">{overall}</div>']
+        for label, matches_overall in ((label, True), ('Other items', False)):
+            items = []
+            for text, status in observations:
+                if (status == overall) == matches_overall:
+                    detail = evidence_html(getattr(text, 'full', text), '', fold_actual=False)
+                    items.append('<li>'+detail+'</li>')
+            if not items:
+                continue
+            parts.append(f'<details class="result-group"><summary>{label}: <span>Detail</span></summary>'
+                         + '<ol>'+''.join(items)+'</ol></details>')
+        return ''.join(parts)
     if len(observations) <= 1:
         return ''.join(evidence_html(text, status) for text, status in observations)
     groups = defaultdict(list)
@@ -81,20 +96,31 @@ def legacy_method_body(result, metadata):
             f'<details><summary>HTTP evidence #{evidence_id}</summary><pre>'
             + escape('\n'.join(lines)) + '</pre></details>')
     checkpoints = defaultdict(list)
-    for step, kind, _, text, status in rows:
+    actions = defaultdict(list)
+    for step, kind, label, text, status in rows:
         if kind == 'Checkpoint' and step and not isinstance(text, MissingObservation):
             checkpoints[step].append((text, status))
+        elif kind in ('Action', 'Command') and step.isdecimal():
+            actions[step, kind, label].append((text, status))
     parts = []
     seen = set()
     for step, kind, label, text, status in rows:
         if kind in ('Action', 'Command') and step.isdecimal():
+            outcomes = actions.pop((step, kind, label), [])
+            if not outcomes:
+                continue
             requests = http.pop(step, [])
             evidence = ''.join(requests)
             if len(requests) > 1:
                 evidence = (f'<details><summary>Details · HTTP evidence ({len(requests):,})</summary>'
                             + evidence + '</details>')
             parts.append(table_row(f'Step {step} | Action', label, evidence))
-            parts.append(table_row(f'Step {step} | Outcome', '', evidence_html(text, status), status))
+            if len(outcomes) == 1:
+                parts.append(table_row(f'Step {step} | Outcome', '', evidence_html(text, status), status))
+            else:
+                content = ''.join(f'<div class="method-{judgement_class(verdict)}">'
+                                  + evidence_html(value, verdict) + '</div>' for value, verdict in outcomes)
+                parts.append(table_row(f'Step {step} | Outcome', '', content))
         elif kind == 'Checkpoint' and step and step.rstrip('abcdefghijklmnopqrstuvwxyz').isdecimal():
             if step in seen:
                 continue
@@ -120,6 +146,8 @@ def event_evidence(event):
     for key in ('expected', 'actual', 'reason', 'note'):
         if key in event:
             value = event[key]
+            if key == 'reason' and not str(value or '').strip():
+                continue
             value = (value or '""') if isinstance(value, str) else json.dumps(value, ensure_ascii=False)
             if key == 'actual':
                 start = sum(len(part) + 1 for part in parts)
@@ -276,7 +304,7 @@ def generate_html_report(db_path, reports, preview_case_id=None):
     import re
     if preview:
         styles = re.search(r'<style>(.*?)</style>', template, re.S)[1]
-        content = ''.join(sections).replace('<details class=', '<details open class=')
+        content = ''.join(sections).replace('<details class="case-disclosure"', '<details open class="case-disclosure"')
         html = ('<!doctype html><html lang="en"><head><meta charset="utf-8">'
                 '<meta name="viewport" content="width=device-width,initial-scale=1">'
                 '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'">'

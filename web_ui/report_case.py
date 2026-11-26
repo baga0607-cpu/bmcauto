@@ -145,6 +145,8 @@ def _method_table_rows(result, metadata, number_subitems):
             if key not in value:
                 continue
             raw = value[key]
+            if key == 'reason' and not str(raw or '').strip():
+                continue
             if key == 'actual' and raw is None and status in ('Skip',):
                 continue
             rendered = 'null' if raw is None else '""' if raw == '' else display(raw)

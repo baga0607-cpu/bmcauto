@@ -43,7 +43,8 @@ dt{color:#666;font-size:12px}dd{color:#333;font-size:13px;line-height:1.45}
 
 .judgement-text{display:block;font-weight:700;color:#606b77}.method-pass .judgement-text{color:#35634c}
 .method-fail .result-text,.method-fail .judgement-text,.result-text [data-judgement="fail"],.result-text [data-judgement="fail"]>.judgement-text{color:#dd4b50;font-weight:700}
-.method-conditional .judgement-text{color:#f18c43;font-weight:700}
+.method-conditional .judgement-text,.judgement-text[data-judgement="conditional"],[data-judgement="conditional"]>.judgement-text{color:#f18c43;font-weight:700}
+[data-judgement="pass"]>.judgement-text{color:#35634c}
 .result-note{display:block;margin-top:6px;color:#f18c43;font-weight:700;line-height:1.4;background:transparent;border:0}
 .result-note strong{display:block;color:inherit;margin-bottom:3px}
 .case[data-status="FAIL"] .result-note,.method-fail .result-note{color:#dd4b50}
@@ -58,6 +59,10 @@ dt{color:#666;font-size:12px}dd{color:#333;font-size:13px;line-height:1.45}
  .method-table{font-size:8.5pt;line-height:1.35}.method-table th,.method-table td{padding:2pt 4pt}
  .result-note{margin-top:4pt}
 }
+.result-group > summary{list-style:none}
+.result-group > summary::-webkit-details-marker{display:none}
+.result-group > summary span::before{content:"▸ ";}
+.result-group[open] > summary span::before{content:"▾ ";}
 </style></head><body><main>
 <header class="report-header"><div><p class="eyebrow">BMC Agent / Quality assurance</p><h1>BMC Test Report</h1><p class="generated">Generated {{GENERATED}}</p></div><button class="primary" id="print-report">Print</button></header>
 <div class="stats" aria-label="Formal report results">{{STATS}}</div>
