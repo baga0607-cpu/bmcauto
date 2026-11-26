@@ -11,7 +11,7 @@ import zipfile
 import requests
 from case_log import CaseLog
 from report_case import method_rows, method_table_rows
-from result_policy import method_status
+from result_policy import declared_method_items, method_status
 ROOT = Path(__file__).resolve().parents[2]
 MODULES = {}
 for path in sorted((ROOT / 'test_assets/redfish').glob('rf_01_*.py')):
@@ -57,12 +57,14 @@ class SeriesAudit(unittest.TestCase):
         self.assertEqual(ctx['case_result']['status'],expected,(ctx['case_result'],str(error)))
         if expected in ('Pass','C-PASS','Block'):self.assertIsNone(error)
         rows=[r['result'] for r in log.records if r['kind']=='step']
-        definitions=module.TEST_CASE['test_method']
-        self.assertEqual({r['method_index'] for r in rows},set(range(len(definitions))))
+        definitions = dict(declared_method_items(module.TEST_CASE['test_method']))
+        def identity(row):
+            return row.get('checkpoint_id', row.get('method_index'))
+        self.assertEqual({identity(row) for row in rows},set(definitions))
         for row in rows:
-            definition=definitions[row['method_index']]
+            definition=definitions[identity(row)]
             self.assertEqual((row['type'],row['step_number']),(definition['type'],definition['step_number']))
-            self.assertIn(row['status'],('COMPLETED','FAILED','ERROR','PASS','FAIL','C-PASS','Skip'))
+            self.assertIn(row['status'],('COMPLETED','FAILED','ERROR','PASS','FAIL','C-PASS','Skip','Not executed'))
             if row['status']=='Skip':self.assertTrue(row.get('reason'))
             if row['status']=='C-PASS':
                 self.assertEqual(row['type'],'Checkpoint')
@@ -72,8 +74,8 @@ class SeriesAudit(unittest.TestCase):
         table = method_table_rows({'log_records':log.records, 'report_definition':module.TEST_CASE}, {})
         typed = [r for r in table if r[1] in ('Command','Action','Checkpoint','Record')]
         self.assertEqual(len(typed),len(rows))
-        expected_order = sorted(rows,key=lambda r:r['method_index'])
-        self.assertEqual([r[2] for r in typed],[definitions[r['method_index']]['step'] for r in expected_order])
+        expected_order = sorted(rows,key=lambda row:list(definitions).index(identity(row)))
+        self.assertEqual([r[2] for r in typed],[definitions[identity(r)]['step'].replace('\n\n','\n') for r in expected_order])
         self.assertEqual([r[4] for r in typed],[r['status'] for r in expected_order])
         self.assertEqual(len([r for r in log.records if r['kind']=='finish']),1)
         self.assertNotRegex(output.getvalue(),r'(?m)^\[\d+\] ')
@@ -153,7 +155,7 @@ class SeriesAudit(unittest.TestCase):
         routes=schema_routes([{'Uri':'/redfish/v1/Schemas/Test.json'},{'Uri':'/schema/Other.json'}])
         routes['/schema/Other.json']=reply({'$schema':'https://json-schema.org/draft/2020-12/schema','$defs':{}})
         rows,_,_=self.run_case(13,routes,'C-PASS')
-        acquired=[r for r in rows if r['method_index']==6]
+        acquired=[r for r in rows if r.get('checkpoint_id')=='declared_file_acquisition']
         self.assertEqual(len(acquired),2)
         self.assertEqual({r['actual']['value']['uri'] for r in acquired},{'https://bmc.invalid/redfish/v1/Schemas/Test.json','https://bmc.invalid/schema/Other.json'})
         routes=schema_routes([{'ArchiveUri':'/bundle.tar','ArchiveFile':'Test.json'}])

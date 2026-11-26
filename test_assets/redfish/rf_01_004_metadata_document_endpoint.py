@@ -2,40 +2,87 @@ import json
 from urllib.parse import urljoin, urlsplit
 import xml.etree.ElementTree as ET
 
-TEST_CASE = {'modified_at': "2026-11-12T09:19:32.977199+00:00",
- 'test_type': 'compliance',
- 'spec_ref': ['DSP0266 v1.25.0 section 6.7 Table 4; sections 7.2.4 and 8.4.2 (OData metadata); section '
-              '11.1.4 (CSDL format).'],
- 'created_at': '2026-10-19T03:27:51.085627+00:00',
- 'name': 'RF-01-004 Metadata Document Endpoint',
- 'description': 'GET /redfish/v1/$metadata and verify the minimum XML Edmx document identity.',
- 'test_method': [{'step_number': 1,
-                  'type': 'Command',
-                  'step': 'Send GET /redfish/v1/$metadata and follow supported same-origin redirects.'},
-                 {'step_number': 1,
-                  'type': 'Checkpoint',
-                  'step': 'Verify that the final HTTP status is 200.'},
-                 {'step_number': 2,
-                  'type': 'Action',
-                  'step': 'Parse the response bytes as XML using the declared encoding.'},
-                 {'step_number': 2,
-                  'type': 'Checkpoint',
-                  'step': "Verify that the XML document contains no DTD declaration.\n\nThis is a parser safeguard: DTD processing is disabled."},
-                 {'step_number': 2,
-                  'type': 'Checkpoint',
-                  'step': 'Verify that the response body can be parsed as XML.'},
-                 {'step_number': 3,
-                  'type': 'Action',
-                  'step': 'Read the root element name, namespace and Version attribute.'},
-                 {'step_number': 3, 'type': 'Checkpoint', 'step': 'Verify that the root local name is Edmx.'},
-                 {'step_number': 3,
-                  'type': 'Checkpoint',
-                  'step': 'Verify that the root namespace is http://docs.oasis-open.org/odata/ns/edmx.'},
-                 {'step_number': 3,
-                  'type': 'Checkpoint',
-                  'step': "Verify that the root element has a Version attribute with:\n- No namespace prefix.\n- The exact value \"4.0\"."}],
- 'automation': 'automatic',
- 'parameters': {}}
+TEST_CASE = {
+    "modified_at": "2026-11-26T05:00:54.277898+00:00",
+    "test_type": "compliance",
+    "spec_ref": [
+        "DSP0266 v1.25.0 section 6.7 Table 4",
+        "DSP0266 v1.25.0 section 7.2.4 (OData metadata)",
+        "DSP0266 v1.25.0 section 8.4.2 (OData metadata)",
+        "DSP0266 v1.25.0 section 11.1.4 (CSDL format)."
+    ],
+    "created_at": "2026-10-19T03:27:51.085627+00:00",
+    "name": "RF-01-004 Metadata Document Endpoint",
+    "description": "GET /redfish/v1/$metadata and verify the minimum XML Edmx document identity.",
+    "test_method": [
+        {
+            "step_number": 1,
+            "type": "Command",
+            "step": "Send GET /redfish/v1/$metadata and follow supported same-origin redirects.",
+            "route": "bmc_redfish",
+            "checkpoints": {
+                "final_http_status": {
+                    "expected": "Verify that the final HTTP status is 200."
+                }
+            }
+        },
+        {
+            "step_number": 2,
+            "type": "Action",
+            "step": "Parse the response bytes as XML using the declared encoding.",
+            "checkpoints": {
+                "xml_parser_safety_boundary": {
+                    "expected": "Verify that the XML document contains no DTD declaration.\n\nThis is a parser safeguard: DTD processing is disabled."
+                },
+                "valid_xml": {
+                    "expected": "Verify that the response body can be parsed as XML."
+                }
+            }
+        },
+        {
+            "step_number": 3,
+            "type": "Action",
+            "step": "Read the root element name, namespace and Version attribute.",
+            "checkpoints": {
+                "root_local_name": {
+                    "expected": "Verify that the root local name is Edmx."
+                },
+                "root_namespace": {
+                    "expected": "Verify that the root namespace is http://docs.oasis-open.org/odata/ns/edmx."
+                },
+                "edmx_version_attribute": {
+                    "expected": "Verify that the root element has a Version attribute with:\n- No namespace prefix.\n- The exact value \"4.0\"."
+                }
+            }
+        }
+    ],
+    "automation": "automatic",
+    "parameters": {},
+    "command_routes": {
+        "bmc_redfish": {
+            "from": "bmcagent",
+            "to": "bmc",
+            "method": "redfish",
+            "lan_port": "task.bmc.lan_ports.port1",
+            "username": "task.bmc.username",
+            "password": "task.bmc.password"
+        }
+    }
+}
+
+
+from result_policy import declared_method_items
+
+_METHOD_ITEMS = dict(declared_method_items(TEST_CASE["test_method"]))
+
+
+def _route_host(context):
+    from redfish_route import RedfishRoute
+    declaration = TEST_CASE["command_routes"]["bmc_redfish"]
+    try:
+        return RedfishRoute(dict(context, log=context.get("log")), declaration).host
+    except (KeyError, TypeError, AttributeError, IndexError) as error:
+        raise ValueError("Invalid Task BMC LAN port settings") from error
 
 
 class UnsupportedDTD(ValueError):
@@ -51,17 +98,18 @@ class CaseFailure(AssertionError):
     """Non-program failure with an actionable reason."""
 
 
-_METHOD_CHECKS = [('Final\\ HTTP\\ status', 1),
- ('XML\\ parser\\ safety\\ boundary', 3),
- ('Valid\\ XML', 4),
- ('Root\\ local\\ name', 6),
- ('Root\\ namespace', 7),
- ('Edmx\\ Version\\ attribute', 8)]
+_METHOD_CHECKS = [('Final\\ HTTP\\ status', 'final_http_status'),
+ ('XML\\ parser\\ safety\\ boundary', 'xml_parser_safety_boundary'),
+ ('Valid\\ XML', 'valid_xml'),
+ ('Root\\ local\\ name', 'root_local_name'),
+ ('Root\\ namespace', 'root_namespace'),
+ ('Edmx\\ Version\\ attribute', 'edmx_version_attribute')]
 
 
 def _method_emit(context, index, status, **detail):
-    item = TEST_CASE["test_method"][index]
-    result = dict(method_index=index, step_number=item["step_number"], type=item["type"],
+    item = _METHOD_ITEMS[index]
+    identity = {"checkpoint_id": index} if item["type"] == "Checkpoint" else {"method_index": index}
+    result = dict(**identity, step_number=item["step_number"], type=item["type"],
                   status=status, **detail)
     result = json.loads(json.dumps(result, ensure_ascii=False), parse_constant=lambda value: value)
     context.setdefault("_method_results", []).append(result)
@@ -80,7 +128,7 @@ def _report_flush(context, status=None, reason=None):
         return
     pending = context.get("_method_pending", [])
     requests = context.get("_method_http", [])
-    index = next(i for i, item in enumerate(TEST_CASE["test_method"])
+    index = next(i for i, item in _METHOD_ITEMS.items()
                  if item["step_number"] == phase and item["type"] in ("Command", "Action"))
     failed_parse = any(label in ("Valid JSON", "Valid XML", "XML parser safety boundary")
                        and result["status"] == "FAIL" for _, label, result in pending)
@@ -104,7 +152,7 @@ def _report_begin(context, number):
     context["_method_phase"] = number
     context.setdefault("_method_visited", set()).add(number)
     context["_method_pending"], context["_method_http"] = [], []
-    item = next(item for item in TEST_CASE["test_method"]
+    item = next(item for item in _METHOD_ITEMS.values()
                 if item["step_number"] == number and item["type"] in ("Command", "Action"))
     if context.get("log") is not None:
         context["log"].section(f'Step {number} | {item["type"]} | {item["step"]}')
@@ -122,7 +170,7 @@ def _log(context, method, *args, **kwargs):
         index = next((index for pattern, index in _METHOD_CHECKS if re.fullmatch(pattern, label)), None)
         if index is None:
             raise RuntimeError("No declared Checkpoint for " + label)
-        phase = TEST_CASE["test_method"][index]["step_number"]
+        phase = _METHOD_ITEMS[index]["step_number"]
         if context.get("_method_phase") != phase:
             _report_begin(context, phase)
         note = kwargs.get("note")
@@ -133,6 +181,8 @@ def _log(context, method, *args, **kwargs):
             result["note"] = note
         if kwargs.get("reason"):
             result["reason"] = kwargs["reason"]
+        elif status == "FAIL":
+            result["reason"] = f"{label}: expected {result['expected']!r}, observed {result['actual']['value']!r}."
         context.setdefault("_method_pending", []).append((index, label, result))
         return
     if method == "http":
@@ -146,11 +196,11 @@ def _log(context, method, *args, **kwargs):
 def _finish(context, status, reason, evidence, observations):
     _report_flush(context, status, reason)
     results = context.setdefault("_method_results", [])
-    for index, item in enumerate(TEST_CASE["test_method"]):
+    for index, item in _METHOD_ITEMS.items():
         if item["type"] == "Record" and item.get("observation") in observations:
             _method_emit(context, index, "COMPLETED", actual=observations[item["observation"]])
-    observed = {result["method_index"] for result in results}
-    for index, item in enumerate(TEST_CASE["test_method"]):
+    observed = {result.get("checkpoint_id", result.get("method_index")) for result in results}
+    for index, item in _METHOD_ITEMS.items():
         if index not in observed:
             skip_reason = ("No applicable item was encountered for this check."
                            if item["step_number"] in context.get("_method_visited", set()) and status == "Pass"
@@ -185,14 +235,17 @@ def execute(client, context=None, preset=None):
     """Use Task connection settings, not global YAML or client private APIs."""
     if not isinstance(context, dict):
         raise RuntimeError("BMCAgent did not supply a dictionary execution context")
+    logger = context.get("log")
+    if callable(getattr(logger, "declare_methods", None)):
+        logger.declare_methods(TEST_CASE["test_method"])
     _log(context, "section", "Task connection settings", report_step=1)
     evidence = []
     observations = {}
     conf = context.get("redfish", {})
     if not isinstance(conf, dict):
         return _finish(context, "Fail", "Task BMC settings are invalid", evidence, observations)
-    host = conf.get("host", "")
     try:
+        host = _route_host(context)
         parsed = urlsplit(host) if isinstance(host, str) else None
         valid = parsed is not None and parsed.scheme in ("http", "https") and bool(parsed.hostname)
         valid = valid and not parsed.username and not parsed.password

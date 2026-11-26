@@ -4,55 +4,100 @@ import re
 from collections import deque
 from urllib.parse import urljoin, urlsplit, urlunsplit
 
-TEST_CASE = {'modified_at': "2026-11-12T09:19:33.017066+00:00",
- 'test_type': 'compliance',
- 'spec_ref': ['DSP0266 v1.25.0 section 6.1 (URI characters and percent encoding).',
-              'RFC 3986 sections 2.1, 3.2.2 and 3.5 (encoding, IPv6 authority and fragments); RFC 6901 '
-              'sections 3 and 6 (JSON Pointer escapes).'],
- 'created_at': '2026-10-30T06:16:31.055575+00:00',
- 'name': 'RF-01-010 URI Character and Encoding Rules',
- 'description': 'Inspect original resource URI references discovered from ServiceRoot for unsafe characters, '
-                'fragment delimiters and percent-encoding outside query components.',
- 'test_method': [{'step_number': 1,
-                  'type': 'Action',
-                  'step': 'Prepare a read-only traversal of the service.'},
-                 {'step_number': 1,
-                  'type': 'Checkpoint',
-                  'step': 'Verify that a valid HTTP(S) service origin is available.'},
-                 {'step_number': 2,
-                  'type': 'Command',
-                  'step': 'GET discoverable local resources and collection pages from /redfish/v1/. Do not '
-                          'invoke Actions or fetch external services.'},
-                 {'step_number': 2,
-                  'type': 'Checkpoint',
-                  'step': "Verify that traversal completed without:\n- Resources that could not be read.\n- Invalid links.\n- Pagination errors."},
-                 {'step_number': 3,
-                  'type': 'Action',
-                  'step': 'Inspect original URI components before normalization.'},
-                 {'step_number': 3,
-                  'type': 'Checkpoint',
-                  'step': "Verify each original URI reference against these rules:\n- The value is a nonempty string.\n- No raw whitespace, control characters or non-ASCII characters.\n- No unsafe characters: <, >, \", {, }, |, \\, ^, ~, [, ], or backtick, except as allowed below.\n- Percent encoding is allowed only in the query component. Each % must be followed by two hexadecimal digits.\n- Square brackets are allowed around a valid IPv6 address in the authority.\n- ~0 and ~1 are allowed in the fragment for JSON Pointer escaping.\n- No additional raw # inside the fragment."},
-                 {'step_number': 3,
-                  'type': 'Checkpoint',
-                  'step': 'Verify that the complete discovered scope was assessed.'}],
- 'automation': 'automatic',
- 'parameters': {}}
+TEST_CASE = {
+    "modified_at": "2026-11-26T05:00:54.277898+00:00",
+    "test_type": "compliance",
+    "spec_ref": [
+        "DSP0266 v1.25.0 section 6.1 (URI characters and percent encoding).",
+        "RFC 3986 section 2.1 (encoding, IPv6 authority and fragments)",
+        "RFC 3986 section 3.2.2 (encoding, IPv6 authority and fragments)",
+        "RFC 3986 section 3.5 (encoding, IPv6 authority and fragments)",
+        "RFC 6901 section 3 (JSON Pointer escapes).",
+        "RFC 6901 section 6 (JSON Pointer escapes)."
+    ],
+    "created_at": "2026-10-30T06:16:31.055575+00:00",
+    "name": "RF-01-010 URI Character and Encoding Rules",
+    "description": "Inspect original resource URI references discovered from ServiceRoot for unsafe characters, fragment delimiters and percent-encoding outside query components.",
+    "test_method": [
+        {
+            "step_number": 1,
+            "type": "Action",
+            "step": "Prepare a read-only traversal of the service.",
+            "checkpoints": {
+                "task_origin_available": {
+                    "expected": "Verify that a valid HTTP(S) service origin is available."
+                }
+            }
+        },
+        {
+            "step_number": 2,
+            "type": "Command",
+            "step": "GET discoverable local resources and collection pages from /redfish/v1/. Do not invoke Actions or fetch external services.",
+            "route": "bmc_redfish",
+            "checkpoints": {
+                "traversal_complete": {
+                    "expected": "Verify that traversal completed without:\n- Resources that could not be read.\n- Invalid links.\n- Pagination errors."
+                }
+            }
+        },
+        {
+            "step_number": 3,
+            "type": "Action",
+            "step": "Inspect original URI components before normalization.",
+            "checkpoints": {
+                "original_uri_character_and_encoding_rules": {
+                    "expected": "Verify each original URI reference against these rules:\n- The value is a nonempty string.\n- No raw whitespace, control characters or non-ASCII characters.\n- No unsafe characters: <, >, \", {, }, |, \\, ^, ~, [, ], or backtick, except as allowed below.\n- Percent encoding is allowed only in the query component. Each % must be followed by two hexadecimal digits.\n- Square brackets are allowed around a valid IPv6 address in the authority.\n- ~0 and ~1 are allowed in the fragment for JSON Pointer escaping.\n- No additional raw # inside the fragment."
+                },
+                "scope_sufficient_for_pass": {
+                    "expected": "Verify that the complete discovered scope was assessed."
+                }
+            }
+        }
+    ],
+    "automation": "automatic",
+    "parameters": {},
+    "command_routes": {
+        "bmc_redfish": {
+            "from": "bmcagent",
+            "to": "bmc",
+            "method": "redfish",
+            "lan_port": "task.bmc.lan_ports.port1",
+            "username": "task.bmc.username",
+            "password": "task.bmc.password"
+        }
+    }
+}
+
+
+from result_policy import declared_method_items
+
+_METHOD_ITEMS = dict(declared_method_items(TEST_CASE["test_method"]))
+
+
+def _route_host(context):
+    from redfish_route import RedfishRoute
+    declaration = TEST_CASE["command_routes"]["bmc_redfish"]
+    try:
+        return RedfishRoute(dict(context, log=context.get("log")), declaration).host
+    except (KeyError, TypeError, AttributeError, IndexError) as error:
+        raise ValueError("Invalid Task BMC LAN port settings") from error
 
 
 class CaseFailure(AssertionError):
     """Non-program failure with an actionable reason."""
 
 
-_METHOD_CHECKS = [('Task\\ origin\\ available', 1),
- ('Traversal\\ evidence\\ available', 3),
- ('Traversal\\ complete', 3),
- ('Original\\ URI\\ character\\ and\\ encoding\\ rules', 5),
- ('Scope\\ sufficient\\ for\\ Pass', 6)]
+_METHOD_CHECKS = [('Task\\ origin\\ available', 'task_origin_available'),
+ ('Traversal\\ evidence\\ available', 'traversal_complete'),
+ ('Traversal\\ complete', 'traversal_complete'),
+ ('Original\\ URI\\ character\\ and\\ encoding\\ rules', 'original_uri_character_and_encoding_rules'),
+ ('Scope\\ sufficient\\ for\\ Pass', 'scope_sufficient_for_pass')]
 
 
 def _method_emit(context, index, status, **detail):
-    item = TEST_CASE["test_method"][index]
-    result = dict(method_index=index, step_number=item["step_number"], type=item["type"],
+    item = _METHOD_ITEMS[index]
+    identity = {"checkpoint_id": index} if item["type"] == "Checkpoint" else {"method_index": index}
+    result = dict(**identity, step_number=item["step_number"], type=item["type"],
                   status=status, **detail)
     result = json.loads(json.dumps(result, ensure_ascii=False), parse_constant=lambda value: value)
     context.setdefault("_method_results", []).append(result)
@@ -71,7 +116,7 @@ def _report_flush(context, status=None, reason=None):
         return
     pending = context.get("_method_pending", [])
     requests = context.get("_method_http", [])
-    index = next(i for i, item in enumerate(TEST_CASE["test_method"])
+    index = next(i for i, item in _METHOD_ITEMS.items()
                  if item["step_number"] == phase and item["type"] in ("Command", "Action"))
     failed_parse = any(label in ("Valid JSON", "Valid XML", "XML parser safety boundary")
                        and result["status"] == "FAIL" for _, label, result in pending)
@@ -95,7 +140,7 @@ def _report_begin(context, number):
     context["_method_phase"] = number
     context.setdefault("_method_visited", set()).add(number)
     context["_method_pending"], context["_method_http"] = [], []
-    item = next(item for item in TEST_CASE["test_method"]
+    item = next(item for item in _METHOD_ITEMS.values()
                 if item["step_number"] == number and item["type"] in ("Command", "Action"))
     if context.get("log") is not None:
         context["log"].section(f'Step {number} | {item["type"]} | {item["step"]}')
@@ -113,7 +158,7 @@ def _log(context, method, *args, **kwargs):
         index = next((index for pattern, index in _METHOD_CHECKS if re.fullmatch(pattern, label)), None)
         if index is None:
             raise RuntimeError("No declared Checkpoint for " + label)
-        phase = TEST_CASE["test_method"][index]["step_number"]
+        phase = _METHOD_ITEMS[index]["step_number"]
         if context.get("_method_phase") != phase:
             _report_begin(context, phase)
         note = kwargs.get("note")
@@ -124,6 +169,8 @@ def _log(context, method, *args, **kwargs):
             result["note"] = note
         if kwargs.get("reason"):
             result["reason"] = kwargs["reason"]
+        elif status == "FAIL":
+            result["reason"] = f"{label}: expected {result['expected']!r}, observed {result['actual']['value']!r}."
         context.setdefault("_method_pending", []).append((index, label, result))
         return
     if method == "http":
@@ -137,11 +184,11 @@ def _log(context, method, *args, **kwargs):
 def _finish(context, status, reason, evidence, observations):
     _report_flush(context, status, reason)
     results = context.setdefault("_method_results", [])
-    for index, item in enumerate(TEST_CASE["test_method"]):
+    for index, item in _METHOD_ITEMS.items():
         if item["type"] == "Record" and item.get("observation") in observations:
             _method_emit(context, index, "COMPLETED", actual=observations[item["observation"]])
-    observed = {result["method_index"] for result in results}
-    for index, item in enumerate(TEST_CASE["test_method"]):
+    observed = {result.get("checkpoint_id", result.get("method_index")) for result in results}
+    for index, item in _METHOD_ITEMS.items():
         if index not in observed:
             skip_reason = ("No applicable item was encountered for this check."
                            if item["step_number"] in context.get("_method_visited", set()) and status == "Pass"
@@ -360,6 +407,9 @@ def execute(client, context=None, preset=None):
     """Inspect service-provided URI strings without synthesizing invalid requests."""
     if not isinstance(context, dict):
         raise RuntimeError("BMCAgent did not supply a dictionary execution context")
+    logger = context.get("log")
+    if callable(getattr(logger, "declare_methods", None)):
+        logger.declare_methods(TEST_CASE["test_method"])
     evidence = []
     observations = {"resources": [], "uris": [], "violations": [], "excluded": [], "unread": [],
                     "scope": "Structured resource/page links, Action references, OData context and Location"}
@@ -368,7 +418,7 @@ def execute(client, context=None, preset=None):
     try:
         if not isinstance(conf, dict):
             raise ValueError("Missing Task settings")
-        host = _url(conf.get("host"), "")
+        host = _url(_route_host(context), "")
         origin = _origin(host)
     except (ValueError, TypeError):
         return _finish(context, "Fail", "Task BMC URL is missing or invalid", evidence, observations)

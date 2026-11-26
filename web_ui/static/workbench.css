@@ -815,6 +815,7 @@ body.execution-workspace #execution-panel{display:flex;flex-direction:column;fle
 .execution-dialog-header h2{margin:0}.execution-dialog-header .help{overflow-wrap:anywhere}
 .execution-dialog fieldset{border:0;padding:0;margin:0;min-width:0}
 .execution-dialog .settings-form{max-width:none}
+.plan-parameters-dialog .repo-view-content > p.help{max-width:none;overflow-wrap:anywhere}
 .execution-dialog .section:first-child{margin-top:16px}
 .execution-dialog .actions{margin-top:0;justify-content:flex-start}
 .execution-dialog .table-wrap{max-height:55vh;overflow:auto;margin-top:12px}
@@ -885,6 +886,11 @@ dialog.repo-footer-dialog[open]{display:grid;gap:8px;max-inline-size:var(--dialo
 dialog.repo-view-dialog[open]{display:flex;flex-direction:column;overflow:hidden}
 .repo-view-dialog>header{flex:none}
 .repo-view-dialog>.repo-view-content{min-height:0;overflow:auto}
+.parameter-label{white-space:pre-line}
+.fields > .parameter-field { grid-column: 1 / -1; }
+.parameter-field > .parameter-label { overflow-wrap: anywhere; }
+.field.parameter-field > input:not([type="checkbox"]) { max-width: 28rem; }
+.field.parameter-field > input[type="checkbox"] { width: 17px; align-self: flex-start; }
 .repo-view-dialog>.plan-parameter-actions{flex:none;justify-content:flex-end;margin-top:1rem}
 .repo-view-dialog>p[role=alert]:empty{display:none}
 

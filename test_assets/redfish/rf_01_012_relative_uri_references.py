@@ -3,44 +3,74 @@ import re
 from collections import deque
 from urllib.parse import urljoin, urlsplit, urlunsplit
 
-TEST_CASE = {'modified_at': '2026-11-26T04:03:58.628274+00:00',
- 'test_type': 'compliance',
- 'spec_ref': ['DSP0266 v1.25.0 sections 6.1 and 6.7 (relative references in response bodies and HTTP headers).',
- 'RFC 3986 section 4.2 (relative-reference syntax); Redfish section 6.7 imposes narrower allowed '
- 'forms.', 'RFC 8288 section 3 (Link parameter syntax) and Appendix B.3 (compatible parsing).'],
- 'created_at': '2026-10-30T07:19:35.437164+00:00',
- 'name': 'RF-01-012 Relative URI References',
- 'description': 'Inspect discovered Body and GET-response header URI references for the Redfish '
-                'relative-reference form requirement.',
- 'command_routes': {'bmc_redfish': {'from': 'bmcagent', 'to': 'bmc', 'method': 'redfish',
-                                    'lan_port': 'task.bmc.lan_ports.port1',
-                                    'username': 'task.bmc.username', 'password': 'task.bmc.password'}},
- 'test_method': [{'step_number': 1,
-                  'type': 'Action',
-                  'step': 'Prepare a read-only traversal of the service.',
-                  'checkpoints': {
-                      'service_origin_valid': {'expected': 'Verify that a valid HTTP(S) service origin is available.'},
-                  }},
-                 {'step_number': 2,
-                  'type': 'Command',
-                  'route': 'bmc_redfish',
-                  'step': 'GET discoverable local resources and collection pages from /redfish/v1/. Do not '
-                          'invoke Actions or fetch external services. Inspect each response before following '
-                          'same-origin 301, 302, 307 or 308 redirects (maximum five).',
-                  'checkpoints': {
-                      'link_header_syntax': {'expected': 'Verify Link header parameter syntax under RFC 8288 section 3. Values containing non-token characters must be quoted. Record syntax failures while continuing compatible parsing and subsequent URI checks.'},
-                      'traversal_complete': {'expected': "Verify that traversal completed without:\n- Resources that could not be read.\n- Invalid links.\n- Pagination errors."},
-                  }},
-                 {'step_number': 3,
-                  'type': 'Action',
-                  'step': 'Classify original Body and GET-response header URI references before resolution.',
-                  'checkpoints': {
-                      'uri_reference_form': {'expected': "Verify that each relative reference uses either accepted form:\n- /path: starts with a single /.\n- //authority/path: starts with // and includes a valid authority.\n\nAbsolute URIs are also allowed."},
-                      'relative_reference_present': {'expected': "Verify that at least one applicable relative reference was found.\n\nProject coverage policy: no applicable references means FAIL for this check."},
-                      'discovered_scope_assessed': {'expected': "Verify that all items within the discovered scope were assessed.\n\nProject coverage policy: incomplete coverage prevents PASS."},
-                  }}],
- 'automation': 'automatic',
- 'parameters': {}}
+TEST_CASE = {
+    "modified_at": "2026-11-26T05:00:54.277898+00:00",
+    "test_type": "compliance",
+    "spec_ref": [
+        "DSP0266 v1.25.0 section 6.1",
+        "DSP0266 v1.25.0 section 6.7 (relative references in response bodies and HTTP headers).",
+        "RFC 3986 section 4.2 (relative-reference syntax)",
+        "RFC 8288 Appendix B.3 (compatible parsing).",
+        "RFC 8288 section 3 (Link parameter syntax)"
+    ],
+    "created_at": "2026-10-30T07:19:35.437164+00:00",
+    "name": "RF-01-012 Relative URI References",
+    "description": "Inspect discovered Body and GET-response header URI references for the Redfish relative-reference form requirement.",
+    "command_routes": {
+        "bmc_redfish": {
+            "from": "bmcagent",
+            "to": "bmc",
+            "method": "redfish",
+            "lan_port": "task.bmc.lan_ports.port1",
+            "username": "task.bmc.username",
+            "password": "task.bmc.password"
+        }
+    },
+    "test_method": [
+        {
+            "step_number": 1,
+            "type": "Action",
+            "step": "Prepare a read-only traversal of the service.",
+            "checkpoints": {
+                "service_origin_valid": {
+                    "expected": "Verify that a valid HTTP(S) service origin is available."
+                }
+            }
+        },
+        {
+            "step_number": 2,
+            "type": "Command",
+            "route": "bmc_redfish",
+            "step": "GET discoverable local resources and collection pages from /redfish/v1/. Do not invoke Actions or fetch external services. Inspect each response before following same-origin 301, 302, 307 or 308 redirects (maximum five).",
+            "checkpoints": {
+                "link_header_syntax": {
+                    "expected": "Verify Link header parameter syntax under RFC 8288 section 3. Values containing non-token characters must be quoted. Record syntax failures while continuing compatible parsing and subsequent URI checks."
+                },
+                "traversal_complete": {
+                    "expected": "Verify that traversal completed without:\n- Resources that could not be read.\n- Invalid links.\n- Pagination errors."
+                }
+            }
+        },
+        {
+            "step_number": 3,
+            "type": "Action",
+            "step": "Classify original Body and GET-response header URI references before resolution.",
+            "checkpoints": {
+                "uri_reference_form": {
+                    "expected": "Verify that each relative reference uses either accepted form:\n- /path: starts with a single /.\n- //authority/path: starts with // and includes a valid authority.\n\nAbsolute URIs are also allowed."
+                },
+                "relative_reference_present": {
+                    "expected": "Verify that at least one applicable relative reference was found.\n\nProject coverage policy: no applicable references means FAIL for this check."
+                },
+                "discovered_scope_assessed": {
+                    "expected": "Verify that all items within the discovered scope were assessed.\n\nProject coverage policy: incomplete coverage prevents PASS."
+                }
+            }
+        }
+    ],
+    "automation": "automatic",
+    "parameters": {}
+}
 
 
 class CaseFailure(AssertionError):

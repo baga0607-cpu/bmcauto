@@ -4,19 +4,26 @@ import re
 from urllib.parse import urljoin
 
 TEST_CASE = {
-    "modified_at": "2026-11-26T04:40:34.432435+00:00",
+    "modified_at": "2026-11-26T05:00:54.277898+00:00",
     "test_type": "compliance",
     "spec_ref": [
-        "DSP0266 v1.25.0 sections 6.6, 6.7 Table 4 and 7.2.3 (ServiceRoot); sections 9.6.2 and 9.6.3 (resource identity/type)."
+        "DSP0266 v1.25.0 section 6.6",
+        "DSP0266 v1.25.0 section 6.7 Table 4",
+        "DSP0266 v1.25.0 section 7.2.3 (ServiceRoot)",
+        "DSP0266 v1.25.0 section 9.6.2 (resource identity)",
+        "DSP0266 v1.25.0 section 9.6.3 (resource type)"
     ],
     "created_at": "2026-10-19T01:23:29.401576+00:00",
     "name": "RF-01-002 Service Root Endpoint",
     "description": "Verify that /redfish/v1/ returns a ServiceRoot JSON object with the expected resource URI. Record RedfishVersion if present, without evaluating its value.",
     "command_routes": {
         "bmc_redfish": {
-            "from": "bmcagent", "to": "bmc", "method": "redfish",
+            "from": "bmcagent",
+            "to": "bmc",
+            "method": "redfish",
             "lan_port": "task.bmc.lan_ports.port1",
-            "username": "task.bmc.username", "password": "task.bmc.password"
+            "username": "task.bmc.username",
+            "password": "task.bmc.password"
         }
     },
     "test_method": [

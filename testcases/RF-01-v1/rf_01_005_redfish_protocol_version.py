@@ -1,5 +1,5 @@
 TEST_CASE = {
-    "modified_at": "2026-11-26T05:42:12.574147+00:00",
+    "modified_at": "2026-11-26T07:23:50.217074+00:00",
     "test_type": "compliance",
     "spec_ref": [
         "DSP0266 v1.25.0 section 6.6 (RedfishVersion format)."
@@ -66,7 +66,7 @@ TEST_CASE = {
         "preset": {
             "type": "string",
             "default": "",
-            "label": "Expected RedfishVersion (blank: ask during execution)"
+            "label": "- Expected RedfishVersion\n- Find RedfishVersion from 1BMC release note; the keyword is 'Redfish Specification <version> alignment'"
         }
     },
     "command_routes": {
@@ -182,7 +182,7 @@ def _evaluate(flow):
     if expected is None or (isinstance(expected, str) and (not expected.strip())):
         source = 'interactive'
         try:
-            expected = input('Expected RedfishVersion (major.minor.errata): ')
+            expected = input(TEST_CASE["parameters"]["preset"]["label"] + "\n")
         except EOFError:
             expected = ''
     observations['expected_version_source'] = source

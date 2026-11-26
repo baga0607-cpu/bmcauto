@@ -1,52 +1,107 @@
 import json
 from urllib.parse import urljoin, urlsplit
 
-TEST_CASE = {'modified_at': "2026-11-12T09:19:33.002619+00:00",
- 'test_type': 'compliance',
- 'spec_ref': ['DSP0266 v1.25.0 section 6.7 Table 5 (/redfish/ alias); section 6.6 (version discovery).'],
- 'created_at': '2026-10-30T05:45:01.857118+00:00',
- 'name': 'RF-01-007 Version Discovery URI Alias',
- 'description': 'GET /redfish/ and verify direct version discovery or redirection to /redfish.',
- 'test_method': [{'step_number': 1,
-                  'type': 'Command',
-                  'step': 'Send GET /redfish/ and follow supported same-origin redirects.'},
-                 {'step_number': 1,
-                  'type': 'Checkpoint',
-                  'step': 'Verify that the final HTTP status is 200.'},
-                 {'step_number': 1,
-                  'type': 'Checkpoint',
-                  'step': "Verify either accepted behavior:\n- /redfish/ returns the response directly.\n- After redirection, the final URI path is /redfish."},
-                 {'step_number': 2, 'type': 'Action', 'step': 'Parse the response body as JSON.'},
-                 {'step_number': 2,
-                  'type': 'Checkpoint',
-                  'step': 'Verify that the response body can be parsed as JSON.'},
-                 {'step_number': 2,
-                  'type': 'Checkpoint',
-                  'step': 'Verify that the top-level JSON value is an object.'},
-                 {'step_number': 3, 'type': 'Action', 'step': 'Read the v1 property.'},
-                 {'step_number': 3, 'type': 'Checkpoint', 'step': 'Verify that v1 is present.'},
-                 {'step_number': 3, 'type': 'Checkpoint', 'step': 'Verify that v1 is a string.'},
-                 {'step_number': 3, 'type': 'Checkpoint', 'step': 'Verify that v1 is exactly /redfish/v1/.'}],
- 'automation': 'automatic',
- 'parameters': {}}
+TEST_CASE = {
+    "modified_at": "2026-11-26T05:00:54.277898+00:00",
+    "test_type": "compliance",
+    "spec_ref": [
+        "DSP0266 v1.25.0 section 6.7 Table 5 (/redfish/ alias)",
+        "DSP0266 v1.25.0 section 6.6 (version discovery)."
+    ],
+    "created_at": "2026-10-30T05:45:01.857118+00:00",
+    "name": "RF-01-007 Version Discovery URI Alias",
+    "description": "GET /redfish/ and verify direct version discovery or redirection to /redfish.",
+    "test_method": [
+        {
+            "step_number": 1,
+            "type": "Command",
+            "step": "Send GET /redfish/ and follow supported same-origin redirects.",
+            "route": "bmc_redfish",
+            "checkpoints": {
+                "final_http_status": {
+                    "expected": "Verify that the final HTTP status is 200."
+                },
+                "version_discovery_alias_resolution": {
+                    "expected": "Verify either accepted behavior:\n- /redfish/ returns the response directly.\n- After redirection, the final URI path is /redfish."
+                }
+            }
+        },
+        {
+            "step_number": 2,
+            "type": "Action",
+            "step": "Parse the response body as JSON.",
+            "checkpoints": {
+                "valid_json": {
+                    "expected": "Verify that the response body can be parsed as JSON."
+                },
+                "top_level_json_object": {
+                    "expected": "Verify that the top-level JSON value is an object."
+                }
+            }
+        },
+        {
+            "step_number": 3,
+            "type": "Action",
+            "step": "Read the v1 property.",
+            "checkpoints": {
+                "v1_property_exists": {
+                    "expected": "Verify that v1 is present."
+                },
+                "v1_is_a_string": {
+                    "expected": "Verify that v1 is a string."
+                },
+                "v1_mapping": {
+                    "expected": "Verify that v1 is exactly /redfish/v1/."
+                }
+            }
+        }
+    ],
+    "automation": "automatic",
+    "parameters": {},
+    "command_routes": {
+        "bmc_redfish": {
+            "from": "bmcagent",
+            "to": "bmc",
+            "method": "redfish",
+            "lan_port": "task.bmc.lan_ports.port1",
+            "username": "task.bmc.username",
+            "password": "task.bmc.password"
+        }
+    }
+}
+
+
+from result_policy import declared_method_items
+
+_METHOD_ITEMS = dict(declared_method_items(TEST_CASE["test_method"]))
+
+
+def _route_host(context):
+    from redfish_route import RedfishRoute
+    declaration = TEST_CASE["command_routes"]["bmc_redfish"]
+    try:
+        return RedfishRoute(dict(context, log=context.get("log")), declaration).host
+    except (KeyError, TypeError, AttributeError, IndexError) as error:
+        raise ValueError("Invalid Task BMC LAN port settings") from error
 
 
 class CaseFailure(AssertionError):
     """Non-program failure with an actionable reason."""
 
 
-_METHOD_CHECKS = [('Final\\ HTTP\\ status', 1),
- ('Version\\ Discovery\\ alias\\ resolution', 2),
- ('Valid\\ JSON', 4),
- ('Top\\-level\\ JSON\\ object', 5),
- ('v1\\ property\\ exists', 7),
- ('v1\\ is\\ a\\ string', 8),
- ('v1\\ mapping', 9)]
+_METHOD_CHECKS = [('Final\\ HTTP\\ status', 'final_http_status'),
+ ('Version\\ Discovery\\ alias\\ resolution', 'version_discovery_alias_resolution'),
+ ('Valid\\ JSON', 'valid_json'),
+ ('Top\\-level\\ JSON\\ object', 'top_level_json_object'),
+ ('v1\\ property\\ exists', 'v1_property_exists'),
+ ('v1\\ is\\ a\\ string', 'v1_is_a_string'),
+ ('v1\\ mapping', 'v1_mapping')]
 
 
 def _method_emit(context, index, status, **detail):
-    item = TEST_CASE["test_method"][index]
-    result = dict(method_index=index, step_number=item["step_number"], type=item["type"],
+    item = _METHOD_ITEMS[index]
+    identity = {"checkpoint_id": index} if item["type"] == "Checkpoint" else {"method_index": index}
+    result = dict(**identity, step_number=item["step_number"], type=item["type"],
                   status=status, **detail)
     result = json.loads(json.dumps(result, ensure_ascii=False), parse_constant=lambda value: value)
     context.setdefault("_method_results", []).append(result)
@@ -65,7 +120,7 @@ def _report_flush(context, status=None, reason=None):
         return
     pending = context.get("_method_pending", [])
     requests = context.get("_method_http", [])
-    index = next(i for i, item in enumerate(TEST_CASE["test_method"])
+    index = next(i for i, item in _METHOD_ITEMS.items()
                  if item["step_number"] == phase and item["type"] in ("Command", "Action"))
     failed_parse = any(label in ("Valid JSON", "Valid XML", "XML parser safety boundary")
                        and result["status"] == "FAIL" for _, label, result in pending)
@@ -89,7 +144,7 @@ def _report_begin(context, number):
     context["_method_phase"] = number
     context.setdefault("_method_visited", set()).add(number)
     context["_method_pending"], context["_method_http"] = [], []
-    item = next(item for item in TEST_CASE["test_method"]
+    item = next(item for item in _METHOD_ITEMS.values()
                 if item["step_number"] == number and item["type"] in ("Command", "Action"))
     if context.get("log") is not None:
         context["log"].section(f'Step {number} | {item["type"]} | {item["step"]}')
@@ -107,7 +162,7 @@ def _log(context, method, *args, **kwargs):
         index = next((index for pattern, index in _METHOD_CHECKS if re.fullmatch(pattern, label)), None)
         if index is None:
             raise RuntimeError("No declared Checkpoint for " + label)
-        phase = TEST_CASE["test_method"][index]["step_number"]
+        phase = _METHOD_ITEMS[index]["step_number"]
         if context.get("_method_phase") != phase:
             _report_begin(context, phase)
         note = kwargs.get("note")
@@ -118,6 +173,8 @@ def _log(context, method, *args, **kwargs):
             result["note"] = note
         if kwargs.get("reason"):
             result["reason"] = kwargs["reason"]
+        elif status == "FAIL":
+            result["reason"] = f"{label}: expected {result['expected']!r}, observed {result['actual']['value']!r}."
         context.setdefault("_method_pending", []).append((index, label, result))
         return
     if method == "http":
@@ -131,11 +188,11 @@ def _log(context, method, *args, **kwargs):
 def _finish(context, status, reason, evidence, observations):
     _report_flush(context, status, reason)
     results = context.setdefault("_method_results", [])
-    for index, item in enumerate(TEST_CASE["test_method"]):
+    for index, item in _METHOD_ITEMS.items():
         if item["type"] == "Record" and item.get("observation") in observations:
             _method_emit(context, index, "COMPLETED", actual=observations[item["observation"]])
-    observed = {result["method_index"] for result in results}
-    for index, item in enumerate(TEST_CASE["test_method"]):
+    observed = {result.get("checkpoint_id", result.get("method_index")) for result in results}
+    for index, item in _METHOD_ITEMS.items():
         if index not in observed:
             skip_reason = ("No applicable item was encountered for this check."
                            if item["step_number"] in context.get("_method_visited", set()) and status == "Pass"
@@ -170,14 +227,17 @@ def execute(client, context=None, preset=None):
     """Use Task connection settings, not global YAML or client private APIs."""
     if not isinstance(context, dict):
         raise RuntimeError("BMCAgent did not supply a dictionary execution context")
+    logger = context.get("log")
+    if callable(getattr(logger, "declare_methods", None)):
+        logger.declare_methods(TEST_CASE["test_method"])
     _log(context, "section", "Task connection settings", report_step=1)
     evidence = []
     observations = {}
     conf = context.get("redfish", {})
     if not isinstance(conf, dict):
         return _finish(context, "Fail", "Task BMC settings are invalid", evidence, observations)
-    host = conf.get("host", "")
     try:
+        host = _route_host(context)
         parsed = urlsplit(host) if isinstance(host, str) else None
         valid = parsed is not None and parsed.scheme in ("http", "https") and bool(parsed.hostname)
         valid = valid and not parsed.username and not parsed.password

@@ -2,66 +2,126 @@ import json
 import re
 from urllib.parse import urljoin, urlsplit
 
-TEST_CASE = {'modified_at': "2026-11-12T09:19:32.977199+00:00",
- 'test_type': 'compliance',
- 'spec_ref': ['DSP0266 v1.25.0 section 6.6 (RedfishVersion format).'],
- 'created_at': '2026-10-19T03:32:23.623177+00:00',
- 'name': 'RF-01-005 Redfish Protocol Version',
- 'description': 'Verify that ServiceRoot RedfishVersion exactly matches the tester-provided protocol '
-                'version.',
- 'test_method': [{'step_number': 1,
-                  'type': 'Action',
-                  'step': 'Read the expected RedfishVersion from the preset, or ask the tester if it is '
-                          'blank.'},
-                 {'step_number': 1,
-                  'type': 'Checkpoint',
-                  'step': 'Verify that a nonblank expected version string was supplied.'},
-                 {'step_number': 2,
-                  'type': 'Command',
-                  'step': 'Send GET /redfish/v1/ and follow supported same-origin redirects.'},
-                 {'step_number': 2,
-                  'type': 'Checkpoint',
-                  'step': 'Verify that the final HTTP status is 200.'},
-                 {'step_number': 3, 'type': 'Action', 'step': 'Parse the response body as JSON.'},
-                 {'step_number': 3,
-                  'type': 'Checkpoint',
-                  'step': 'Verify that the response body can be parsed as JSON.'},
-                 {'step_number': 3,
-                  'type': 'Checkpoint',
-                  'step': 'Verify that the top-level JSON value is an object.'},
-                 {'step_number': 4, 'type': 'Action', 'step': 'Read the RedfishVersion property.'},
-                 {'step_number': 4, 'type': 'Checkpoint', 'step': 'Verify that RedfishVersion is present.'},
-                 {'step_number': 4,
-                  'type': 'Checkpoint',
-                  'step': "Verify that RedfishVersion uses the format major.minor.errata:\n- The value is a string.\n- It contains exactly three components separated by dots.\n- Each component contains one or more decimal digits."},
-                 {'step_number': 5,
-                  'type': 'Action',
-                  'step': 'Compare RedfishVersion with the expected version without normalization.'},
-                 {'step_number': 5,
-                  'type': 'Checkpoint',
-                  'step': "Verify that RedfishVersion exactly matches the tester-supplied version.\n\nProject acceptance policy:\n- Compare the strings without normalization.\n- The tester defines the expected version; DMTF does not prescribe that value."}],
- 'automation': 'semi_automatic',
- 'parameters': {'preset': {'type': 'string',
-                           'default': '',
-                           'label': 'Expected RedfishVersion (blank: ask during execution)'}}}
+TEST_CASE = {
+    "modified_at": "2026-11-26T05:00:54.277898+00:00",
+    "test_type": "compliance",
+    "spec_ref": [
+        "DSP0266 v1.25.0 section 6.6 (RedfishVersion format)."
+    ],
+    "created_at": "2026-10-19T03:32:23.623177+00:00",
+    "name": "RF-01-005 Redfish Protocol Version",
+    "description": "Verify that ServiceRoot RedfishVersion exactly matches the tester-provided protocol version.",
+    "test_method": [
+        {
+            "step_number": 1,
+            "type": "Action",
+            "step": "Read the expected RedfishVersion from the preset, or ask the tester if it is blank.",
+            "checkpoints": {
+                "tester_supplied_expected_version": {
+                    "expected": "Verify that a nonblank expected version string was supplied."
+                }
+            }
+        },
+        {
+            "step_number": 2,
+            "type": "Command",
+            "step": "Send GET /redfish/v1/ and follow supported same-origin redirects.",
+            "route": "bmc_redfish",
+            "checkpoints": {
+                "final_http_status": {
+                    "expected": "Verify that the final HTTP status is 200."
+                }
+            }
+        },
+        {
+            "step_number": 3,
+            "type": "Action",
+            "step": "Parse the response body as JSON.",
+            "checkpoints": {
+                "valid_json": {
+                    "expected": "Verify that the response body can be parsed as JSON."
+                },
+                "top_level_json_object": {
+                    "expected": "Verify that the top-level JSON value is an object."
+                }
+            }
+        },
+        {
+            "step_number": 4,
+            "type": "Action",
+            "step": "Read the RedfishVersion property.",
+            "checkpoints": {
+                "redfishversion_is_present": {
+                    "expected": "Verify that RedfishVersion is present."
+                },
+                "redfishversion_format": {
+                    "expected": "Verify that RedfishVersion uses the format major.minor.errata:\n- The value is a string.\n- It contains exactly three components separated by dots.\n- Each component contains one or more decimal digits."
+                }
+            }
+        },
+        {
+            "step_number": 5,
+            "type": "Action",
+            "step": "Compare RedfishVersion with the expected version without normalization.",
+            "checkpoints": {
+                "exact_redfishversion_match": {
+                    "expected": "Verify that RedfishVersion exactly matches the tester-supplied version.\n\nProject acceptance policy:\n- Compare the strings without normalization.\n- The tester defines the expected version; DMTF does not prescribe that value."
+                }
+            }
+        }
+    ],
+    "automation": "semi_automatic",
+    "parameters": {
+        "preset": {
+            "type": "string",
+            "default": "",
+            "label": "Expected RedfishVersion (blank: ask during execution)"
+        }
+    },
+    "command_routes": {
+        "bmc_redfish": {
+            "from": "bmcagent",
+            "to": "bmc",
+            "method": "redfish",
+            "lan_port": "task.bmc.lan_ports.port1",
+            "username": "task.bmc.username",
+            "password": "task.bmc.password"
+        }
+    }
+}
+
+
+from result_policy import declared_method_items
+
+_METHOD_ITEMS = dict(declared_method_items(TEST_CASE["test_method"]))
+
+
+def _route_host(context):
+    from redfish_route import RedfishRoute
+    declaration = TEST_CASE["command_routes"]["bmc_redfish"]
+    try:
+        return RedfishRoute(dict(context, log=context.get("log")), declaration).host
+    except (KeyError, TypeError, AttributeError, IndexError) as error:
+        raise ValueError("Invalid Task BMC LAN port settings") from error
 
 
 class CaseFailure(AssertionError):
     """Non-program failure with an actionable reason."""
 
 
-_METHOD_CHECKS = [('Tester\\ supplied\\ expected\\ version', 1),
- ('Final\\ HTTP\\ status', 3),
- ('Valid\\ JSON', 5),
- ('Top\\-level\\ JSON\\ object', 6),
- ('RedfishVersion\\ is\\ present', 8),
- ('RedfishVersion\\ format', 9),
- ('Exact\\ RedfishVersion\\ match', 11)]
+_METHOD_CHECKS = [('Tester\\ supplied\\ expected\\ version', 'tester_supplied_expected_version'),
+ ('Final\\ HTTP\\ status', 'final_http_status'),
+ ('Valid\\ JSON', 'valid_json'),
+ ('Top\\-level\\ JSON\\ object', 'top_level_json_object'),
+ ('RedfishVersion\\ is\\ present', 'redfishversion_is_present'),
+ ('RedfishVersion\\ format', 'redfishversion_format'),
+ ('Exact\\ RedfishVersion\\ match', 'exact_redfishversion_match')]
 
 
 def _method_emit(context, index, status, **detail):
-    item = TEST_CASE["test_method"][index]
-    result = dict(method_index=index, step_number=item["step_number"], type=item["type"],
+    item = _METHOD_ITEMS[index]
+    identity = {"checkpoint_id": index} if item["type"] == "Checkpoint" else {"method_index": index}
+    result = dict(**identity, step_number=item["step_number"], type=item["type"],
                   status=status, **detail)
     result = json.loads(json.dumps(result, ensure_ascii=False), parse_constant=lambda value: value)
     context.setdefault("_method_results", []).append(result)
@@ -80,7 +140,7 @@ def _report_flush(context, status=None, reason=None):
         return
     pending = context.get("_method_pending", [])
     requests = context.get("_method_http", [])
-    index = next(i for i, item in enumerate(TEST_CASE["test_method"])
+    index = next(i for i, item in _METHOD_ITEMS.items()
                  if item["step_number"] == phase and item["type"] in ("Command", "Action"))
     failed_parse = any(label in ("Valid JSON", "Valid XML", "XML parser safety boundary")
                        and result["status"] == "FAIL" for _, label, result in pending)
@@ -104,7 +164,7 @@ def _report_begin(context, number):
     context["_method_phase"] = number
     context.setdefault("_method_visited", set()).add(number)
     context["_method_pending"], context["_method_http"] = [], []
-    item = next(item for item in TEST_CASE["test_method"]
+    item = next(item for item in _METHOD_ITEMS.values()
                 if item["step_number"] == number and item["type"] in ("Command", "Action"))
     if context.get("log") is not None:
         context["log"].section(f'Step {number} | {item["type"]} | {item["step"]}')
@@ -122,7 +182,7 @@ def _log(context, method, *args, **kwargs):
         index = next((index for pattern, index in _METHOD_CHECKS if re.fullmatch(pattern, label)), None)
         if index is None:
             raise RuntimeError("No declared Checkpoint for " + label)
-        phase = TEST_CASE["test_method"][index]["step_number"]
+        phase = _METHOD_ITEMS[index]["step_number"]
         if context.get("_method_phase") != phase:
             _report_begin(context, phase)
         note = kwargs.get("note")
@@ -133,6 +193,8 @@ def _log(context, method, *args, **kwargs):
             result["note"] = note
         if kwargs.get("reason"):
             result["reason"] = kwargs["reason"]
+        elif status == "FAIL":
+            result["reason"] = f"{label}: expected {result['expected']!r}, observed {result['actual']['value']!r}."
         context.setdefault("_method_pending", []).append((index, label, result))
         return
     if method == "http":
@@ -146,11 +208,11 @@ def _log(context, method, *args, **kwargs):
 def _finish(context, status, reason, evidence, observations):
     _report_flush(context, status, reason)
     results = context.setdefault("_method_results", [])
-    for index, item in enumerate(TEST_CASE["test_method"]):
+    for index, item in _METHOD_ITEMS.items():
         if item["type"] == "Record" and item.get("observation") in observations:
             _method_emit(context, index, "COMPLETED", actual=observations[item["observation"]])
-    observed = {result["method_index"] for result in results}
-    for index, item in enumerate(TEST_CASE["test_method"]):
+    observed = {result.get("checkpoint_id", result.get("method_index")) for result in results}
+    for index, item in _METHOD_ITEMS.items():
         if index not in observed:
             skip_reason = ("No applicable item was encountered for this check."
                            if item["step_number"] in context.get("_method_visited", set()) and status == "Pass"
@@ -185,6 +247,9 @@ def execute(client, context=None, preset=None):
     """Use Task connection settings, not global YAML or client private APIs."""
     if not isinstance(context, dict):
         raise RuntimeError("BMCAgent did not supply a dictionary execution context")
+    logger = context.get("log")
+    if callable(getattr(logger, "declare_methods", None)):
+        logger.declare_methods(TEST_CASE["test_method"])
     evidence = []
     observations = {}
     _log(context, "section", "Expected protocol version input", report_step=1)
@@ -211,8 +276,8 @@ def execute(client, context=None, preset=None):
     conf = context.get("redfish", {})
     if not isinstance(conf, dict):
         return _finish(context, "Fail", "Task BMC settings are invalid", evidence, observations)
-    host = conf.get("host", "")
     try:
+        host = _route_host(context)
         parsed = urlsplit(host) if isinstance(host, str) else None
         valid = parsed is not None and parsed.scheme in ("http", "https") and bool(parsed.hostname)
         valid = valid and not parsed.username and not parsed.password

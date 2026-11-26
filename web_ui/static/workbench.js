@@ -591,7 +591,7 @@ function folderPage(plan) {
 function caseRows(plan) { return plan.testcases.map(c=>`<button class="case-row" data-action="select-case" data-id="${escape(c.id)}" data-search="${escape(c.tc_name.toLowerCase())}" data-folder="${escape(c.folder_id||'')}" aria-pressed="${c.id===state.caseId}"><strong>${automation(c.automation)}${escape(c.tc_name)}</strong><span class="help">${escape(c.folder_path||'Unfiled')}${c.script_kind!=='single'?' · Retired':''}</span></button>`).join(''); }
 function parameterFields(metadata, settings, disabled=false) { return Object.entries(metadata.parameters||{}).map(([key,spec])=>{
   const value=settings[key]; const field=spec.type==='boolean'?`<input type="checkbox" name="p:${escape(key)}" ${value?'checked':''} ${disabled?'disabled':''}>`:`<input name="p:${escape(key)}" type="${['integer','number'].includes(spec.type)?'number':'text'}" ${spec.type==='integer'?'step="1"':spec.type==='number'?'step="any"':''} value="${escape(value)}" ${disabled?'disabled':''} ${spec.type==='string'?'':'required'}>`;
-  return `<label class="field"><span>${escape(spec.label||key)}</span>${field}<span class="help">${escape(key)} · ${escape(spec.type)}</span></label>`;
+  return `<label class="field parameter-field"><span class="parameter-label">${escape(spec.label||key)}</span>${field}<span class="help">${escape(key)} · ${escape(spec.type)}</span></label>`;
 }).join(''); }
 function planCaseReference(plan,id){
  const c=plan.testcases.find(item=>item.id===id);if(!c)throw Error('Test Case not found.');
@@ -721,7 +721,7 @@ function syncExecutionControls(){
  updateRunningLabel();
  if(!executionDialog&&caseId){const row=$$('[data-execution-case]').find(r=>r.dataset.executionCase===caseId);(action?Array.from(row?.querySelectorAll('[data-action]')||[]).find(b=>b.dataset.action===action):row)?.focus({preventScroll:true});}
  if(!executionDialog&&folder!==undefined)$$('[data-action=execution-folder]',body).find(b=>b.dataset.path===folder)?.focus({preventScroll:true});
- if(executionDialog?.kind==='parameters'){const fieldset=executionDialog.el.querySelector('fieldset');if(fieldset)fieldset.disabled=executionBusy()||executionDialog.saving||Boolean(executionDialog.def?.editing_locked);}
+ planCaseDialog?.syncLock?.();
  const toolbar=$('.execution-toolbar'),resume=toolbar?.querySelector('[data-action=resume]');if(task.execution_active&&!state.activeTask&&!resume)toolbar?.insertAdjacentHTML('beforeend',button('Resume monitoring','resume'));else if(!task.execution_active||state.activeTask)resume?.remove();
  const runControl=$('[data-execution-run-control]');if(runControl){const markup=executionRunButton(task);if(runControl._markup!==markup){const focused=runControl.contains(document.activeElement);runControl.innerHTML=markup;runControl._markup=markup;if(focused&&!executionDialog)runControl.querySelector('button')?.focus({preventScroll:true});}}
  const busy=executionBusy();for(const b of $$('.execution-toolbar [data-action]')){if(['run','execution-select-all','execution-select-none'].includes(b.dataset.action))b.disabled=busy||Boolean(state.executionSelectionBusy);if(b.dataset.action==='stop')b.disabled=!task.execution_active;}
@@ -855,7 +855,8 @@ async function openExecutionDialog(kind,caseId,opener){
  if(kind==='parameters'&&executionBusy())throw Error('Parameters are locked while testing is active.');
  const tc=task.testcases.find(c=>c.id===caseId);
  if(caseId&&!tc)throw Error('Test Case is no longer in this Task.');
- const titles={scope:'Scope',connection:'Connection',parameters:'Parameters',annotation:'Result Annotation',log:'Test log'};
+ if(kind==='parameters')return openPlanCaseDialog(plan,caseId,false,opener);
+ const titles={scope:'Scope',connection:'Connection',annotation:'Result Annotation',log:'Test log'};
  const el=document.createElement('dialog');el.className='execution-dialog';el.dataset.kind=kind;el.setAttribute('aria-labelledby','execution-dialog-title');
  const d={el,kind,taskId:task.id,planId:plan.id,caseId,dirty:false,saving:false,opener};executionDialog=d;
  el.innerHTML='<header class="execution-dialog-header"><div><h2 id="execution-dialog-title">'+titles[kind]+'</h2><p class="help" data-no-translate>'+escape(task.name+(tc?' / '+tc.tc_name:''))+'</p></div><div class="execution-dialog-actions">'+(kind==='log'?'<button type="button" data-execution-export disabled>Export</button>':'')+'<button type="button" data-execution-close aria-label="Close" title="Close" class="execution-icon-button"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="/action-icons.svg#close"/></svg></button></div></header><div class="execution-dialog-body">Loading…</div><p class="execution-dialog-error" role="alert"></p>';
@@ -874,7 +875,6 @@ async function openExecutionDialog(kind,caseId,opener){
  const form=e.target,values=Object.fromEntries(new FormData(form));d.saving=true;el.querySelector('.execution-dialog-error').textContent='';el.querySelectorAll('button').forEach(b=>b.disabled=true);
  try{
  if(kind==='scope'){if(plan.locked||task.execution_active)throw Error('Scope is locked during execution.');const ids=plan.testcases.filter(c=>d.included.has(c.id)).map(c=>c.id);if(task.testcases.some(c=>!ids.includes(c.id))&&!window.confirm('Remove these cases from the Task? Their current results and logs will be removed.'))return;await api('/api/tasks/'+d.taskId+'/testcases/import','POST',{testcases:ids});}
- else if(kind==='parameters'){const activity=await api('/api/tasks');if(activity.tasks.some(t=>t.execution_active)||executionBusy())throw Error('Parameters are locked while testing is active.');const settings={};for(const [name,spec] of Object.entries(d.def.metadata.parameters||{})){const f=form.elements.namedItem('p:'+name);settings[name]=spec.type==='boolean'?f.checked:['integer','number'].includes(spec.type)?Number(f.value):f.value;}await api('/api/plans/'+d.planId+'/testcases/'+d.caseId+'/definition','PUT',{source:d.def.source,settings,settings_revision:d.def.settings_revision});}
  else if(kind==='annotation'){await api('/api/tasks/'+d.taskId+'/testcases/'+d.caseId+'/status','PATCH',{status:values.status,reason:values.reason});await api('/api/task_tc/annotate','POST',{task_id:d.taskId,testcase_id:d.caseId,bug_id:values.bug_id});}
  else if(kind==='log'){await api('/api/input','POST',{session_id:form.dataset.session,value:values.value});state.prompt=null;form.remove();return;}
  d.dirty=false;closeExecutionDialog(true);await refresh();toast('Saved.');
@@ -884,7 +884,6 @@ async function openExecutionDialog(kind,caseId,opener){
  try{
  let html='';
  if(kind==='scope')html='<form><div class="actions"><button type="button" data-scope-all aria-label="Select all" title="Select all" class="execution-icon-button"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="/action-icons.svg#checkAll"/></svg></button><button type="button" data-scope-none aria-label="Clear selection" title="Clear selection" class="execution-icon-button"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="/action-icons.svg#clearSelection"/></svg></button></div><div class="table-wrap"><table class="execution-scope-tree"><thead><tr><th>Directory / Test Case</th></tr></thead><tbody></tbody></table></div><div class="form-actions"><button type="submit" class="primary">Save scope</button></div></form>';
- if(kind==='parameters'){d.def=await api('/api/plans/'+d.planId+'/testcases/'+d.caseId+'/definition');html='<p class="help">Saved parameters belong to '+escape(plan.name)+' and apply to every Task using this Plan case.</p><form><fieldset '+(executionBusy()||d.def.editing_locked?'disabled':'')+'><div class="fields">'+(parameterFields(d.def.metadata,d.def.settings||{})||'<p>No editable parameters.</p>')+'</div><div class="form-actions"><button type="submit" class="primary">Save parameters</button></div></fieldset></form>';}
  if(kind==='annotation')html=(tc.manual_override?'<p class="help">'+escape(tc.manual_override.reason||'')+'</p>':'')+'<form><fieldset '+(task.execution_active?'disabled':'')+'><div class="fields"><label class="field"><span>Status</span><select name="status">'+[['TBD','NR'],['Passed','PASS'],['C-PASS','C-PASS'],['Failed','FAIL'],['Block','Block']].map(([v,l])=>'<option value="'+v+'" '+(tc.status===v?'selected':'')+'>'+l+'</option>').join('')+'</select></label><label class="field"><span>Reason / Note for C-PASS</span><input name="reason" required></label><label class="field"><span>Bug ID</span><input name="bug_id" value="'+escape(tc.bug_id)+'"></label></div><div class="form-actions"><button type="submit" class="primary">Save annotation</button></div></fieldset></form>';
  if(kind==='log')html='<p class="help" data-execution-log-notice hidden>Showing the latest 65,536 characters. Export saves the complete test log.</p><pre class="log code" data-execution-log data-no-translate></pre><div data-execution-input></div>';
  if(executionDialog!==d)return;el.querySelector('.execution-dialog-body').innerHTML=html;
@@ -1017,10 +1016,10 @@ function repoDialog(title,body,footer=''){
  dialog.showModal();return dialog;
 }
 let planCaseDialog=null;
-async function openPlanCaseDialog(plan,id,source){
+async function openPlanCaseDialog(plan,id,source,executionOpener=null){
  const ref=planCaseReference(plan,id);
  const action=source?'plan-case-source':'plan-case-parameters';
- const opener=document.querySelector(`#plan-step-preview [data-action="${action}"][data-id="${CSS.escape(id)}"]`) || document.querySelector(`[data-plan-case="${CSS.escape(id)}"]`);
+ const opener=executionOpener || document.querySelector(`#plan-step-preview [data-action="${action}"][data-id="${CSS.escape(id)}"]`) || document.querySelector(`[data-plan-case="${CSS.escape(id)}"]`);
  const dialog=repoDialog((source?'View Python source':'Parameters')+' · '+ref.name,'<p role="status">Loading…</p>');
  const body=dialog.querySelector('.repo-view-content'),error=dialog.querySelector('[role=alert]');
  const close=dialog.querySelector('[data-action=repo-close]');
@@ -1049,12 +1048,17 @@ async function openPlanCaseDialog(plan,id,source){
    if(!dialog.open)return;
    if(source){body.innerHTML='<pre class="case-source-code" data-no-translate>'+escape(def.source)+'</pre>';return;}
    const locked=def.editing_locked;
-   body.innerHTML=(locked?'<p class="notice info">This Test Case is running. Parameters are locked until it finishes.</p>':'')+'<form id="plan-dialog-parameters"><fieldset><div class="fields">'+parameterFields(def.metadata,def.settings,locked)+'</div></fieldset></form>';
+   dialog.classList.add('plan-parameters-dialog');
+   body.innerHTML='<p class="help">Saved parameters belong to '+escape(plan.name)+' and apply to every Task using this Plan case.</p>'+(locked?'<p class="notice info">This Test Case is running. Parameters are locked until it finishes.</p>':'')+'<form id="plan-dialog-parameters"><fieldset><div class="fields">'+(parameterFields(def.metadata,def.settings,locked)||'<p>No editable parameters.</p>')+'</div></fieldset></form>';
    const form=body.querySelector('form');
    dialog.insertAdjacentHTML('beforeend','<div class="actions plan-parameter-actions"><button class="primary" type="submit" form="plan-dialog-parameters">Save parameters</button><button type="button">Cancel</button></div>');
    const save=dialog.querySelector('[type=submit]'),cancel=dialog.querySelector('.plan-parameter-actions [type=button]');
    const fields=form.querySelector('fieldset');
-   save.disabled=locked;cancel.onclick=requestClose;
+   function syncLock(){
+     save.disabled=fields.disabled=saving||Boolean(def.editing_locked)||(executionOpener!==null&&executionBusy());
+   }
+   planCaseDialog.syncLock=syncLock;
+   syncLock();cancel.onclick=requestClose;
    for(const type of ['input','change'])form.addEventListener(type,event=>{event.stopPropagation();dirty=true;});
    form.onsubmit=async event=>{
      event.preventDefault();event.stopPropagation();
@@ -1062,18 +1066,22 @@ async function openPlanCaseDialog(plan,id,source){
      const settings=currentSettings(form,def.metadata);
      saving=true;save.disabled=close.disabled=cancel.disabled=fields.disabled=true;error.textContent='';
      try{
+       if(executionOpener){
+         const activity=await api('/api/tasks');
+         if(activity.tasks.some(t=>t.execution_active)||executionBusy())throw Error('Parameters are locked while testing is active.');
+       }
        await api(url,'PUT',{source:def.source,settings,settings_revision:def.settings_revision});
        dirty=false;
        finish();toast('Parameters saved.');
-       await refresh(false);
+       await refresh(Boolean(executionOpener));
        const updated=context().plan?.testcases.find(c=>c.id===id);
-       if(updated&&opener){
+       if(updated&&opener&&!executionOpener){
          const incomplete=updated.parameters_complete===false;
          for(const cls of ['primary','case-parameters-incomplete'])opener.classList.toggle(cls,incomplete);
          opener.classList.toggle('case-parameters-complete',!incomplete);
        }
      }catch(e){if(dialog.open)error.textContent=e.message;else toast(e.message,true);if(e.status===423)def.editing_locked=true;}
-     finally{saving=false;close.disabled=cancel.disabled=false;save.disabled=fields.disabled=Boolean(def.editing_locked);}
+     finally{saving=false;close.disabled=cancel.disabled=false;syncLock();}
    };
  }catch(e){body.textContent='';error.textContent=e.message;}
 }
@@ -1243,7 +1251,7 @@ function repositoryWorkspace(add=false,plan=null){
 }
 function standardPreview(def){
  const parameters=Object.entries(def.metadata.parameters||{}),onlyParameters=state.repositoryView==='parameters';
- return `<section id="repository-preview" tabindex="-1" aria-label="Test Case details"><div class="toolbar repository-preview-header"><h2>${escape(def.name)}</h2>${repoIcon('Close','close-standard','close')}</div><div class="repository-preview-content"><h3>${onlyParameters?'Editable parameters':'Python source'}</h3>${onlyParameters?(parameters.length?`<div class="table-wrap"><table><thead><tr><th>Parameter</th><th>Type</th><th>Default</th></tr></thead><tbody>${parameters.map(([key,spec])=>`<tr><td>${escape(spec.label||key)}${spec.label&&spec.label!==key?`<p class="help">${escape(key)}</p>`:''}</td><td>${escape(spec.type)}</td><td>${escape(JSON.stringify(spec.default))}</td></tr>`).join('')}</tbody></table></div><p class="help">Edit these values after adding the Test Case to a Plan.</p>`:'<p class="help">No editable parameters declared.</p>'):`<pre class="log code">${escape(def.source)}</pre>`}</div></section>`;
+ return `<section id="repository-preview" tabindex="-1" aria-label="Test Case details"><div class="toolbar repository-preview-header"><h2>${escape(def.name)}</h2>${repoIcon('Close','close-standard','close')}</div><div class="repository-preview-content"><h3>${onlyParameters?'Editable parameters':'Python source'}</h3>${onlyParameters?(parameters.length?`<div class="table-wrap"><table><thead><tr><th>Parameter</th><th>Type</th><th>Default</th></tr></thead><tbody>${parameters.map(([key,spec])=>`<tr><td class="parameter-label">${escape(spec.label||key)}${spec.label&&spec.label!==key?`<p class="help">${escape(key)}</p>`:''}</td><td>${escape(spec.type)}</td><td>${escape(JSON.stringify(spec.default))}</td></tr>`).join('')}</tbody></table></div><p class="help">Edit these values after adding the Test Case to a Plan.</p>`:'<p class="help">No editable parameters declared.</p>'):`<pre class="log code">${escape(def.source)}</pre>`}</div></section>`;
 }
 async function repositoryPage() {
  state.repository=await api('/api/repository/testcases');state.repositoryFolders=await api('/api/repository/folders');
@@ -1895,7 +1903,7 @@ async function submit(form) {
    await api('/api/input','POST',{session_id:form.dataset.session,value:values.value});state.prompt=null;$('#input-slot').replaceChildren();toast('Response submitted.');
  }
 }
-function inputForm(session,text){return `<form id="input-form" class="input-request" data-session="${escape(session)}"><label for="run-input">${escape(text)}</label><div class="actions"><input id="run-input" name="value" autocomplete="off" required><button class="primary">Submit response</button></div><p class="help">Execution waits here until you respond or stop it.</p></form>`;}
+function inputForm(session,text){return `<form id="input-form" class="input-request" data-session="${escape(session)}"><label for="run-input" class="parameter-label">${escape(text)}</label><div class="actions"><input id="run-input" name="value" autocomplete="off" required><button class="primary">Submit response</button></div><p class="help">Execution waits here until you respond or stop it.</p></form>`;}
 // Keep the display on a one-second clock. A heartbeat or summary refresh is not case activity.
 let streamActivity = null;
 function executionElapsed(task,c){
@@ -1936,7 +1944,7 @@ function stream(session,taskId,caseId) {
    if(msg.text||msg.error)state.log+=(msg.text||msg.error)+'\n';if(msg.type==='case_done')state.log+='Test Case: '+msg.result+'\n';
    if(msg.type==='input_required')state.prompt={session,text:msg.text};
    if(msg.type==='input_required'||msg.type==='input_resolved')updateExecutionLog();else scheduleExecutionLogUpdate();
-   if(msg.type==='input_required'&&context().task?.id===taskId&&!executionDialog){const running=context().task.testcases.find(c=>c.status==='Running');if(running)openExecutionDialog('log',running.id).catch(e=>toast(e.message,true));}
+   if(msg.type==='input_required'&&context().task?.id===taskId&&!executionDialog&&!planCaseDialog){const running=context().task.testcases.find(c=>c.status==='Running');if(running)openExecutionDialog('log',running.id).catch(e=>toast(e.message,true));}
    if(context().task?.id===taskId){const out=$('#log-output');if(out){out.textContent=state.log;out.scrollTop=out.scrollHeight;}if(msg.type==='input_required'){state.prompt={session,text:msg.text};if($('#input-slot'))$('#input-slot').innerHTML=inputForm(session,msg.text);}}
  };
  source.onerror=()=>{if(finished)return; source.close();reject(Error('Live connection interrupted. Use Resume monitoring to reconnect to the active Task.'));};

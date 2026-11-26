@@ -4,10 +4,11 @@ import re
 from urllib.parse import urljoin, urlsplit
 
 TEST_CASE = {
-    "modified_at": "2026-11-24T03:05:34.327403+00:00",
+    "modified_at": "2026-11-26T05:00:54.277898+00:00",
     "test_type": "compliance",
     "spec_ref": [
-        "DSP0266 v1.25.0 section 6.6 (protocol/version discovery); section 6.7 Table 4 (/redfish)."
+        "DSP0266 v1.25.0 section 6.6 (protocol/version discovery)",
+        "DSP0266 v1.25.0 section 6.7 Table 4 (/redfish)."
     ],
     "created_at": "2026-10-14T07:32:57.063413+00:00",
     "name": "RF-01-001 Version Discovery Endpoint",
@@ -16,52 +17,77 @@ TEST_CASE = {
         {
             "step_number": 1,
             "type": "Command",
-            "step": "Send a GET request to `/redfish`."
-        },
-        {
-            "step_number": 1,
-            "type": "Checkpoint",
-            "step": "Verify that the final response status is HTTP 200."
+            "step": "Send a GET request to `/redfish`.",
+            "route": "bmc_redfish",
+            "checkpoints": {
+                "http_status": {
+                    "expected": "Verify that the final response status is HTTP 200."
+                }
+            }
         },
         {
             "step_number": 2,
             "type": "Action",
-            "step": "Parse the final response body as JSON."
-        },
-        {
-            "step_number": 2,
-            "type": "Checkpoint",
-            "step": "Verify that the response body can be parsed as JSON."
-        },
-        {
-            "step_number": 2,
-            "type": "Checkpoint",
-            "step": "Verify that the top-level JSON value is an object."
+            "step": "Parse the final response body as JSON.",
+            "checkpoints": {
+                "json_parseable": {
+                    "expected": "Verify that the response body can be parsed as JSON."
+                },
+                "top_level_object": {
+                    "expected": "Verify that the top-level JSON value is an object."
+                }
+            }
         },
         {
             "step_number": 3,
             "type": "Action",
-            "step": "Read the `v1` property from the JSON object."
-        },
-        {
-            "step_number": 3,
-            "type": "Checkpoint",
-            "step": "Verify that the `v1` property exists."
-        },
-        {
-            "step_number": 3,
-            "type": "Checkpoint",
-            "step": "Verify that the `v1` value is a string."
-        },
-        {
-            "step_number": 3,
-            "type": "Checkpoint",
-            "step": "Verify that the `v1` value equals `/redfish/v1/` exactly, including the trailing slash."
+            "step": "Read the `v1` property from the JSON object.",
+            "checkpoints": {
+                "v1_present": {
+                    "expected": "Verify that the `v1` property exists."
+                },
+                "v1_string": {
+                    "expected": "Verify that the `v1` value is a string."
+                },
+                "v1_uri": {
+                    "expected": "Verify that the `v1` value equals `/redfish/v1/` exactly, including the trailing slash."
+                }
+            }
         }
     ],
     "automation": "automatic",
-    "parameters": {}
+    "parameters": {},
+    "command_routes": {
+        "bmc_redfish": {
+            "from": "bmcagent",
+            "to": "bmc",
+            "method": "redfish",
+            "lan_port": "task.bmc.lan_ports.port1",
+            "username": "task.bmc.username",
+            "password": "task.bmc.password"
+        }
+    }
 }
+
+
+from result_policy import declared_method_items
+
+# Keep the evaluation order while reporting each result under its declared identity.
+_DECLARATIONS = list(declared_method_items(TEST_CASE["test_method"]))
+_METHOD_ITEMS = [item for key, item in _DECLARATIONS]
+
+
+def _identity(position):
+    key, item = _DECLARATIONS[position]
+    return {"checkpoint_id": key} if item["type"] == "Checkpoint" else {"method_index": key}
+
+def _route_host(context):
+    from redfish_route import RedfishRoute
+    declaration = TEST_CASE["command_routes"]["bmc_redfish"]
+    try:
+        return RedfishRoute(dict(context, log=context.get("log")), declaration).host
+    except (KeyError, TypeError, AttributeError, IndexError) as error:
+        raise ValueError("Invalid Task BMC LAN port settings") from error
 
 ENDPOINT = "/redfish"
 
@@ -81,8 +107,8 @@ def _safe(value):
 
 
 def _emit(context, method_index, status, actual=None, expected=None, reason=None):
-    item = TEST_CASE["test_method"][method_index]
-    result = {"method_index": method_index, "type": item["type"],
+    item = _METHOD_ITEMS[method_index]
+    result = {**_identity(method_index), "type": item["type"],
               "step_number": item["step_number"], "status": status, "actual": _safe(actual)}
     if expected is not None:
         result["expected"] = expected
@@ -101,14 +127,14 @@ def _emit(context, method_index, status, actual=None, expected=None, reason=None
 def _begin(context, method_index):
     context["_active_step"] = method_index
     logger = context.get("log")
-    item = TEST_CASE["test_method"][method_index]
+    item = _METHOD_ITEMS[method_index]
     if logger is not None:
         logger.section(f'Step {item["step_number"]} | {item["type"]} | {item["step"]}')
 
 
 def _location(context):
     index = context.get("_active_step")
-    return f'Step {TEST_CASE["test_method"][index]["step_number"]}' if index is not None else "Execution"
+    return f'Step {_METHOD_ITEMS[index]["step_number"]}' if index is not None else "Execution"
 
 
 def _done(context, method_index, actual=None):
@@ -119,7 +145,7 @@ def _done(context, method_index, actual=None):
 def _check(context, method_index, passed, expected, actual):
     _emit(context, method_index, "PASS" if passed else "FAIL", actual, expected)
     if not passed:
-        item = TEST_CASE["test_method"][method_index]
+        item = _METHOD_ITEMS[method_index]
         context["_failures"].append(
             f'Step {item["step_number"]} — {item["step"]} Expected {expected!r}; received {_safe(actual)!r}')
 
@@ -132,7 +158,7 @@ def _finish(context, status, reason, evidence, observations):
     active = context.get("_active_step")
     if active is not None and active not in context["_method_results"]:
         _emit(context, active, "ERROR" if status == "Error" else "FAILED", reason=reason)
-    for index, item in enumerate(TEST_CASE["test_method"]):
+    for index, item in enumerate(_METHOD_ITEMS):
         if index not in context["_method_results"]:
             pending = {"Command": "Skip", "Action": "Skip", "Checkpoint": "Skip", "Record": "Skip"}
             _emit(context, index, pending[item["type"]], reason=reason)
@@ -169,12 +195,15 @@ def execute(client, context=None, preset=None):
     """Use Task connection settings and keep typed method evidence in the Log."""
     if not isinstance(context, dict):
         raise RuntimeError("BMCAgent did not supply a dictionary execution context")
+    logger = context.get("log")
+    if callable(getattr(logger, "declare_methods", None)):
+        logger.declare_methods(TEST_CASE["test_method"])
     context["_method_results"], context["_failures"] = {}, []
     evidence, observations = [], {}
     _begin(context, 0)
     conf = context.get("redfish", {})
     try:
-        host = conf.get("host", "") if isinstance(conf, dict) else ""
+        host = _route_host(context) if isinstance(conf, dict) else ""
         parsed = urlsplit(host) if isinstance(host, str) else None
         valid = parsed is not None and parsed.scheme in ("http", "https") and bool(parsed.hostname)
         valid = valid and not parsed.username and not parsed.password

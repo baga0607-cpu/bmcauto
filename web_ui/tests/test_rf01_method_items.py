@@ -109,7 +109,7 @@ class MethodItemsTest(unittest.TestCase):
                 self.assertIn(item["type"], ("Command", "Action", "Checkpoint", "Record"))
                 self.assertIsInstance(item["step_number"], int)
             declarations = dict(declared_method_items(meta["test_method"]))
-            parse_key = "json_parseable" if module is CASES[1] else 3
+            parse_key = "json_parseable"
             self.assertIn("can be parsed as JSON", declarations[parse_key]["step"])
 
     def test_pass_and_no_001_record(self):

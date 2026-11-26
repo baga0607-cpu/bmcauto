@@ -2,63 +2,90 @@ import json
 from urllib.parse import urljoin, urlsplit
 
 TEST_CASE = {
-    "modified_at": "2026-11-12T09:11:35.094005+00:00",
+    "modified_at": "2026-11-26T05:00:54.277898+00:00",
     "test_type": "compliance",
-    "spec_ref": ['DSP0266 v1.25.0 section 6.7, Table 4 (/redfish/v1/openapi.yaml); section 11.3.4, Table 33 '
- '(openapi.yaml terms).'],
+    "spec_ref": [
+        "DSP0266 v1.25.0 section 6.7, Table 4 (/redfish/v1/openapi.yaml)",
+        "DSP0266 v1.25.0 section 11.3.4, Table 33 (openapi.yaml terms)."
+    ],
     "created_at": "2026-10-30T05:56:21.765986+00:00",
     "name": "RF-01-008 OpenAPI Document Endpoint",
     "description": "Verify the minimum OpenAPI document structure when the endpoint is available; conditionally accept explicitly confirmed absence of this optional endpoint.",
     "test_method": [
-    {
-        "step_number": 1,
-        "type": "Command",
-        "step": "Send GET /redfish/v1/openapi.yaml and follow supported same-origin redirects."
-    },
-    {
-        "step_number": 1,
-        "type": "Checkpoint",
-        "step": "Verify the response using these acceptance rules:\n\n- PASS: HTTP 200.\n- C-PASS - HTTP 404: The message exactly matches \"The URI /redfish/v1/openapi.yaml was not found.\"\n- C-PASS - HTTP 400: A single @Message.ExtendedInfo entry contains both:\n  - MessageId: Base.1.16.InvalidURI\n  - Message: \"The URI /redfish/v1/openapi.yaml was not found.\" (exact match)\n- FAIL: Any other response.\n\nC-PASS is a project acceptance policy. Include the actual response and acceptance reason in Note, and skip the remaining document checks."
-    },
-    {
-        "step_number": 2,
-        "type": "Action",
-        "step": "Parse the response body as a single YAML document."
-    },
-    {
-        "step_number": 2,
-        "type": "Checkpoint",
-        "step": "Verify that the response body can be parsed as YAML."
-    },
-    {
-        "step_number": 2,
-        "type": "Checkpoint",
-        "step": "Verify that the top-level YAML value is an object."
-    },
-    {
-        "step_number": 3,
-        "type": "Action",
-        "step": "Read the openapi, info and paths properties."
-    },
-    {
-        "step_number": 3,
-        "type": "Checkpoint",
-        "step": "Verify that openapi is present and is a string."
-    },
-    {
-        "step_number": 3,
-        "type": "Checkpoint",
-        "step": "Verify that info is present and is an object."
-    },
-    {
-        "step_number": 3,
-        "type": "Checkpoint",
-        "step": "Verify that paths is present and is an object."
-    }
-],
+        {
+            "step_number": 1,
+            "type": "Command",
+            "step": "Send GET /redfish/v1/openapi.yaml and follow supported same-origin redirects.",
+            "route": "bmc_redfish",
+            "checkpoints": {
+                "endpoint_status": {
+                    "expected": "Verify the response using these acceptance rules:\n\n- PASS: HTTP 200.\n- C-PASS - HTTP 404: The message exactly matches \"The URI /redfish/v1/openapi.yaml was not found.\"\n- C-PASS - HTTP 400: A single @Message.ExtendedInfo entry contains both:\n  - MessageId: Base.1.16.InvalidURI\n  - Message: \"The URI /redfish/v1/openapi.yaml was not found.\" (exact match)\n- FAIL: Any other response.\n\nC-PASS is a project acceptance policy. Include the actual response and acceptance reason in Note, and skip the remaining document checks."
+                }
+            }
+        },
+        {
+            "step_number": 2,
+            "type": "Action",
+            "step": "Parse the response body as a single YAML document.",
+            "checkpoints": {
+                "yaml_parseable": {
+                    "expected": "Verify that the response body can be parsed as YAML."
+                },
+                "top_level_object": {
+                    "expected": "Verify that the top-level YAML value is an object."
+                }
+            }
+        },
+        {
+            "step_number": 3,
+            "type": "Action",
+            "step": "Read the openapi, info and paths properties.",
+            "checkpoints": {
+                "openapi_is_present_and_is_a_string": {
+                    "expected": "Verify that openapi is present and is a string."
+                },
+                "info_is_present_and_is_an_object": {
+                    "expected": "Verify that info is present and is an object."
+                },
+                "paths_is_present_and_is_an_object": {
+                    "expected": "Verify that paths is present and is an object."
+                }
+            }
+        }
+    ],
     "automation": "automatic",
     "parameters": {},
+    "command_routes": {
+        "bmc_redfish": {
+            "from": "bmcagent",
+            "to": "bmc",
+            "method": "redfish",
+            "lan_port": "task.bmc.lan_ports.port1",
+            "username": "task.bmc.username",
+            "password": "task.bmc.password"
+        }
+    }
 }
+
+
+from result_policy import declared_method_items
+
+# Keep the evaluation order while reporting each result under its declared identity.
+_DECLARATIONS = list(declared_method_items(TEST_CASE["test_method"]))
+_METHOD_ITEMS = [item for key, item in _DECLARATIONS]
+
+
+def _identity(position):
+    key, item = _DECLARATIONS[position]
+    return {"checkpoint_id": key} if item["type"] == "Checkpoint" else {"method_index": key}
+
+def _route_host(context):
+    from redfish_route import RedfishRoute
+    declaration = TEST_CASE["command_routes"]["bmc_redfish"]
+    try:
+        return RedfishRoute(dict(context, log=context.get("log")), declaration).host
+    except (KeyError, TypeError, AttributeError, IndexError) as error:
+        raise ValueError("Invalid Task BMC LAN port settings") from error
 
 
 class CaseFailure(AssertionError):
@@ -66,8 +93,8 @@ class CaseFailure(AssertionError):
 
 
 def _emit(context, index, status, **values):
-    item = TEST_CASE["test_method"][index]
-    result = dict(method_index=index, type=item["type"],
+    item = _METHOD_ITEMS[index]
+    result = dict(**_identity(index), type=item["type"],
                   step_number=item["step_number"], status=status, **values)
     context.setdefault("_method_results", {})[index] = result
     logger = context.get("log")
@@ -81,7 +108,7 @@ def _log(context, method, *args, **kwargs):
     if method == "section":
         number = kwargs.pop("report_step")
         context["_active_step"] = number
-        item = TEST_CASE["test_method"][{1: 0, 2: 2, 3: 5}[number]]
+        item = _METHOD_ITEMS[{1: 0, 2: 2, 3: 5}[number]]
         args = (f'Step {number} | {item["type"]} | {item["step"]}',)
     elif method == "http":
         context["_http_actual"] = {"uri": args[1], "status": args[2]}
@@ -113,7 +140,7 @@ def _finish(context, status, reason, evidence, observations):
     action = {1: 0, 2: 2, 3: 5}.get(context.get("_active_step"))
     if action is not None and action not in results:
         _emit(context, action, "ERROR" if status == "Error" else "FAILED", reason=reason)
-    for index in range(len(TEST_CASE["test_method"])):
+    for index in range(len(_METHOD_ITEMS)):
         if index not in results:
             _emit(context, index, "Skip", reason=(
                 "Optional endpoint is absent; no document is available for validation."
@@ -142,14 +169,17 @@ def execute(client, context=None, preset=None):
     """Use Task connection settings, not global YAML or client private APIs."""
     if not isinstance(context, dict):
         raise RuntimeError("BMCAgent did not supply a dictionary execution context")
+    logger = context.get("log")
+    if callable(getattr(logger, "declare_methods", None)):
+        logger.declare_methods(TEST_CASE["test_method"])
     _log(context, "section", "Task connection settings", report_step=1)
     evidence = []
     observations = {}
     conf = context.get("redfish", {})
     if not isinstance(conf, dict):
         return _finish(context, "Fail", "Task BMC settings are invalid", evidence, observations)
-    host = conf.get("host", "")
     try:
+        host = _route_host(context)
         parsed = urlsplit(host) if isinstance(host, str) else None
         valid = parsed is not None and parsed.scheme in ("http", "https") and bool(parsed.hostname)
         valid = valid and not parsed.username and not parsed.password
