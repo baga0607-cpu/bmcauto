@@ -90,7 +90,7 @@ class SourceCreatedAtTest(unittest.TestCase):
         settings = dict(self.definition(tc)['settings'], expected=204)
         self.update(tc, {'settings': settings, 'settings_revision': 0})
         target = '/api/repository/testcases/' + self.repository['id']
-        newer = source.replace('2026-01-01','2026-02-01')
+        newer = source.replace('2026-01-01','2026-02-01').replace('\n', '\r\n')
         self.assertEqual(self.client.put(target, json={'source': newer,
             'previous_modified_at': tc['modified_at']}).status_code, 200)
         check = self.client.get('/api/plans/a/case-versions').get_json()[0]
@@ -99,7 +99,7 @@ class SourceCreatedAtTest(unittest.TestCase):
         self.assertEqual(self.client.post(url, json=dict(check, confirm=True, repository_modified='stale')).status_code, 409)
         self.assertEqual(self.definition(tc)['source'], source)
         self.assertEqual(self.client.post(url, json=dict(check, confirm=True)).status_code, 200)
-        self.assertEqual(self.definition(tc)['source'], newer)
+        self.assertEqual(self.definition(tc)['source'], newer.replace('\r\n', '\n'))
         self.assertEqual(self.definition(tc)['settings'], settings)
         self.assertEqual(self.definition(peer, 'b')['source'], source)
         self.assertEqual(self.client.get('/api/plans/a/case-versions').get_json()[0]['status'], 'Up to date')

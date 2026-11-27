@@ -369,7 +369,7 @@ def register(app, runtime):
         s.add(tc);s.flush();ps.assign_folder(s,tc,folder)
         path=script_file(runtime['MAIN_PROGRAM_DIR'],tc)
         path.parent.mkdir(parents=True,exist_ok=False);paths.append(path)
-        path.write_text(row.source_text,encoding='utf-8')
+        path.write_bytes(row.source_text.encode('utf-8'))
         return tc
 
     def remove_copies(paths):
@@ -457,7 +457,7 @@ def register(app, runtime):
         for membership in s.query(TaskTestCase).filter_by(testcase_id=tc.system_id):
             if membership.executed_at or membership.result_json or membership.manual_override_json or membership.status in ('Passed','Failed','Block','CP','C-PASS'):
                 membership.mark_for_retest(*(reasons or ['Case Overwritten']))
-        path.write_text(source,encoding='utf-8')
+        path.write_bytes(source.encode('utf-8'))
 
     @route('/api/plans/<plan_id>/testcases/<tc_id>/repository-update', ['POST'])
     def update_from_repository(s, data, plan_id, tc_id):
@@ -611,8 +611,9 @@ def register(app, runtime):
             if item['action']=='skip':skipped.append(item['name']);return
             if item['action']=='overwrite':
                 tc=actual[item['target_id']];path=script_file(runtime['MAIN_PROGRAM_DIR'],tc)
-                previous_source = path.read_text(encoding='utf-8')
-                originals.setdefault(path, previous_source)
+                previous_bytes = path.read_bytes()
+                previous_source = previous_bytes.decode('utf-8')
+                originals.setdefault(path, previous_bytes)
                 overwrite_source(s, tc, path, previous_source, item['source'], item['settings'])
                 updated.append(tc)
             else:
@@ -641,7 +642,7 @@ def register(app, runtime):
             s.commit()
         except Exception:
             s.rollback()
-            for path,source in originals.items():path.write_text(source,encoding='utf-8')
+            for path,original in originals.items():path.write_bytes(original)
             remove_copies(paths);raise
         return jsonify(added=[tc.to_dict() for tc in added],updated=[tc.to_dict() for tc in updated],skipped=skipped),201
 
@@ -664,7 +665,8 @@ def register(app, runtime):
         if data.get('settings_revision') != (tc.settings_revision or 0):
             raise ps.StateError('The Plan Test Case changed. Reload before saving.', 409)
         path = script_file(runtime['MAIN_PROGRAM_DIR'], tc)
-        original = path.read_text(encoding='utf-8')
+        original_bytes = path.read_bytes()
+        original = original_bytes.decode('utf-8').replace('\r\n', '\n').replace('\r', '\n')
         source = data.get('source', original)
         if not isinstance(source, str):
             raise ps.StateError('Python source must be text')
@@ -691,9 +693,11 @@ def register(app, runtime):
                 if membership.executed_at or membership.result_json or membership.manual_override_json or membership.status in ('Passed', 'Failed', 'CP', 'C-PASS'):
                     membership.mark_for_retest(*reasons)
             try:
-                path.write_text(source, encoding='utf-8')
+                if source != original:
+                    path.write_bytes(source.encode('utf-8'))
                 s.commit()
             except Exception:
-                path.write_text(original, encoding='utf-8')
+                if source != original:
+                    path.write_bytes(original_bytes)
                 raise
         return jsonify(definition(runtime['MAIN_PROGRAM_DIR'], tc))

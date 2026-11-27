@@ -785,7 +785,7 @@ def import_tc():
             modified_at=version, repository_id=repository_id, settings_json=json.dumps(settings))
         s.add(tc); s.flush(); ps.assign_folder(s, tc, folder)
         path = sc.script_file(MAIN_PROGRAM_DIR, tc)
-        path.parent.mkdir(parents=True, exist_ok=False); path.write_text(source, encoding='utf-8')
+        path.parent.mkdir(parents=True, exist_ok=False); path.write_bytes(source.encode('utf-8'))
         s.commit()
         return jsonify(tc.to_dict()), 201
     except Exception as error:
