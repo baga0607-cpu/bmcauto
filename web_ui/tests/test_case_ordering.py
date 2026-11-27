@@ -71,7 +71,7 @@ class CaseOrderingTest(unittest.TestCase):
         self.assertEqual(self.plan_ids(),[one,twenty,two,ten])
     def test_natural_numbers_versions_and_deleted_ids(self):
         with self.Session() as s:
-            records=[dict(id=str(i),name=n,folder_id='x',source_version=v) for i,(n,v) in enumerate([('RF-2-10','v1'),('RF-2-2','v2'),('RF-2-2','v1'),('RF-10-1','v1')])]
+            records=[dict(id=str(i),name=n,folder_id='x',modified_at=v) for i,(n,v) in enumerate([('RF-2-10','v1'),('RF-2-2','v2'),('RF-2-2','v1'),('RF-10-1','v1')])]
             self.assertEqual([r['id'] for r in co.arrange(s,'repository',records)],['2','1','0','3'])
             co.save(s,'repository','x',['deleted','3','0'])
             self.assertEqual([r['id'] for r in co.arrange(s,'repository',records)],['3','0','2','1'])

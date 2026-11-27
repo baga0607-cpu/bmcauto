@@ -25,6 +25,7 @@ import sqlite3
 import plan_state as ps
 import plan_history
 import single_case as sc
+from taipei_time import TAIPEI
 from case_log import CaseLog, PrintLogWriter, open_log_files
 
 
@@ -73,6 +74,9 @@ try:
         bootstrap_engine.dispose()
 
     with sqlite3.connect(DB_PATH) as conn:
+        conn.execute("PRAGMA foreign_keys=OFF")
+        conn.execute("BEGIN IMMEDIATE")
+        sc.migrate_modified_at(conn, MAIN_PROGRAM_DIR)
         cursor = conn.cursor()
 
         try: cursor.execute("ALTER TABLE testcases ADD COLUMN selected TEXT DEFAULT '1'")
@@ -81,16 +85,16 @@ try:
         except sqlite3.OperationalError: pass
         try: cursor.execute("ALTER TABLE testcases ADD COLUMN normalized_name TEXT")
         except sqlite3.OperationalError: pass
-        try: cursor.execute("ALTER TABLE testcases ADD COLUMN source_version TEXT")
+        try: cursor.execute("ALTER TABLE testcases ADD COLUMN modified_at TEXT")
         except sqlite3.OperationalError: pass
         cursor.execute("DROP INDEX IF EXISTS uq_testcases_plan_normalized_name")
         rows = cursor.execute(
-            "SELECT system_id, plan_id, display_name, source_version FROM testcases ORDER BY rowid"
+            "SELECT system_id, plan_id, display_name, modified_at FROM testcases ORDER BY rowid"
         ).fetchall()
         seen_normalized_names = set()
-        for system_id, existing_plan_id, display_name, source_version in rows:
+        for system_id, existing_plan_id, display_name, modified_at in rows:
             normalized_name = _normalized_tc_name_for_schema(display_name)
-            unique_key = (existing_plan_id, normalized_name, source_version or "")
+            unique_key = (existing_plan_id, normalized_name, modified_at or "")
             if unique_key in seen_normalized_names:
                 normalized_name = f"{normalized_name}::legacy::{system_id}"
             seen_normalized_names.add(unique_key)
@@ -764,7 +768,7 @@ def import_tc():
         if original.plan_id == plan.id: raise ps.StateError('Choose another Plan as the source')
         if original.script_kind != 'single': raise ps.StateError('Step-based import is retired', 410)
         definition = sc.definition(MAIN_PROGRAM_DIR, original)
-        source, version, settings = definition['source'], original.source_version, definition['settings']
+        source, version, settings = definition['source'], original.modified_at, definition['settings']
         repository_id = original.repository_id
         origin_plan = ps.require(s, ProjectPlan, original.plan_id)
         s.info['plan_import_origin'] = dict(type='plan', id=origin_plan.id, name=origin_plan.name)
@@ -778,7 +782,7 @@ def import_tc():
         identity = str(uuid.uuid4())
         tc = TestCase(system_id=identity, display_name=name, plan_id=plan.id,
             script_kind='single', script_path=f'testcase_database.scripts.{identity}',
-            source_version=version, repository_id=repository_id, settings_json=json.dumps(settings))
+            modified_at=version, repository_id=repository_id, settings_json=json.dumps(settings))
         s.add(tc); s.flush(); ps.assign_folder(s, tc, folder)
         path = sc.script_file(MAIN_PROGRAM_DIR, tc)
         path.parent.mkdir(parents=True, exist_ok=False); path.write_text(source, encoding='utf-8')
@@ -856,7 +860,7 @@ def run_testcase():
     single_execution = False
     case_settings = {}
     case_revision = None
-    case_source_version = None
+    case_modified_at = None
     if not task_id: return jsonify(error='Run Test Cases from a Task. Step execution is retired.'), 400
     if task_id:
         session = ps.request_session(DbSession)
@@ -873,14 +877,14 @@ def run_testcase():
             tc = ps.require(session, TestCase, testcase_id)
             if tc.plan_id != task.plan_id: raise ps.StateError('Test Case belongs to another Plan')
             case_revision = tc.settings_revision or 0
-            case_source_version = tc.source_version
+            case_modified_at = tc.modified_at
             if tc.script_kind == 'single':
                 definition = sc.definition(MAIN_PROGRAM_DIR, tc)
                 case_settings = sc.validate_settings(definition['metadata'], definition['settings'])
                 case_module = tc.script_path + '.case'
                 single_execution = True
                 case_revision = tc.settings_revision or 0
-                case_source_version = tc.source_version
+                case_modified_at = tc.modified_at
                 tc_name = tc.display_name
             else:
                 raise ps.StateError('Step-based Test Cases are retired. Import a single .py into the Repository.', 410)
@@ -931,7 +935,7 @@ def run_testcase():
             original_put(msg)
         msg_queue.put = put_msg
         # ── 建立 log 目錄與本次執行的 log 檔 ────────────────────────────
-        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.datetime.now(TAIPEI).strftime("%Y%m%d_%H%M%S")
         safe_tc_name = "".join([c if c.isalnum() or c in "-_" else "_" for c in tc_name]).strip("_")
         if not safe_tc_name:
             safe_tc_name = "Custom_TestCase"
@@ -1009,7 +1013,7 @@ def run_testcase():
                     if single_execution:
                         saved = result_session.query(TaskTestCase).filter_by(task_id=task_id, testcase_id=testcase_id).one()
                         result_data = json.loads(saved.result_json)
-                        result_data.update(source_version=case_source_version, plan_settings_revision=case_revision,
+                        result_data.update(modified_at=case_modified_at, plan_settings_revision=case_revision,
                                            settings=case_settings, log_files=log_files,
                                            report_definition={key:definition['metadata'].get(key) for key in ('description', 'test_method', 'spec_ref', 'test_type', 'compliance')})
                         saved.result_json = json.dumps(result_data, ensure_ascii=False)

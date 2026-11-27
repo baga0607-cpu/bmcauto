@@ -1,5 +1,5 @@
 TEST_CASE = {
-    "modified_at": "2026-11-26T05:42:12.574147+00:00",
+    "modified_at": "2026-11-27T15:33:42.839835+08:00",
     "test_type": "compliance",
     "spec_ref": [
         "DSP0266 v1.25.0 section 6.7 Table 5 (/redfish/v1 alias)",
@@ -8,7 +8,7 @@ TEST_CASE = {
         "DSP0266 v1.25.0 section 9.6.2 (identity/type).",
         "DSP0266 v1.25.0 section 9.6.3 (identity/type)."
     ],
-    "created_at": "2026-10-19T07:42:16.950028+00:00",
+    "created_at": "2026-10-19T15:42:16.950028+08:00",
     "name": "RF-01-006 Service Root URI Alias",
     "description": "GET /redfish/v1 without a trailing slash and verify direct ServiceRoot delivery or redirection to /redfish/v1/. Record RedfishVersion without checking its expected value.",
     "test_method": [

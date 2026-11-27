@@ -3,21 +3,9 @@ import re
 
 from result_policy import declared_method_items, method_status
 import json
-from datetime import datetime, timezone, timedelta
+from taipei_time import format_timestamp as execution_date
 
 MISSING = '—'
-
-
-def execution_date(value):
-    if not value:
-        return MISSING
-    try:
-        parsed = datetime.fromisoformat(str(value).replace('Z', '+00:00'))
-    except (ValueError, TypeError):
-        return display(value)
-    if parsed.tzinfo is None:
-        return parsed.strftime('%Y/%m/%d %H:%M:%S') + ' (timezone not recorded)'
-    return parsed.astimezone(timezone(timedelta(hours=8))).strftime('%Y/%m/%d %H:%M:%S') + ' (UTC+08:00)'
 
 
 def result_summary(result, manual=None, limit=600):

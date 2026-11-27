@@ -111,7 +111,7 @@ class PlanFolder(Base):
 class TestCase(Base):
     __tablename__ = 'testcases'
     __table_args__ = (
-        Index('uq_testcases_plan_name_version', 'plan_id', 'normalized_name', text("coalesce(source_version, '')"), unique=True),
+        Index('uq_testcases_plan_name_version', 'plan_id', 'normalized_name', text("coalesce(modified_at, '')"), unique=True),
     )
     system_id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     display_name = Column(String(255), nullable=False)
@@ -126,7 +126,7 @@ class TestCase(Base):
 
     script_path = Column(String(255), nullable=False)
     script_kind = Column(String(20), nullable=False, default='steps')
-    source_version = Column(String(50), nullable=True)
+    modified_at = Column(String(50), nullable=True)
     repository_id = Column(String(36), nullable=True)
     settings_json = Column(Text, nullable=False, default='{}')
     settings_revision = Column(Integer, nullable=False, default=0)
@@ -146,7 +146,7 @@ class TestCase(Base):
             "category": (self.folder_obj.parent or self.folder_obj).name if self.folder_obj else (self.category_obj.name if self.category_obj else ""),
             "script_path": self.script_path,
             "script_kind": self.script_kind,
-            "source_version": self.source_version,
+            "modified_at": self.modified_at,
             "repository_id": self.repository_id,
             "settings_revision": self.settings_revision or 0,
             "custom_subfolder": self.folder_obj.name if self.folder_obj and self.folder_obj.parent_id else None,
@@ -235,7 +235,7 @@ class RepositoryCase(Base):
     __tablename__ = 'repository_cases'
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     name = Column(String(255), nullable=False)
-    source_version = Column(String(50), nullable=False, unique=True)
+    modified_at = Column(String(50), nullable=True)
     source_text = Column(Text, nullable=False)
 
 

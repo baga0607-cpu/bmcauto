@@ -1,4 +1,6 @@
 import subprocess
+from datetime import datetime
+from taipei_time import TAIPEI, format_timestamp
 
 from console_helper import ConsoleClient
 
@@ -63,13 +65,11 @@ class WebLoggingRedfishClient:
         if use_remote:
             print(f"  [Console][IPMI] Executing remote command: {cmd_str}")
             if self._api_f:
-                import datetime as _dt
-                now_str = _dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S,%f")[:-3]
+                now_str = format_timestamp(datetime.now(TAIPEI))
                 self._api_f.write(f"{now_str} - DEBUG - [IPMI  ] [Console] {cmd_str}\n")
                 self._api_f.flush()
             if self._mq is not None:
-                import datetime as _dt
-                now_str = _dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S,%f")[:-3]
+                now_str = format_timestamp(datetime.now(TAIPEI))
                 header_line = f"{now_str} - DEBUG - [IPMI  ] [Console] {cmd_str}"
                 self._mq.put({"type": "api_body", "text": header_line})
 
@@ -102,13 +102,11 @@ class WebLoggingRedfishClient:
         else:
             print(f"  [IPMI] Executing local command: {cmd_str}")
             if self._api_f:
-                import datetime as _dt
-                now_str = _dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S,%f")[:-3]
+                now_str = format_timestamp(datetime.now(TAIPEI))
                 self._api_f.write(f"{now_str} - DEBUG - [IPMI  ] {cmd_str}\n")
                 self._api_f.flush()
             if self._mq is not None:
-                import datetime as _dt
-                now_str = _dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S,%f")[:-3]
+                now_str = format_timestamp(datetime.now(TAIPEI))
                 header_line = f"{now_str} - DEBUG - [IPMI  ] {cmd_str}"
                 self._mq.put({"type": "api_body", "text": header_line})
 
@@ -156,13 +154,11 @@ class WebLoggingRedfishClient:
         if use_remote:
             print(f"  [Console][IPMI] Executing remote command: {cmd_str}")
             if self._api_f:
-                import datetime as _dt
-                now_str = _dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S,%f")[:-3]
+                now_str = format_timestamp(datetime.now(TAIPEI))
                 self._api_f.write(f"{now_str} - DEBUG - [IPMI  ] [Console] {cmd_str}\n")
                 self._api_f.flush()
             if self._mq is not None:
-                import datetime as _dt
-                now_str = _dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S,%f")[:-3]
+                now_str = format_timestamp(datetime.now(TAIPEI))
                 header_line = f"{now_str} - DEBUG - [IPMI  ] [Console] {cmd_str}"
                 self._mq.put({"type": "api_body", "text": header_line})
 
@@ -201,13 +197,11 @@ class WebLoggingRedfishClient:
         else:
             print(f"  [API][IPMI  ] {cmd_str}")
             if self._api_f:
-                import datetime as _dt
-                now_str = _dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S,%f")[:-3]
+                now_str = format_timestamp(datetime.now(TAIPEI))
                 self._api_f.write(f"{now_str} - DEBUG - [IPMI  ] {cmd_str}\n")
                 self._api_f.flush()
             if self._mq is not None:
-                import datetime as _dt
-                now_str = _dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S,%f")[:-3]
+                now_str = format_timestamp(datetime.now(TAIPEI))
                 header_line = f"{now_str} - DEBUG - [IPMI  ] {cmd_str}"
                 self._mq.put({"type": "api_body", "text": header_line})
 
@@ -249,8 +243,7 @@ class WebLoggingRedfishClient:
                 return IpmiResponse("", str(e), -1)
 
     def _log(self, method, uri, status, resp_dict=None):
-        import datetime as _dt
-        now_str = _dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S,%f")[:-3]
+        now_str = format_timestamp(datetime.now(TAIPEI))
         icon = "[OK]" if status and str(status).isdigit() and int(status) < 300 else "[!!]"
         
         # 摘要行：透過 stdout 到 SSE + Test log

@@ -14,7 +14,7 @@ def move_cases(s,ids,data):
   anchor=ps.require(s,Member,relative)
   if relative in ids or anchor.folder_id!=target or insertion not in ('before','after'):
    raise ps.StateError('Choose another Test Case in the destination folder and before/after insertion.')
- records=[dict(id=r.id,name=r.name,source_version=r.source_version,folder_id=target)
+ records=[dict(id=r.id,name=r.name,modified_at=r.modified_at,folder_id=target)
           for r in s.query(RepositoryCase).join(Member,Member.repository_id==RepositoryCase.id).filter(Member.folder_id==target,RepositoryCase.id.notin_(ids))]
  ordered=[r['id'] for r in co.arrange(s,'repository',records)]
  for member in members:

@@ -1,10 +1,10 @@
 TEST_CASE = {
-    "modified_at": "2026-11-26T07:23:50.217074+00:00",
+    "modified_at": "2026-11-27T15:33:42.839835+08:00",
     "test_type": "compliance",
     "spec_ref": [
         "DSP0266 v1.25.0 section 6.6 (RedfishVersion format)."
     ],
-    "created_at": "2026-10-19T03:32:23.623177+00:00",
+    "created_at": "2026-10-19T11:32:23.623177+08:00",
     "name": "RF-01-005 Redfish Protocol Version",
     "description": "Verify that ServiceRoot RedfishVersion exactly matches the tester-provided protocol version.",
     "test_method": [

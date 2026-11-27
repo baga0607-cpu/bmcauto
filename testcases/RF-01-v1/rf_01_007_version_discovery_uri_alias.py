@@ -1,11 +1,11 @@
 TEST_CASE = {
-    "modified_at": "2026-11-26T05:42:12.574147+00:00",
+    "modified_at": "2026-11-27T15:33:42.839835+08:00",
     "test_type": "compliance",
     "spec_ref": [
         "DSP0266 v1.25.0 section 6.7 Table 5 (/redfish/ alias)",
         "DSP0266 v1.25.0 section 6.6 (version discovery)."
     ],
-    "created_at": "2026-10-30T05:45:01.857118+00:00",
+    "created_at": "2026-10-30T13:45:01.857118+08:00",
     "name": "RF-01-007 Version Discovery URI Alias",
     "description": "GET /redfish/ and verify direct version discovery or redirection to /redfish.",
     "test_method": [

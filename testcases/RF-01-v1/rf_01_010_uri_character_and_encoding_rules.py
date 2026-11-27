@@ -1,5 +1,5 @@
 TEST_CASE = {
-    "modified_at": "2026-11-26T05:42:12.574147+00:00",
+    "modified_at": "2026-11-27T15:33:42.839835+08:00",
     "test_type": "compliance",
     "spec_ref": [
         "DSP0266 v1.25.0 section 6.1 (URI characters and percent encoding).",
@@ -9,7 +9,7 @@ TEST_CASE = {
         "RFC 6901 section 3 (JSON Pointer escapes).",
         "RFC 6901 section 6 (JSON Pointer escapes)."
     ],
-    "created_at": "2026-10-30T06:16:31.055575+00:00",
+    "created_at": "2026-10-30T14:16:31.055575+08:00",
     "name": "RF-01-010 URI Character and Encoding Rules",
     "description": "Inspect original resource URI references discovered from ServiceRoot for unsafe characters, fragment delimiters and percent-encoding outside query components.",
     "test_method": [

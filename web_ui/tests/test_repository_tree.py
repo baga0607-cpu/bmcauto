@@ -75,13 +75,13 @@ class RepositoryTreeTest(unittest.TestCase):
   url='/api/repository/testcases/'+self.repository['id']
   before=self.client.get(url).get_json()
   history=self.client.get('/api/repository/history').get_json()
-  data={'previous_version':before['source_version'],'source':before['source']}
+  data={'previous_modified_at':before['modified_at'],'source':before['source']}
   response=self.client.put(url,json=data)
   self.assertEqual(response.status_code,409)
   self.assertIn('identical',response.get_json()['error'])
   self.assertEqual(self.client.get(url).get_json(),before)
   self.assertEqual(self.client.get('/api/repository/history').get_json(),history)
-  self.assertEqual(self.client.put(url,json={**data,'source':data['source']+'\n'}).status_code,200)
+  self.assertEqual(self.client.put(url,json={**data,'source':data['source'].replace("'name':", "'modified_at': '2026-01-01T00:00:00Z', 'name':")}).status_code,200)
 
  def test_keep_descendant_cases_and_replacement_history(self):
   parent=self.create('Parent');nested=self.create('Child',parent['id'])
@@ -89,7 +89,7 @@ class RepositoryTreeTest(unittest.TestCase):
   self.client.put(url+'/folder',json={'folder_id':nested['id']})
   copied=self.client.post('/api/plans/a/repository/testcases',json={'repository_id':identity}).get_json()['id']
   old=self.client.get(url).get_json()
-  data={'source':old['source'].replace('Service entry','Updated entry'),'previous_version':old['source_version']}
+  data={'source':old['source'].replace("'name':", "'modified_at': '2026-01-01T00:00:00Z', 'name':").replace('Service entry','Updated entry'),'previous_modified_at':old['modified_at']}
   self.assertEqual(self.client.put(url,json=data).status_code,200)
   self.assertEqual(self.client.put(url,json=data).status_code,409)
   result=self.client.post('/api/repository/batch',json={'action':'delete','confirm':True,'keep_cases':True,'folder_ids':[parent['id'],nested['id']]})

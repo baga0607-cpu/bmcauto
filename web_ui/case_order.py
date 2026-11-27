@@ -25,7 +25,7 @@ def arrange(session, scope, records):
         rank = {identity: n for n, identity in enumerate(orders.get(folder, []))}
         rows.sort(key=lambda r: (rank.get(r['id'], len(rank)),
                                 natural_key(r.get('tc_name', r.get('name', ''))),
-                                r.get('source_version') or '', r['id']))
+                                r.get('modified_at') or '', r['id']))
         result.extend(rows)
     return result
 
@@ -57,4 +57,4 @@ def plan_rows(session, plan_id, rows):
     by_id = {row.system_id: row for row in rows}
     return [by_id[r['id']] for r in arrange(session, 'plan:'+plan_id,
             [dict(id=r.system_id, tc_name=r.display_name, folder_id=r.folder_id,
-                  source_version=r.source_version) for r in rows])]
+                  modified_at=r.modified_at) for r in rows])]

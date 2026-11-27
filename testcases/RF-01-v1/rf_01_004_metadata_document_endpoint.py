@@ -1,5 +1,5 @@
 TEST_CASE = {
-    "modified_at": "2026-11-26T05:42:12.574147+00:00",
+    "modified_at": "2026-11-27T15:33:42.839835+08:00",
     "test_type": "compliance",
     "spec_ref": [
         "DSP0266 v1.25.0 section 6.7 Table 4",
@@ -7,7 +7,7 @@ TEST_CASE = {
         "DSP0266 v1.25.0 section 8.4.2 (OData metadata)",
         "DSP0266 v1.25.0 section 11.1.4 (CSDL format)."
     ],
-    "created_at": "2026-10-19T03:27:51.085627+00:00",
+    "created_at": "2026-10-19T11:27:51.085627+08:00",
     "name": "RF-01-004 Metadata Document Endpoint",
     "description": "GET /redfish/v1/$metadata and verify the minimum XML Edmx document identity.",
     "test_method": [

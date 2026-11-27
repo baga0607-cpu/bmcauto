@@ -63,11 +63,21 @@ def run(ctx):
 | `name` | 必填 | 英文顯示名稱。 |
 | `automation` | 新建 Case 必填 | 依測試方法需要的人員參與程度，填 `automatic`、`semi_automatic` 或 `manual`。 |
 | `description` | 必填 | 英文測試目的。報告會印出這段內容。 |
-| `created_at`、`modified_at` | 兩者必填 | 使用含時區的 ISO 8601 字串。新建來源檔時兩者相同。直接編輯來源檔時，保留 `created_at` 並更新 `modified_at`。透過 Plan 編輯器儲存時保留原建立時間，修改時間的處理見第 5 節。 |
+| `created_at`、`modified_at` | 兩者必填 | 作者填寫台北時間，以含 `+08:00` 的 ISO 8601 字串保存。新建來源檔時兩者相同。直接編輯來源檔時，保留 `created_at` 並更新 `modified_at`。透過 Plan 編輯器儲存時保留原建立時間，修改時間的處理見第 5 節。 |
 | `spec_ref` | 有文件化設計來源時必填 | 英文字串清單。列出規範或設計文件名稱／編號，可取得時附版本與章節；每個引用章節各列一項。來源屬於整個 Case，無須逐一對應 Checkpoint。 |
 | `environments` | 需要其他機器的 shell 時必填 | 宣告如何取得具名環境，例如從 BMCAgent 經 SSH 登入 Console Server。全程由本機發送時可省略。 |
 | `command_routes` | 任一執行分支會發送命令或請求時必填 | 每條路徑有唯一字典鍵，必填 `from`、`to`、`method`，其餘依介面決定。只在錯誤復原分支使用的路徑也要宣告。 |
 | `test_method` | 必填 | 有順序的清單，每項代表一個步驟，涵蓋驗證、操作和單純記錄資料的步驟。 |
+
+### 時戳與台北時間
+
+每次修改 Case 來源檔，都必須保留 `created_at` 所代表的原始建立時間，並在同一次修改中將 `modified_at` 更新為本次實際修訂的台北時間。即使只調整格式、註解或 metadata（例如換算時戳的時區），也適用這項規則。
+
+Plan 以 Repository ID 識別來源測項，並以來源的 `modified_at` 比對版本。替換測項庫中的來源檔時，新檔的 `modified_at` 必須晚於原版本。匯入 Plan、複製測項或只修改 Plan 的參數值時，沿用來源的修改時間。
+
+BMCAgent 所有頁面、歷程與報告的時戳一律換算為台北時間（Asia/Taipei，UTC+08:00），採 24 小時制，以 `YYYY-MM-DD HH:mm:ss` 顯示到秒。`created_at` 與 `modified_at` 同樣適用。例如來源值 `2026-11-27T02:42:12.574147+08:00` 和既有來源值 `2026-11-26T18:42:12.574147Z` 均顯示為 `2026-11-27 02:42:12`。
+
+來源檔、API 與版本比對保留時區和原有小數秒精度。新測項的兩個欄位皆須明寫時區。排程起訖日是台北日曆日期，維持 `YYYY-MM-DD`。
 
 ### 如何選擇 automation
 

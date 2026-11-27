@@ -1,11 +1,11 @@
 TEST_CASE = {
-    "modified_at": "2026-11-26T05:42:12.574147+00:00",
+    "modified_at": "2026-11-27T15:33:42.839835+08:00",
     "test_type": "compliance",
     "spec_ref": [
         "DSP0266 v1.25.0 section 6.7, Table 4 (/redfish/v1/openapi.yaml)",
         "DSP0266 v1.25.0 section 11.3.4, Table 33 (openapi.yaml terms)."
     ],
-    "created_at": "2026-10-30T05:56:21.765986+00:00",
+    "created_at": "2026-10-30T13:56:21.765986+08:00",
     "name": "RF-01-008 OpenAPI Document Endpoint",
     "description": "Verify the minimum OpenAPI document structure when the endpoint is available; conditionally accept explicitly confirmed absence of this optional endpoint.",
     "test_method": [

@@ -46,11 +46,12 @@ class AutomationLabelsTest(unittest.TestCase):
    source=self.source('automatic')+"\ninput('No scanning or execution during import')\n"
    self.assertEqual(api.sc.metadata(source)['automation'],'automatic')
 
- def test_equal_clock_ticks_still_import_distinct_generations(self):
-  from datetime import datetime,timezone
-  with patch.object(api.sc,'datetime') as clock:
-   clock.now.return_value=datetime(2030,1,1,tzinfo=timezone.utc)
-   first=self.client.post('/api/repository/testcases',json={'source':self.source('automatic')})
-   second=self.client.post('/api/repository/testcases',json={'source':self.source('semi_automatic')})
-  self.assertEqual(first.status_code,201);self.assertEqual(second.status_code,201)
-  self.assertNotEqual(first.get_json()['source_version'],second.get_json()['source_version'])
+ def test_distinct_cases_can_share_an_authored_timestamp(self):
+  stamp = "'modified_at': '2026-01-01T00:00:00Z', 'name':"
+  responses = [self.client.post('/api/repository/testcases',json={
+      'source': self.source(kind).replace("'name':", stamp)})
+      for kind in ('automatic','semi_automatic')]
+  self.assertEqual([r.status_code for r in responses], [201,201])
+  first, second = [r.get_json() for r in responses]
+  self.assertNotEqual(first['id'], second['id'])
+  self.assertEqual(first['modified_at'], second['modified_at'])

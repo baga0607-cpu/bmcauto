@@ -29,10 +29,8 @@ const automation = value => {
  return `<span class="automation-tag" role="img" aria-label="${label}" title="${label}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${shape}</svg></span>`;
 };
 const latestSourceDate = c => c.source_modified_at || c.source_created_at;
-const sourceSearchText = c => [c.tc_name || c.name, ...[c.source_created_at,c.source_modified_at].filter(Boolean).flatMap(v=>[v,version(v),new Date(v).toLocaleDateString('sv-SE')])].join(' ');
-const sourceDateLabel = c => '<span data-no-translate title="'+escape('Created: '+version(c.source_created_at)+' / Modified: '+version(c.source_modified_at))+'">'+escape(version(latestSourceDate(c)))+'</span>';
-const version = value => value ? date(value) + ' · ' + (String(value).match(/\.(\d+)/)?.[1] || '000000') : '—';
-const date = value => value ? new Date(value).toLocaleString('en-GB', {year:'numeric',month:'short',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'}) : '—';
+const sourceSearchText = c => [c.tc_name || c.name, ...[c.source_created_at,c.source_modified_at].filter(Boolean).flatMap(v=>[v,TaipeiTime.format(v)])].join(' ');
+const sourceDateLabel = c => '<span data-no-translate title="'+escape('Created: '+TaipeiTime.format(c.source_created_at)+' / Modified: '+TaipeiTime.format(c.source_modified_at))+'">'+escape(TaipeiTime.format(latestSourceDate(c)))+'</span>';
 function toast(message, error=false) { clearTimeout(notificationTimer); $('#notifications').innerHTML=`<div class="toast ${error?'error':''}" role="${error?'alert':'status'}">${escape(message)}</div>`; notificationTimer=setTimeout(()=>$('#notifications').replaceChildren(),error?12000:5000); }
 async function api(url, method='GET', data) {
   const response = await fetch(url, {method,headers:data ? {'Content-Type':'application/json'} : {},body:data ? JSON.stringify(data) : undefined});
@@ -211,7 +209,8 @@ async function planEditorList(project,plan=project.plans.find(p=>p.id===activePl
    const item=project.plans.find(p=>p.id===id);
    return `<option value="${escape(id)}" ${plan?.id===id?'selected':''} data-no-translate>${escape(item.name)}</option>`;
  }).join('');
- const controls=`<div class="plan-controls"><label for="plan-picker">Plan:</label><select id="plan-picker" ${plan?'':'disabled'}>${options}</select>${button('Add Plan','new-plan','','aria-haspopup="dialog"')}${button('Edit Plan','edit-plan','','aria-haspopup="dialog" '+(!plan||plan.locked?'disabled':''))}</div>`;
+ const controls=`<div class="plan-controls"><div class="plan-current"><label for="plan-picker">Plan</label><select id="plan-picker" ${plan?'':'disabled'}>${options}</select></div>
+ <div class="plan-header-actions">${button('Add Plan','new-plan','','aria-haspopup="dialog"')}${button('Edit Plan','edit-plan','','aria-haspopup="dialog" '+(!plan||plan.locked?'disabled':''))}</div></div>`;
  return controls+'<section class="plan-inline-editor" aria-label="Plan workspace">'+(plan?await planPage(project,plan):empty('No Test Plans','Use Add Plan to create a Plan.'))+'</section>';
 }
 function reportPage(project){
@@ -391,7 +390,7 @@ function savedFolderCollapse(scope,folders){
    state.folderCollapseCache[scope]=new Set(Array.isArray(saved)?saved.filter(id=>typeof id==='string'):[]);
  }
  const collapsed=state.folderCollapseCache[scope];
- for(const id of collapsed)if(!folders.some(folder=>folder.id===id))collapsed.delete(id);
+ for(const id of collapsed)if(!(id===''&&scope.startsWith('plan:'))&&!folders.some(folder=>folder.id===id))collapsed.delete(id);
  return collapsed;
 }
 function saveFolderExpansions(){
@@ -432,22 +431,32 @@ async function refreshPlanSteps(plan,selected){
  const panel=$('#plan-step-preview');
  if(!panel)return;
  const visible=planRows().filter(row=>row.hasAttribute('data-plan-case'));
- const target=visible.find(row=>row.dataset.planCase===state.planStepFocus&&selected.has(planRowKey(row)))
+ const target=visible.find(row=>row.dataset.planCase===state.planStepFocus)
    ||visible.find(row=>selected.has(planRowKey(row)))||(!selected.size&&visible[0]);
  const tc=plan.testcases.find(c=>c.id===target?.dataset.planCase);
  const id=tc?.id||'';
  for(const row of visible)row.classList.toggle('case-preview-current',row===target);
  if(panel.dataset.caseId===id)return;
  panel.dataset.caseId=id;
- panel.querySelector('h2').textContent=tc?.tc_name||'Select a Test Case';
+ const name=tc?.tc_name||'Select a Test Case';
+ const match=/^([A-Za-z]+(?:-\d+)+)\s+(.+)$/.exec(name);
+ panel.querySelector('.plan-case-code').textContent=match?.[1]||'';
+ panel.querySelector('h2').textContent=match?.[2]||name;
+ const info=panel.querySelector('.plan-case-info');
+ info.hidden=!tc;
+ const showInfo=(modified,feature)=>{
+   info.querySelector('time').textContent=TaipeiTime.format(modified);
+   info.querySelector('[data-feature-id]').textContent=String(feature??'').trim()||'—';
+ };
+ showInfo(tc?.source_modified_at,tc?.feature_id);
  const parameters=panel.querySelector('[data-action="plan-case-parameters"]');
  parameters.hidden=!(tc?.parameter_count>0&&tc.script_kind==='single');
  parameters.dataset.id=id;
  parameters.title=parameters.hidden?'Parameters':`Parameters (${tc.parameter_count})`;
  parameters.setAttribute('aria-label',parameters.title);
 
- const body=panel.querySelector('tbody');
- const message=text=>{body.innerHTML='<tr><td colspan="2">'+escape(text)+'</td></tr>';};
+ const body=panel.querySelector('.plan-step-scroll');
+ const message=text=>{body.textContent=text;};
  panel.querySelector('.plan-step-scroll').scrollTop=0;
  if(!tc){body.replaceChildren();return;}
  if(tc.script_kind!=='single'){message('No case.py definition available.');return;}
@@ -455,11 +464,28 @@ async function refreshPlanSteps(plan,selected){
  try{
    const definition=await api('/api/plans/'+encodeURIComponent(plan.id)+'/testcases/'+encodeURIComponent(id)+'/definition');
    if(!panel.isConnected||panel.dataset.caseId!==id)return;
-   const rows=planMethodRows(definition.metadata.test_method);
+   const meta=definition.metadata;
+   showInfo(meta.modified_at??definition.source_modified_at,meta.feature_id??meta.Feature_ID??tc.feature_id);
+   const rows=planMethodRows(meta.test_method);
    if(!rows.length){message('No test steps declared in case.py.');return;}
-   body.innerHTML=rows.map(([step,description,check])=>'<tr class="'+(check?'checkpoint-row':'main-step-row')+'"><td>'+escape(step)+'</td><td>'+escape(description)+'</td></tr>').join('');
+   const groups=[];
+   for(const [step,description,check] of rows){
+     if(!check||!groups.length)groups.push([]);
+     groups.at(-1).push(check
+       ? '<div class="plan-check"><span>'+escape(step)+'</span><p>'+escape(description)+'</p></div>'
+       : '<div class="plan-action-label">'+escape(step)+'</div><h3>'+escape(description)+'</h3>');
+   }
+   body.innerHTML=groups.map(parts=>'<section class="plan-reading-step">'+parts.join('')+'</section>').join('');
  }catch(error){if(panel.isConnected&&panel.dataset.caseId===id)message(error.message);}
 }
+function selectablePlanKeys(){
+ const keys=state.planSearch?.trim()?planRows().map(planRowKey):listSelectionItems('plan').map(item=>item.kind+':'+item.id);
+ return keys.filter(key=>key!=='folder:');
+}
+document.addEventListener('click',event=>{
+ const menu=document.querySelector('.plan-manage[open]');
+ if(menu&&!menu.contains(event.target))menu.open=false;
+},true);
 function refreshPlanSelection(){
  const plan=context().plan;
  if(!plan)return;
@@ -472,6 +498,12 @@ function refreshPlanSelection(){
  refreshPlanSteps(plan,selected);
  const folder=folder_ids[0]||'',oneFolder=selected.size===1&&folder_ids.length===1;
  const parent=folder||plan.testcases.find(c=>c.id===case_ids[0])?.folder_id||'';
+ const toggle=$('.plan-manage [data-action="plan-select-all"]');
+ if(toggle){
+   const keys=selectablePlanKeys();
+   toggle.disabled=!keys.length;
+   toggle.setAttribute('aria-pressed',String(keys.length>0&&keys.every(key=>selected.has(key))));
+ }
  const actions={
    'new-plan-folder':[selected.size>1,parent],
    'choose-import-source':[false,''],
@@ -500,34 +532,55 @@ function selectPlanRow(row,event){
 for(const type of ['click','keydown']){
  document.addEventListener(type,event=>{
    const row=event.target.closest('#plan-case-list [data-plan-folder],#plan-case-list [data-plan-case]');
-   if(!row||event.target.closest('input,select,button:not(.repository-folder-name)'))return;
+   if(!row||event.target.closest('input,select,button:not(.repository-folder-name):not(.folder-collapse)'))return;
    if(type==='keydown'&&!['Enter',' '].includes(event.key))return;
-   event.preventDefault();event.stopImmediatePropagation();selectPlanRow(row,event);
+   event.preventDefault();event.stopImmediatePropagation();
+   selectPlanRow(row,event);
+   const toggle=row.querySelector('[data-action="toggle-plan-folder"]');
+   if(!toggle||event.ctrlKey||event.metaKey||event.shiftKey||event.repeat)return;
+   const id=row.dataset.planFolder,plan=context().plan;
+   const searching=Boolean(state.planSearch?.trim());
+   const collapsed=searching?state.planSearchCollapse.ids:state.planCollapsed;
+   if(collapsed.has(id))collapsed.delete(id);else collapsed.add(id);
+   if(!searching)saveFolderExpansions();
+   $('#plan-case-list').innerHTML=planCaseTable(plan);
+   syncCaseSelections();
+   planRows().find(item=>item.dataset.planFolder===id)?.focus({preventScroll:true});
  },true);
 }
 const caseListHeaders='<th data-no-translate>Modified_at</th><th data-no-translate>Feature_ID</th><th>Actions</th>';
 function caseListMetadata(c){
- const value=c.source_modified_at,stamp=new Date(value);
- const display=value&&Number.isFinite(stamp.getTime())?stamp.toLocaleDateString('sv-SE'):'—';
- return `<td data-no-translate title="${escape(value||'')}">${display}</td><td></td>`;
+ const display=TaipeiTime.format(c.source_modified_at);
+ return `<td data-no-translate title="${escape(display)}">${escape(display)}</td><td></td>`;
 }
 function planCaseTable(plan) {
   const importing=Boolean(state.importSource);
-  const showFeature=!importing;
+
   const chosen=planSelection();for(const key of chosen){if(key==='folder:')continue;const at=key.indexOf(':'),id=key.slice(at+1);if(key.startsWith('case:')?!plan.testcases.some(c=>c.id===id):!plan.folders.some(f=>f.id===id))chosen.delete(key);}
-  const query=(state.planSearch||'').trim().toLowerCase(),collapsed=state.planCollapsed=savedFolderCollapse('plan:'+plan.id,plan.folders);
+  const query=(state.planSearch||'').trim().toLowerCase();
+  state.planCollapsed=savedFolderCollapse('plan:'+plan.id,plan.folders);
+  if(state.planSearchCollapse?.plan!==plan.id||state.planSearchCollapse.query!==query){
+    state.planSearchCollapse={plan:plan.id,query,ids:new Set()};
+  }
+  const collapsed=query?state.planSearchCollapse.ids:state.planCollapsed;
   const cases=(folder,depth,match)=>plan.testcases.filter(c=>(c.folder_id||null)===folder&&(match||!query||KeywordSearch.matches(sourceSearchText(c),query))).map(c=>{
-    const modified=c.source_modified_at;
-    const label=importing?escape(c.tc_name):`<span class="plan-case-caption"><span>${escape(c.tc_name)}</span><small data-no-translate>${modified?escape(modified.replace('T',' ')):'—'}</small></span>`;
-    return `<tr tabindex="0" data-plan-case="${escape(c.id)}" draggable="${!plan.locked}" style="--depth:${depth}"><td><div class="case-selection-label"><strong>${automation(c.automation)}${label}</strong></div>${importing?`<p class="help case-source-version" data-no-translate>${sourceDateLabel(c)}</p>`:''}</td>${showFeature?`<td>${escape(String(c.feature_id??''))}</td>`:''}</tr>`;
+    const parts=/^([A-Za-z]+(?:-\d+)+)\s+(.+)$/.exec(c.tc_name);
+    const caption=parts?`<span class="plan-list-code" data-no-translate>${escape(parts[1])}</span>${escape(parts[2])}`:escape(c.tc_name);
+    const label=importing?escape(c.tc_name):`<span class="plan-case-caption"><span>${caption}</span></span>`;
+    const canUpdate=!importing&&state.planVersionCheck?.planId===plan.id&&state.planVersionCheck.updates.has(c.id);
+    const update=canUpdate?button('Update','update-plan-case','plan-version-update',`data-id="${escape(c.id)}" ${plan.locked?'disabled':''}`):'';
+    return `<tr tabindex="0" data-plan-case="${escape(c.id)}" draggable="${!plan.locked}" style="--depth:${depth}"><td><div class="case-selection-label"><strong>${automation(c.automation)}${label}</strong>${update}</div>${importing?`<p class="help case-source-version" data-no-translate>${sourceDateLabel(c)}</p>`:''}</td></tr>`;
   }).join('');
+  const disclosure=(id,contents)=>contents?
+    button('<svg class="plan-folder-toggle-icon" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M5 3l8 5-8 5z"/></svg>','toggle-plan-folder','folder-collapse',`data-id="${escape(id)}" aria-label="Toggle folder" aria-expanded="${!collapsed.has(id)}"`):
+    '<span class="folder-collapse-spacer" aria-hidden="true"></span>';
   const children=(parent,depth,ancestorMatch=false)=>plan.folders.filter(f=>(f.parent_id||null)===parent).sort((a,b)=>a.position-b.position).map(f=>{
     const match=ancestorMatch||Boolean(query&&KeywordSearch.matches(f.name,query)),descendants=children(f.id,depth+1,match)+cases(f.id,depth+1,match);
     if(query&&!match&&!descendants)return '';
-    return `<tr tabindex="0" class="repository-folder-row" data-plan-folder="${escape(f.id)}" draggable="${!plan.locked}" style="--depth:${depth}"><td><div class="repository-folder-line">${button('<svg class="disclosure-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/action-icons.svg#chevron"/></svg>','toggle-plan-folder','folder-collapse',`data-id="${escape(f.id)}" aria-label="Toggle folder" aria-expanded="${!collapsed.has(f.id)||Boolean(query)}"`)}<button class="repository-folder-name" data-action="select-plan-folder" data-id="${escape(f.id)}" aria-pressed="${state.planFolder===f.id}">${icon('folder')}<strong>${escape(f.name)}</strong></button></div></td>${showFeature?'<td></td>':''}</tr>${collapsed.has(f.id)&&!query?'':descendants}`;
+    return `<tr tabindex="0" class="repository-folder-row" data-plan-folder="${escape(f.id)}" draggable="${!plan.locked}" style="--depth:${depth}"><td><div class="repository-folder-line">${disclosure(f.id,descendants)}<button class="repository-folder-name" data-action="select-plan-folder" data-id="${escape(f.id)}" aria-pressed="${state.planFolder===f.id}">${icon('folder')}<strong>${escape(f.name)}</strong></button></div></td></tr>${collapsed.has(f.id)?'':descendants}`;
   }).join('');
   const rows=children(null,1)+cases(null,1,false);
-  return `<div class="table-wrap repository-scroll"><table id="repository-table" class="repository-hierarchy ${importing?'':'case-list-columns'}"><thead><tr><th>Directory / Test Case</th>${showFeature?'<th data-no-translate>Feature_ID</th>':''}</tr></thead><tbody><tr tabindex="0" class="repository-folder-row" data-plan-folder=""><td><div class="repository-folder-line"><span class="folder-collapse-spacer"></span><span class="repository-folder-name">${icon('folder')}<strong>BMC</strong><span class="repository-folder-count">(${plan.testcases.length})</span></span></div></td>${showFeature?'<td></td>':''}</tr>${rows||`<tr><td colspan="${showFeature?2:1}">No Test Cases</td></tr>`}</tbody></table></div>`;
+  return `<div class="table-wrap repository-scroll"><table id="repository-table" class="repository-hierarchy ${importing?'':'case-list-columns'}" aria-label="Plan folders and Test Cases">${importing?'<thead><tr><th>Directory / Test Case</th></tr></thead>':''}<tbody><tr tabindex="0" class="repository-folder-row" data-plan-folder=""><td><div class="repository-folder-line">${disclosure('',rows)}<span class="repository-folder-name">${icon('folder')}<strong>BMC</strong><span class="repository-folder-count">(${plan.testcases.length})</span></span></div></td></tr>${rows?(collapsed.has('')?'':rows):`<tr><td>No Test Cases</td></tr>`}</tbody></table></div>`;
 }
 function importRows(){return $$('#import-source-list tr[data-import-kind][draggable=true]');}
 function importRowKey(row){return row.dataset.importKind+':'+row.dataset.importId;}
@@ -574,7 +627,7 @@ async function planPage(project, plan) {
     state.repository=await api('/api/repository/testcases');state.repositoryFolders=await api('/api/repository/folders');
     contents=`<div class="toolbar"><h2>Add from Test Case Repository</h2>${button('Back to Plan','close-panel')}</div>${repositoryWorkspace(true,plan)}`;
   }else{
-    contents=`<div class="repository-layout plan-step-layout"><div class="repository-page-controls actions plan-tools"><label><span class="sr-only">Find Test Case</span><input id="plan-search" type="search" placeholder="Find Test Case" value="${escape(state.planSearch||'')}"></label>${repoIcon('New folder','new-plan-folder','folderPlus')}${repoIcon('Import Test Case','choose-import-source','plus')}${repoIcon('Delete selected','plan-selection-delete','trash')}${repoIcon('Select all','plan-select-all','checkAll')}${repoIcon('Rename folder','rename-plan-folder','edit')}${repoIcon('Sort Test Cases','resort-plan-folder','sort')}${repoIcon('History','plan-history','history')}</div><div class="repository-list" id="plan-case-list">${planCaseTable(plan)}</div><section id="plan-step-preview" aria-label="Test Case preview"><div class="plan-step-heading"><h2></h2>${repoIcon('Parameters','plan-case-parameters','parameters','hidden')}</div><div class="plan-step-scroll"><table><thead><tr><th scope="col">Step</th><th scope="col">Description</th></tr></thead><tbody></tbody></table></div></section></div>`;
+    contents=`<div class="repository-layout plan-step-layout"><div class="repository-page-controls actions plan-tools"><label><span class="sr-only">Find Test Case</span><input id="plan-search" type="search" placeholder="Find Test Case" value="${escape(state.planSearch||'')}"></label><details class="plan-manage"><summary>Manage</summary><div>${button('Import Case','choose-import-source')}${button('New Folder','new-plan-folder')}${button('Rename Folder','rename-plan-folder')}${button('Sort Case','resort-plan-folder')}${button('Select All','plan-select-all')}${button('Delete Selected','plan-selection-delete')}${button('Check Version','plan-case-versions')}${button('History','plan-history')}</div></details></div><div class="repository-list" id="plan-case-list">${planCaseTable(plan)}</div><section id="plan-step-preview" aria-label="Test Case preview"><div class="plan-step-heading"><div><small class="plan-case-code"></small><h2></h2></div><div class="plan-case-info" hidden><div><time data-no-translate></time></div><div><span data-feature-id data-no-translate></span></div></div>${button('Parameters','plan-case-parameters','','hidden')}</div><div class="plan-step-scroll"></div></section></div>`;
   }
   if(state.importSource){
     const ratio=state.importSplit??50;
@@ -922,7 +975,7 @@ function updateExecutionLog(){
    const key=JSON.stringify([tc.status,tc.executed_at,tc.result_updated_at]);
    if(!d.loadingLog&&(d.logKey!==key||(tc.status==='Running'&&Date.now()-(d.logLoadedAt||0)>=2000)))void loadExecutionLog(d,key);
   }
-  const full=d.logText||'',text=full.slice(-executionLogPreviewLimit)||(d.loadingLog?'Loading test log…':'No test log available.');
+  const full=d.logText||'',text=TaipeiTime.logText(full.slice(-executionLogPreviewLimit))||(d.loadingLog?'Loading test log…':'No test log available.');
   const notice=d.el.querySelector('[data-execution-log-notice]');if(notice)notice.hidden=full.length<=executionLogPreviewLimit;
   d.el.querySelector('[data-execution-export]').disabled=!full||d.saving||(!live&&d.loadingLog);
   if(out.textContent!==text){const atEnd=out.scrollTop+out.clientHeight>=out.scrollHeight-30;out.textContent=text;if(atEnd)out.scrollTop=out.scrollHeight;}
@@ -948,7 +1001,7 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)executionP
 
 function evidence(task) {
   const tc=task.testcases.find(c=>c.id===state.caseId); if(!tc)return '';
-  return `<h2>${automation(tc.automation)}${escape(tc.tc_name)}</h2><div class="metadata"><span>Latest result ${status(tc.status)}</span><span>Executed <strong>${escape(date(tc.executed_at))}</strong></span></div>${tc.needs_retest?'<div class="notice">'+escape(tc.retest_message || 'Rerun needed')+'</div>':''}${tc.manual_override?`<p class="help">Manual result: ${escape(tc.manual_override.status==='CP'?'C-PASS':tc.manual_override.status)} · ${escape(tc.manual_override.reason||'No reason recorded')}</p>`:''}<div class="actions"><strong>Test log</strong></div><pre class="log code" id="log-output">${escape(state.activeTask===task.id && tc.status==='Running'?state.log:tc.log_text||'No test log. Run this Test Case to collect evidence.')}</pre><div id="input-slot">${state.activeTask===task.id&&state.prompt?inputForm(state.prompt.session,state.prompt.text):''}</div><details><summary>Result annotation</summary><form id="annotation-form"><div class="fields"><label class="field"><span>Manual status</span><select name="status" ${task.execution_active?'disabled':''}><option value="TBD">Not run / pending</option><option value="Passed">Passed</option><option value="C-PASS">C-PASS</option><option value="Failed">Failed</option><option value="Block">Block</option></select></label><label class="field"><span>Reason / Note for C-PASS</span><input name="reason" ${task.execution_active?'disabled':''}></label><label class="field"><span>Bug ID</span><input name="bug_id" value="${escape(tc.bug_id)}" ${task.execution_active?'disabled':''}></label></div><div class="form-actions"><button ${task.execution_active?'disabled':''}>Save annotation</button></div></form></details>`;
+  return `<h2>${automation(tc.automation)}${escape(tc.tc_name)}</h2><div class="metadata"><span>Latest result ${status(tc.status)}</span><span>Executed <strong>${escape(TaipeiTime.format(tc.executed_at))}</strong></span></div>${tc.needs_retest?'<div class="notice">'+escape(tc.retest_message || 'Rerun needed')+'</div>':''}${tc.manual_override?`<p class="help">Manual result: ${escape(tc.manual_override.status==='CP'?'C-PASS':tc.manual_override.status)} · ${escape(tc.manual_override.reason||'No reason recorded')}</p>`:''}<div class="actions"><strong>Test log</strong></div><pre class="log code" id="log-output">${escape(TaipeiTime.logText(state.activeTask===task.id && tc.status==='Running'?state.log:tc.log_text||'No test log. Run this Test Case to collect evidence.'))}</pre><div id="input-slot">${state.activeTask===task.id&&state.prompt?inputForm(state.prompt.session,state.prompt.text):''}</div><details><summary>Result annotation</summary><form id="annotation-form"><div class="fields"><label class="field"><span>Manual status</span><select name="status" ${task.execution_active?'disabled':''}><option value="TBD">Not run / pending</option><option value="Passed">Passed</option><option value="C-PASS">C-PASS</option><option value="Failed">Failed</option><option value="Block">Block</option></select></label><label class="field"><span>Reason / Note for C-PASS</span><input name="reason" ${task.execution_active?'disabled':''}></label><label class="field"><span>Bug ID</span><input name="bug_id" value="${escape(tc.bug_id)}" ${task.execution_active?'disabled':''}></label></div><div class="form-actions"><button ${task.execution_active?'disabled':''}>Save annotation</button></div></form></details>`;
 }
 function repositoryCheck(kind,id){return `<input type="checkbox" class="repository-batch-check" data-kind="${kind}" data-id="${escape(id)}" aria-label="Select ${kind}" ${state.repositorySelection?.has(kind+':'+id)?'checked':''}>`;}
 function repositorySelectionData(){const folders=[],cases=[];for(const value of state.repositorySelection||[]){const [kind,id]=value.split(':');(kind==='folder'?folders:cases).push(id);}return {folder_ids:folders,case_ids:cases};}
@@ -1149,7 +1202,8 @@ function historyRows(entry,caseNames){
    }
    function detail(label,a,b){
      if(JSON.stringify(a)===JSON.stringify(b))return;
-     const text=a===undefined||b===undefined?value(a===undefined?b:a):value(a)+' → '+value(b);
+     const render=v=>['version','created_at','modified_at','source_created_at','source_modified_at'].includes(label)&&typeof v==='string'&&/^\d{4}-\d{2}-\d{2}T/.test(v)?TaipeiTime.format(v):value(v);
+     const text=a===undefined||b===undefined?render(a===undefined?b:a):render(a)+' → '+render(b);
      details.push(label+' · '+text);
    }
    for(const key of new Set([...Object.keys(before),...Object.keys(after)])){
@@ -1178,7 +1232,7 @@ async function showCaseHistory(plan=null){
    const operations={folder_create:'Create folder',folder_modify:'Change folder',import:'Import Test Cases',
      remove:'Remove Test Case',replace:'Replace Test Case',move:'Move items',delete:'Remove items',
      resort:'Sort Test Cases',case_move:'Move Test Cases'};
-   const rows=entries.map(entry=>'<tr><td>'+escape(date(entry.time))+'</td><td>'+escape(entry.operator||'—')+
+   const rows=entries.map(entry=>'<tr><td>'+escape(TaipeiTime.format(entry.time))+'</td><td>'+escape(entry.operator||'—')+
      '</td><td><strong>'+escape(operations[entry.operation]||entry.operation)+'</strong>'+
      (entry.import_origin?'<div>Imported from '+escape(entry.import_origin.type==='plan'?'Plan · '+entry.import_origin.name:
        entry.import_origin.type==='repository'?'Test Case Repository':'Python source')+'</div>':'')+
@@ -1215,16 +1269,16 @@ async function repositoryOperation(action){
   repoConfirm(dialog,async()=>{await api('/api/repository/batch','POST',{...selection,action:'delete',confirm:true,keep_cases:choice?.value!=='delete'});state.repositorySelection.clear();state.repositoryDefinition=null;});return;
  }
  if(action==='repo-replace'&&current){
-  const dialog=repoDialog('Replace Test Case',`<h3>Current Test Case</h3><p>${escape(current.name)} · ${escape(version(latestSourceDate(current)||current.source_version))}</p><h3>Replacement Test Case</h3><label class="field"><span>Python file</span><input type="file" accept=".py"></label><p data-candidate></p>`,repoIcon('Confirm replacement','repo-confirm','confirm','disabled')+repoIcon('Cancel','repo-close','close'));
+  const dialog=repoDialog('Replace Test Case',`<h3>Current Test Case</h3><p>${escape(current.name)} · ${escape(TaipeiTime.format(latestSourceDate(current)||current.modified_at))}</p><h3>Replacement Test Case</h3><label class="field"><span>Python file</span><input type="file" accept=".py"></label><p data-candidate></p>`,repoIcon('Confirm replacement','repo-confirm','confirm','disabled')+repoIcon('Cancel','repo-close','close'));
   const input=dialog.querySelector('input'),preview=dialog.querySelector('[data-candidate]'),confirm=dialog.querySelector('[data-action=repo-confirm]');
   let source=null,request=0;
   input.onchange=async()=>{const n=++request;confirm.disabled=true;source=null;preview.textContent='';
    try{const file=input.files[0];if(!file)return;if(!file.name.toLowerCase().endsWith('.py'))throw Error('Choose a .py file.');
     const text=await file.text(),{metadata}=await api('/api/repository/inspect','POST',{source:text});if(n!==request)return;
-    preview.textContent=metadata.name+' · '+version(metadata.modified_at||metadata.created_at||new Date(file.lastModified).toISOString());source=text;confirm.disabled=false;
+    preview.textContent=metadata.name+' · '+TaipeiTime.format(metadata.modified_at||metadata.created_at||new Date(file.lastModified).toISOString());source=text;confirm.disabled=false;
    }catch(e){if(n===request)preview.textContent=e.message;}
   };
-  repoConfirm(dialog,()=>api('/api/repository/testcases/'+current.id,'PUT',{source,previous_version:current.source_version}));
+  repoConfirm(dialog,()=>api('/api/repository/testcases/'+current.id,'PUT',{source,previous_modified_at:current.modified_at}));
  }
 }
 document.addEventListener('click',event=>{
@@ -1418,7 +1472,7 @@ function caseContextItems(row){
  }else if(row.hasAttribute('data-plan-folder')&&plan){
    const id=row.dataset.planFolder;
    add('New folder','new-plan-folder',id,plan.locked);
-   add('Sort Test Cases','resort-plan-folder',id,plan.locked);
+   add('Sort Case','resort-plan-folder',id,plan.locked);
    if(id){add('Rename','rename-plan-folder',id,plan.locked);add('Delete folder','delete-folder',id,plan.locked,true);}
  }else if(document.body.classList.contains('repository-page')&&row.hasAttribute('data-repository-id')){
    const c=state.repository.find(item=>item.id===row.dataset.repositoryId);if(!c)return [];
@@ -1568,6 +1622,32 @@ async function doAction(action, element) {
   const {project,plan,task}=taskFormContext();
   if(!executionElementMatches(element))return;
   if(action==='execution-folder'){const collapsed=collapsedExecutionFolders(task),path=element.dataset.path;if(collapsed.has(path))collapsed.delete(path);else collapsed.add(path);syncExecutionControls();return;}
+  if(action==='plan-case-versions'){
+    const dialog=repoDialog('Check Version · '+plan.name,'<p role="status">Checking…</p>');
+    const body=dialog.querySelector('.repo-view-content');
+    try{
+      const cases=await api('/api/plans/'+encodeURIComponent(plan.id)+'/case-versions');
+      if(context().plan?.id!==plan.id)return;
+      state.planVersionCheck={planId:plan.id,updates:new Map(cases.filter(c=>c.status==='Repository update available').map(c=>[c.id,c]))};
+      $('#plan-case-list').innerHTML=planCaseTable(plan);
+      syncCaseSelections();
+      body.innerHTML=cases.length?`<table><thead><tr><th>Test Case</th><th>Plan modified</th><th>Repository modified</th><th>Status</th></tr></thead><tbody>${cases.map(c=>`<tr><td>${escape(c.name)}</td><td>${escape(TaipeiTime.format(c.plan_modified))}</td><td>${escape(TaipeiTime.format(c.repository_modified))}</td><td>${escape(c.status)}</td></tr>`).join('')}</tbody></table>`:'<p>This Plan has no Test Cases.</p>';
+    }catch(error){body.textContent='';dialog.querySelector('[role=alert]').textContent=error.message;}
+    return;
+  }
+  if(action==='update-plan-case'){
+    const checked=state.planVersionCheck;
+    const item=checked?.planId===plan.id&&checked.updates.get(element.dataset.id);
+    if(!item)return;
+    const body=`<h3>${escape(item.name)}</h3><p>Replace this Plan copy with the Repository version?</p><dl><dt>Current Plan Version</dt><dd>${escape(TaipeiTime.format(item.plan_modified))}</dd><dt>Repository Version</dt><dd>${escape(TaipeiTime.format(item.repository_modified))}</dd></dl><p>Compatible parameter values are kept. New or incompatible parameters use their defaults. Existing results are marked for retest.</p>`;
+    return planOperationDialog('Update Test Case',body,'Confirm Update','confirm',async()=>{
+      await api('/api/plans/'+encodeURIComponent(plan.id)+'/testcases/'+encodeURIComponent(item.id)+'/repository-update','POST',{
+        confirm:true,repository_id:item.repository_id,plan_modified:item.plan_modified,repository_modified:item.repository_modified
+      });
+      checked.updates.delete(item.id);
+      toast('Test Case updated.');
+    });
+  }
   if(action==='plan-history')return showCaseHistory(plan);
   if(action==='task-info-tab'){
     const selected=element.dataset.taskInfoTab;
@@ -1674,9 +1754,10 @@ async function doAction(action, element) {
   else if(action==='toggle-plan-matrix'){state.expandedPlans??=new Set();const id=element.dataset.id;state.expandedPlans.has(id)?state.expandedPlans.delete(id):state.expandedPlans.add(id);const expanded=state.expandedPlans.has(id);element.setAttribute('aria-expanded',String(expanded));element.closest('tr').nextElementSibling.hidden=!expanded;}
   else if(action==='toggle-repository-folder'){state.repositoryCollapsed??=new Set();state.repositoryCollapsed.has(element.dataset.id)?state.repositoryCollapsed.delete(element.dataset.id):state.repositoryCollapsed.add(element.dataset.id);saveFolderExpansions();await draw();}
   else if(action==='plan-select-all'){
-    const keys=state.planSearch?.trim()?planRows().map(planRowKey):listSelectionItems('plan').map(item=>item.kind+':'+item.id);
-    const selected=planSelection();selected.clear();
-    for(const key of keys)if(key!=='folder:')selected.add(key);
+    const keys=selectablePlanKeys(),selected=planSelection();
+    const allSelected=keys.every(key=>selected.has(key));
+    selected.clear();
+    if(!allSelected)for(const key of keys)selected.add(key);
     refreshPlanSelection();
   }
   else if(action==='plan-selection-delete'){
@@ -1718,7 +1799,6 @@ async function doAction(action, element) {
     if(!discard())return;state.dirty=false;
     state.planFolder=element.dataset.id;state.planRename=null;$('#plan-case-list').innerHTML=planCaseTable(plan);syncCaseSelections();
   }
-  else if(action==='toggle-plan-folder'){state.planCollapsed??=new Set();const id=element.dataset.id;state.planCollapsed.has(id)?state.planCollapsed.delete(id):state.planCollapsed.add(id);saveFolderExpansions();$('#plan-case-list').innerHTML=planCaseTable(plan);syncCaseSelections();}
   else if(['plan-case-parameters','plan-case-source'].includes(action)){await openPlanCaseDialog(plan,element.dataset.id,action==='plan-case-source');}
   else if(action==='close-plan-case'){if(!discard())return;state.dirty=false;state.caseId=null;await draw();}
   else if(action==='plan-remove-case'){
@@ -1798,7 +1878,7 @@ async function doAction(action, element) {
     state.dirty=false;state.panel=null;await draw();toast('Repository Test Case removed.');
   }
   else if(action==='close-standard'){state.repositoryDefinition=null;await draw();}
-  else if(action==='export-case'){const c=plan.testcases.find(c=>c.id===state.caseId);download(c.tc_name+'.json',JSON.stringify({script_kind:'single',tc_name:c.tc_name,source:state.definition.source,source_version:c.source_version,source_created_at:c.source_created_at,source_modified_at:c.source_modified_at,settings:state.definition.settings,folder_path:c.folder_path},null,2),'application/json');}
+  else if(action==='export-case'){const c=plan.testcases.find(c=>c.id===state.caseId);download(c.tc_name+'.json',JSON.stringify({script_kind:'single',tc_name:c.tc_name,source:state.definition.source,modified_at:c.modified_at,source_created_at:c.source_created_at,source_modified_at:c.source_modified_at,settings:state.definition.settings,folder_path:c.folder_path},null,2),'application/json');}
   else if(['delete-project','delete-case'].includes(action)) {
     const type=action.split('-')[1],tc=plan?.testcases.find(c=>c.id===state.caseId);const name=type==='project'?project.name:type==='task'?task.name:tc.tc_name;
     if(!await confirmDelete(`Delete ${type}: ${name}?`,type==='case'?'This deletes the Plan Test Case and its current results and logs from every Task in this Plan.':`This permanently deletes the ${type} and its contained items, including current test evidence.`))return;
@@ -1945,7 +2025,7 @@ function stream(session,taskId,caseId) {
    if(msg.type==='input_required')state.prompt={session,text:msg.text};
    if(msg.type==='input_required'||msg.type==='input_resolved')updateExecutionLog();else scheduleExecutionLogUpdate();
    if(msg.type==='input_required'&&context().task?.id===taskId&&!executionDialog&&!planCaseDialog){const running=context().task.testcases.find(c=>c.status==='Running');if(running)openExecutionDialog('log',running.id).catch(e=>toast(e.message,true));}
-   if(context().task?.id===taskId){const out=$('#log-output');if(out){out.textContent=state.log;out.scrollTop=out.scrollHeight;}if(msg.type==='input_required'){state.prompt={session,text:msg.text};if($('#input-slot'))$('#input-slot').innerHTML=inputForm(session,msg.text);}}
+   if(context().task?.id===taskId){const out=$('#log-output');if(out){out.textContent=TaipeiTime.logText(state.log);out.scrollTop=out.scrollHeight;}if(msg.type==='input_required'){state.prompt={session,text:msg.text};if($('#input-slot'))$('#input-slot').innerHTML=inputForm(session,msg.text);}}
  };
  source.onerror=()=>{if(finished)return; source.close();reject(Error('Live connection interrupted. Use Resume monitoring to reconnect to the active Task.'));};
  }); }
@@ -2141,7 +2221,7 @@ async function resolveImportConflicts(conflicts){
  let index=0;const decisions={};
  const render=()=>{
   const c=conflicts[index];
-  $('#import-conflict-items').innerHTML=`<div class="conflict-case-name"><span>Test Case Name</span><strong data-no-translate>${escape(c.name)}</strong></div>${c.targets.length>1?`<label class="field"><span>Latest source date</span><select id="conflict-target">${c.targets.map(t=>`<option value="${escape(t.id)}" data-no-translate>${escape(version(latestSourceDate(t)))}</option>`).join('')}</select></label>`:''}<div class="conflict-actions"><button type="button" data-conflict-choice="overwrite">${c.same_version?'Overwrite':'Overwrite and update'}</button>${c.same_version?'':'<button type="button" data-conflict-choice="coexist">Keep both</button>'}<button type="button" data-conflict-choice="skip">Skip this Case</button><button type="button" data-action="cancel-import-conflicts">Cancel</button></div>${conflicts.length>1?`<p class="help">${index+1} / ${conflicts.length}</p>`:''}`;
+  $('#import-conflict-items').innerHTML=`<div class="conflict-case-name"><span>Test Case Name</span><strong data-no-translate>${escape(c.name)}</strong></div>${c.targets.length>1?`<label class="field"><span>Latest source date</span><select id="conflict-target">${c.targets.map(t=>`<option value="${escape(t.id)}" data-no-translate>${escape(TaipeiTime.format(latestSourceDate(t)))}</option>`).join('')}</select></label>`:''}<div class="conflict-actions"><button type="button" data-conflict-choice="overwrite">${c.same_version?'Overwrite':'Overwrite and update'}</button>${c.same_version?'':'<button type="button" data-conflict-choice="coexist">Keep both</button>'}<button type="button" data-conflict-choice="skip">Skip this Case</button><button type="button" data-action="cancel-import-conflicts">Cancel</button></div>${conflicts.length>1?`<p class="help">${index+1} / ${conflicts.length}</p>`:''}`;
  };
  render();dialog.showModal();form.querySelector('[data-conflict-choice]')?.focus();
  return new Promise(resolve=>{
@@ -2389,9 +2469,6 @@ CaseWindows.configure({api,renderFields:parameterFields,onSaved:async()=>{await 
  for(const row of document.querySelectorAll('[data-plan-case],[data-repository-id]')){const selected=ref.kind==='plan'?row.dataset.planCase===ref.caseId&&context().plan?.id===ref.planId:row.dataset.repositoryId===ref.caseId;row.toggleAttribute('data-window-selected',selected);}
 }});
 sizeGlobalNavigation();
-$('#theme-toggle').innerHTML=icon('sun');
-function theme(value){document.documentElement.dataset.theme=value;localStorage.setItem('bmc-theme',value);$('#theme-toggle').setAttribute('aria-label',`Switch to ${value==='dark'?'light':'dark'} theme`);}
-theme(localStorage.getItem('bmc-theme')||'light');$('#theme-toggle').onclick=()=>theme(document.documentElement.dataset.theme==='dark'?'light':'dark');
 refresh(false).then(navigate).catch(e=>{$('#workspace').setAttribute('aria-busy','false');$('#workspace').innerHTML=empty('Unable to load BMC Agent',e.message,button('Retry','retry','primary'));toast(e.message,true);});
 document.addEventListener('click',event=>{if(event.target.closest('[data-action=retry]'))refresh(false).then(navigate).catch(e=>toast(e.message,true));});
 })();
@@ -2412,3 +2489,16 @@ new MutationObserver(schedulePlanListSize).observe(document.getElementById('work
 new ResizeObserver(schedulePlanListSize).observe(document.getElementById('workspace'));
 window.addEventListener('resize',schedulePlanListSize);
 schedulePlanListSize();
+
+// Scroll events do not bubble. Capture them for nested panes and the viewport.
+const scrollbarIdleTimers=new WeakMap();
+document.addEventListener('scroll',event=>{
+ const pane=event.target===document?document.scrollingElement:event.target;
+ if(!(pane instanceof Element))return;
+ if(!pane.hasAttribute('data-scroll-active'))pane.setAttribute('data-scroll-active','');
+ clearTimeout(scrollbarIdleTimers.get(pane));
+ scrollbarIdleTimers.set(pane,setTimeout(()=>{
+   pane.removeAttribute('data-scroll-active');
+   scrollbarIdleTimers.delete(pane);
+ },800));
+},{capture:true,passive:true});

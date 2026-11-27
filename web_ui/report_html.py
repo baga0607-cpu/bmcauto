@@ -90,7 +90,7 @@ def legacy_method_body(result, metadata):
         lines = http_lines(record.get('method'), record.get('uri'), record.get('status'),
                            record.get('request_headers'), record.get('headers'), record.get('body', ''))
         if record.get('timestamp'):
-            lines.insert(0, 'Time: ' + record['timestamp'])
+            lines.insert(0, 'Time: ' + execution_date(record['timestamp']))
         evidence_id = escape(str(record.get('evidence_id', index)))
         http[str(record.get('step_number'))].append(
             f'<details><summary>HTTP evidence #{evidence_id}</summary><pre>'

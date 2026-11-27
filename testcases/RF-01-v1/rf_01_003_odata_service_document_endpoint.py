@@ -1,12 +1,12 @@
 TEST_CASE = {
-    "modified_at": "2026-11-26T05:42:12.574147+00:00",
+    "modified_at": "2026-11-27T15:33:42.839835+08:00",
     "test_type": "compliance",
     "spec_ref": [
         "DSP0266 v1.25.0 section 6.7 Table 4",
         "DSP0266 v1.25.0 section 7.2.4",
         "DSP0266 v1.25.0 section 8.4.3 Table 15 (OData service document)."
     ],
-    "created_at": "2026-10-19T01:53:55.572569+00:00",
+    "created_at": "2026-10-19T09:53:55.572569+08:00",
     "name": "RF-01-003 OData Service Document Endpoint",
     "description": "GET /redfish/v1/odata and verify the metadata context and the minimum service document entry structure.",
     "test_method": [

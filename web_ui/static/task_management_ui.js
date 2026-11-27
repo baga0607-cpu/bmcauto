@@ -327,8 +327,7 @@ let calendar=null, viewStart=null, selectedDay=null, selectedTask=null, schedule
 
   function historyList(rows){
     const period=(start,end)=>escape(start||'—')+' ~ '+escape(end||'—');
-    const stamp=value=>new Date(value).toLocaleString('sv-SE',{timeZone:'Asia/Taipei',hour12:false});
-    return `<section class="task-history" aria-label="History List"><h2 data-no-translate>History List</h2>${rows.length?`<div class="table-wrap"><table><thead><tr><th>Time (Taipei)</th><th>Previous dates</th><th>New dates</th><th data-no-translate>History</th></tr></thead><tbody>${rows.map(row=>`<tr><td data-no-translate>${escape(stamp(row.created_at))}</td><td data-no-translate>${period(row.previous_start_date,row.previous_end_date)}</td><td data-no-translate>${period(row.start_date,row.end_date)}</td><td class="history-text" data-no-translate>${escape(row.history)}</td></tr>`).join('')}</tbody></table></div>`:'<p class="help">No History yet.</p>'}</section>`;
+    return `<section class="task-history" aria-label="History List"><h2 data-no-translate>History List</h2>${rows.length?`<div class="table-wrap"><table><thead><tr><th>Time (Taipei)</th><th>Previous dates</th><th>New dates</th><th data-no-translate>History</th></tr></thead><tbody>${rows.map(row=>`<tr><td data-no-translate>${escape(TaipeiTime.format(row.created_at))}</td><td data-no-translate>${period(row.previous_start_date,row.previous_end_date)}</td><td data-no-translate>${period(row.start_date,row.end_date)}</td><td class="history-text" data-no-translate>${escape(row.history)}</td></tr>`).join('')}</tbody></table></div>`:'<p class="help">No History yet.</p>'}</section>`;
   }
 
   function taskInfo(task, options={}){

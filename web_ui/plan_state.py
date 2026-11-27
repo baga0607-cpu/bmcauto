@@ -383,7 +383,7 @@ def migrate_case_versions(conn):
     if not ddl:return
     conn.exec_driver_sql('DROP INDEX IF EXISTS uq_testcases_plan_normalized_name')
     if 'uq_testcases_plan_normalized_name' not in ddl:
-        conn.exec_driver_sql("CREATE UNIQUE INDEX IF NOT EXISTS uq_testcases_plan_name_version ON testcases(plan_id, normalized_name, coalesce(source_version, ''))")
+        conn.exec_driver_sql("CREATE UNIQUE INDEX IF NOT EXISTS uq_testcases_plan_name_version ON testcases(plan_id, normalized_name, coalesce(modified_at, ''))")
         return
     if conn.exec_driver_sql('PRAGMA foreign_keys').scalar():raise ValueError('Migration requires foreign keys disabled outside the transaction')
     import re
@@ -398,7 +398,7 @@ def migrate_case_versions(conn):
     conn.exec_driver_sql('DROP TABLE testcases')
     conn.exec_driver_sql('ALTER TABLE testcases_version_migration RENAME TO testcases')
     for (sql,) in extra:conn.exec_driver_sql(sql)
-    conn.exec_driver_sql("CREATE UNIQUE INDEX IF NOT EXISTS uq_testcases_plan_name_version ON testcases(plan_id, normalized_name, coalesce(source_version, ''))")
+    conn.exec_driver_sql("CREATE UNIQUE INDEX IF NOT EXISTS uq_testcases_plan_name_version ON testcases(plan_id, normalized_name, coalesce(modified_at, ''))")
 
 
 def migrate_current_state(engine,log_path):
@@ -416,7 +416,7 @@ def migrate_current_state(engine,log_path):
                 for name,kind in additions.items():
                     if name not in present: conn.exec_driver_sql(f'ALTER TABLE {table} ADD COLUMN {name} {kind}')
             for table, additions in {
-                'testcases': {'script_kind': "TEXT NOT NULL DEFAULT 'steps'", 'source_version': 'TEXT',
+                'testcases': {'script_kind': "TEXT NOT NULL DEFAULT 'steps'", 'modified_at': 'TEXT',
                               'repository_id': 'TEXT', 'settings_json': "TEXT NOT NULL DEFAULT '{}'",
                               'settings_revision': 'INTEGER NOT NULL DEFAULT 0'},
                 'task_testcases': {'duration_ms': 'INTEGER', 'needs_retest': 'BOOLEAN NOT NULL DEFAULT 0', 'retest_reasons': 'JSON'},
@@ -618,7 +618,7 @@ def install_routes(app, runtime):
         if 'tc_name' in data or 'display_name' in data:
             name=str(data.get('tc_name',data.get('display_name'))).strip()
             if not name: raise StateError('Testcase name is required')
-            duplicate=s.query(TestCase).filter_by(plan_id=tc.plan_id,normalized_name=name.casefold(),source_version=tc.source_version).first()
+            duplicate=s.query(TestCase).filter_by(plan_id=tc.plan_id,normalized_name=name.casefold(),modified_at=tc.modified_at).first()
             if duplicate and duplicate.system_id!=tc_id: raise StateError('TC already exists',409)
             tc.display_name=name
         if any(k in data for k in ('folder_id','folder_path','category','custom_subfolder')): assign_folder(s,tc,resolve_folder(s,tc.plan_id,data))

@@ -11,12 +11,12 @@ import test_report_exports as export_fixtures
 
 class ReportCaseFieldsTest(unittest.TestCase):
     def test_execution_date_is_readable_taiwan_time(self):
-        self.assertEqual(execution_date('2026-10-30T07:27:04.323336+00:00'),'2026/10/30 15:27:04 (UTC+08:00)')
-        self.assertEqual(execution_date('2026-10-30T23:59:59Z'),'2026/10/31 07:59:59 (UTC+08:00)')
-        self.assertEqual(execution_date('2026-10-30T15:27:04+08:00'),'2026/10/30 15:27:04 (UTC+08:00)')
+        self.assertEqual(execution_date('2026-10-30T07:27:04.323336+00:00'),'2026-10-30 15:27:04')
+        self.assertEqual(execution_date('2026-10-30T23:59:59Z'),'2026-10-31 07:59:59')
+        self.assertEqual(execution_date('2026-10-30T15:27:04+08:00'),'2026-10-30 15:27:04')
         self.assertEqual(execution_date(None),'—')
-        self.assertIn('timezone not recorded',execution_date('2026-10-30T15:27:04'))
-        self.assertEqual(execution_date('unknown'),'unknown')
+        self.assertEqual('2026-10-30 15:27:04',execution_date('2026-10-30T15:27:04'))
+        self.assertEqual(execution_date('unknown'),'—')
     def test_explicit_rows_preserve_false_zero_and_missing_fields(self):
         output=io.StringIO();log=CaseLog(output,lambda event:None)
         log.section('Measurements')

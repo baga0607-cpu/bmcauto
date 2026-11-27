@@ -30,7 +30,7 @@ window.ReportPreview = (() => {
       if (current !== view || view.request !== request) return;
       view.frame.srcdoc = data.html;
       view.frame.hidden = false;
-      view.status.textContent = 'Saved results · Preview loaded '+new Date().toLocaleTimeString();
+      view.status.textContent = 'Saved results · Preview loaded '+TaipeiTime.format(new Date());
     } catch (error) {
       if (current !== view || view.request !== request || error.name === 'AbortError') return;
       view.status.textContent = '';

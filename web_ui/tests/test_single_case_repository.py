@@ -81,7 +81,7 @@ class SingleCaseRepositoryTest(unittest.TestCase):
         self.assertEqual(self.definition(case)['source'],SOURCE)
 
     def test_direct_python_import_is_unavailable(self):
-        payload = dict(plan_id='a', source=SOURCE, script_kind='single', source_version='v1')
+        payload = dict(plan_id='a', source=SOURCE, script_kind='single', modified_at='v1')
         self.assertIn(self.client.post('/api/plans/a/testcases/import-python',json=payload).status_code,(404,405))
         self.assertEqual(self.client.post('/api/import_tc',json=payload).status_code,410)
         with self.Session() as session:
@@ -154,7 +154,8 @@ class SingleCaseRepositoryTest(unittest.TestCase):
         self.assertEqual(result.get_json()['updated'][0]['id'],copied['id'])
         self.assertEqual(self.definition(copied,'b')['settings']['expected'],202)
         # A new repository generation of the same name can coexist without renaming.
-        repo=self.client.post('/api/repository/testcases',json={'source':SOURCE}).get_json()
+        later = SOURCE.replace("'name':", "'modified_at': '2026-10-01T00:00:00+08:00', 'name':")
+        repo=self.client.post('/api/repository/testcases',json={'source':later}).get_json()
         payload={'source_type':'repository','kind':'case','id':repo['id']}
         conflict=self.client.post('/api/plans/b/import-cases',json=payload).get_json()['conflicts'][0]
         self.assertFalse(conflict['same_version']);target=conflict['targets'][0]
@@ -163,7 +164,7 @@ class SingleCaseRepositoryTest(unittest.TestCase):
         self.assertEqual(result.status_code,201,result.get_json())
         twin=result.get_json()['added'][0]
         self.assertEqual(twin['tc_name'],copied['tc_name'])
-        self.assertNotEqual(twin['source_version'],copied['source_version'])
+        self.assertNotEqual(twin['modified_at'],copied['modified_at'])
         self.assertEqual(self.definition(twin,'b')['settings']['expected'],200)
         # Reimporting this version offers overwrite only, even with another version present.
         conflict=self.client.post('/api/plans/b/import-cases',json=payload).get_json()['conflicts'][0]
@@ -184,7 +185,7 @@ class SingleCaseRepositoryTest(unittest.TestCase):
         self.assertEqual(self.definition(copied,'b')['source'],SOURCE)
         result=self.client.post('/api/plans/b/import-cases',json=payload)
         self.assertEqual(result.status_code,201,result.get_json())
-        self.assertEqual(result.get_json()['updated'][0]['source_version'],repo['source_version'])
+        self.assertEqual(result.get_json()['updated'][0]['modified_at'],repo['modified_at'])
         with self.Session() as session:
             membership=session.query(TaskTestCase).filter_by(testcase_id=copied['id']).one()
             self.assertEqual(membership.log_text,'preserve log');self.assertTrue(membership.needs_retest)
@@ -193,8 +194,9 @@ class SingleCaseRepositoryTest(unittest.TestCase):
 
     def test_folder_import_resolves_versions_within_the_same_batch(self):
         folder=self.client.post('/api/repository/folders',json={'name':'Versions'}).get_json()['id']
-        for suffix in ('# one','# two'):
-            self.client.post('/api/repository/testcases',json={'source':SOURCE+'\n'+suffix,'folder_id':folder})
+        for day in ('01', '02'):
+            source = SOURCE.replace("'name':", f"'modified_at': '2026-01-{day}T00:00:00Z', 'name':")
+            self.client.post('/api/repository/testcases',json={'source':source,'folder_id':folder})
         payload={'source_type':'repository','kind':'folder','id':folder}
         response=self.client.post('/api/plans/b/import-cases',json=payload)
         self.assertEqual(response.status_code,409,response.get_json())
@@ -204,7 +206,7 @@ class SingleCaseRepositoryTest(unittest.TestCase):
         result=self.client.post('/api/plans/b/import-cases',json={**payload,'decisions':{conflict['id']:{'action':'coexist','target_id':target['id'],'target_token':target['token']}}})
         self.assertEqual(result.status_code,201,result.get_json())
         self.assertEqual([c['tc_name'] for c in result.get_json()['added']],['Service entry','Service entry'])
-        self.assertEqual(len({c['source_version'] for c in result.get_json()['added']}),2)
+        self.assertEqual(len({c['modified_at'] for c in result.get_json()['added']}),2)
 
     def test_import_rejects_foreign_source_destination_self_and_locked(self):
         source=self.add_case('a')
@@ -216,12 +218,12 @@ class SingleCaseRepositoryTest(unittest.TestCase):
             session.add(Task(id='busy',plan_id='b',name='Busy',execution_active=True));session.commit()
         self.assertEqual(self.client.post('/api/plans/b/import-cases',json=base).status_code,409)
 
-    def test_independent_source_and_settings_keep_generation(self):
+    def test_plan_source_edit_updates_only_its_modified_at(self):
         a, b = self.add_case(), self.add_case('b')
         definition = self.definition(a)
         response = self.update(a, dict(source=SOURCE+'\n# Project adaptation\n', settings={'preset':'/custom','expected':202}, settings_revision=0))
         self.assertEqual(response.status_code, 200, response.get_json())
-        self.assertEqual(response.get_json()['source_version'], self.repository['source_version'])
+        self.assertNotEqual(response.get_json()['modified_at'], self.repository['modified_at'])
         self.assertEqual(self.definition(b, 'b')['settings']['preset'], '/redfish/v1/')
         self.assertEqual(self.definition(b, 'b')['source'], SOURCE)
         self.assertEqual(self.definition(a)['settings_revision'], 1)
@@ -305,9 +307,9 @@ class SingleCaseRepositoryTest(unittest.TestCase):
         tc=self.add_case()
         response=self.client.post('/api/import_tc',json={'plan_id':'b','tc_name':'Copied','system_id':tc['id']})
         self.assertEqual(response.status_code,201,response.get_json())
-        self.assertEqual(self.definition(response.get_json(),'b')['source_version'],self.repository['source_version'])
+        self.assertEqual(self.definition(response.get_json(),'b')['modified_at'],self.repository['modified_at'])
         response=self.client.post('/api/import_tc',json={'plan_id':'b','tc_name':'Round trip','script_kind':'single',
-            'source':SOURCE,'source_version':self.repository['source_version'],'settings':{'preset':'/exported','expected':200}})
+            'source':SOURCE,'modified_at':self.repository['modified_at'],'settings':{'preset':'/exported','expected':200}})
         self.assertEqual(response.status_code,410)
 
     def test_execute_reads_plan_file_each_time(self):

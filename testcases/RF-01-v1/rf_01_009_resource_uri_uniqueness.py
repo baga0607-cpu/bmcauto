@@ -1,12 +1,12 @@
 TEST_CASE = {
-    "modified_at": "2026-11-26T05:42:12.574147+00:00",
+    "modified_at": "2026-11-27T15:33:42.839835+08:00",
     "test_type": "compliance",
     "spec_ref": [
         "DSP0266 v1.25.0 section 6.1 (unique resource paths)",
         "DSP0266 v1.25.0 section 9.6.2 (resource identity)",
         "DSP0266 v1.25.0 section 7.2.2 (collection pagination)."
     ],
-    "created_at": "2026-10-30T06:05:45.102559+00:00",
+    "created_at": "2026-10-30T14:05:45.102559+08:00",
     "name": "RF-01-009 Resource URI Uniqueness",
     "description": "Traverse discoverable local Redfish resources and collection pages; assess resource identity path uniqueness within the observed scope.",
     "test_method": [

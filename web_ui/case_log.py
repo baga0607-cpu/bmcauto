@@ -1,5 +1,6 @@
 """Per-execution readable logs. Sections describe evidence, never execution steps."""
 from datetime import datetime, timezone
+from taipei_time import TAIPEI, format_timestamp
 from result_policy import declared_method_items, method_status, validate_method, validate_case_cp
 import json
 import re
@@ -20,7 +21,7 @@ def log_filenames(task_name, case_name, task_id, case_id):
         return value.encode('utf-16-le')[:limit * 2].decode('utf-16-le', errors='ignore').rstrip(' .') or 'unnamed'
     match = re.match(r'^([A-Za-z]+-\d+(?:-\d+)+)\b', str(case_name))
     case_label = match.group(1) if match else case_id
-    stamp = datetime.now().astimezone().strftime('%Y%m%d_%H%M%S_%f%z')
+    stamp = datetime.now(TAIPEI).strftime('%Y%m%d_%H%M%S_%f%z')
     stem = f'{stamp}__{label(task_name, 24)}__{label(case_label, 36)}__{uuid4().hex}'
     return {'test': f'{stem}__test.log'}
 
@@ -218,7 +219,7 @@ class CaseLog:
         result = record['result']
         status = result['status']
         if status not in observations:
-            stamp = record['timestamp']
+            stamp = format_timestamp(record['timestamp'])
             body = '\n'.join(self._result_lines(result))
             text = '\n' + '=' * 72 + f'\n{heading}\nTime: {stamp}\n' + '-' * 72 + '\n' + body + '\n'
             observations[status] = [0, text, f'Time: {stamp}\n' + body]
@@ -247,7 +248,8 @@ class CaseLog:
             self.emit({'type': 'log', 'text': text[:-1]})
 
     def _write(self, kind, heading, lines, **data):
-        stamp = datetime.now(timezone.utc).isoformat(timespec='milliseconds')
+        instant = datetime.now(timezone.utc)
+        stamp = format_timestamp(instant)
         text = '\n' + '=' * 72 + f'\n{heading}\nTime: {stamp}\n' + '-' * 72 + '\n' + '\n'.join(lines) + '\n'
         if kind == 'section':
             text = '\n' + '=' * 72 + f'\n{heading}\nTime: {stamp}\n'
@@ -257,7 +259,7 @@ class CaseLog:
             text = '\n'.join('  ' + line for line in lines) + '\n'
         elif kind == 'http' and self.section_number:
             text = '\n' + '-' * 72 + f'\n{heading}\nTime: {stamp}\n' + '\n'.join(lines) + '\n' + '-' * 72 + '\n'
-        record = dict(kind=kind, timestamp=stamp, **data)
+        record = dict(kind=kind, timestamp=instant.isoformat(timespec='milliseconds'), **data)
         self.records.append(record)
         if kind == 'step' and data.get('method_type') == 'Checkpoint' and ('checkpoint_id' in data or 'method_index' in data):
             key = (data['step_number'], data.get('checkpoint_id', data.get('method_index')))
@@ -565,7 +567,7 @@ class PrintLogWriter:
     def _line(self, line):
         if self.result_file.closed:
             return
-        stamp = datetime.now(timezone.utc).isoformat(timespec='milliseconds')
+        stamp = format_timestamp(datetime.now(TAIPEI))
         self.result_file.write(f'{stamp} - INFO - {line}\n' if line else '\n')
         self.result_file.flush()
         self.emit({'type': 'log', 'text': line or ' '})

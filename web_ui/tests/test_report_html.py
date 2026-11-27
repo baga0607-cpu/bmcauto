@@ -39,7 +39,7 @@ class HTMLReportTest(unittest.TestCase):
         with zipfile.ZipFile(io.BytesIO(response.data)) as archive:
             html=archive.read('BMC_Report.html').decode()
             self.assertNotIn('<dt>Result Summary</dt>',html)
-            self.assertIn('2026/10/30 15:27:04 (UTC+08:00)',html)
+            self.assertIn('2026-10-30 15:27:04',html)
             self.assertNotIn('Rerun needed',html)
             self.assertNotIn('RAW_LOG_ONLY',html)
             self.assertNotIn('<img src=x',html)

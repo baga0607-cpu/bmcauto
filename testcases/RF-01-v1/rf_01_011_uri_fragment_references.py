@@ -1,5 +1,5 @@
 TEST_CASE = {
-    "modified_at": "2026-11-26T05:42:12.574147+00:00",
+    "modified_at": "2026-11-27T15:33:42.839835+08:00",
     "test_type": "compliance",
     "spec_ref": [
         "DSP0266 v1.25.0 section 6.1 (fragment references)",
@@ -11,7 +11,7 @@ TEST_CASE = {
         "RFC 6901 section 4 (JSON Pointer syntax, evaluation and URI fragment representation).",
         "RFC 6901 section 6 (JSON Pointer syntax, evaluation and URI fragment representation)."
     ],
-    "created_at": "2026-10-30T06:23:36.474763+00:00",
+    "created_at": "2026-10-30T14:23:36.474763+08:00",
     "name": "RF-01-011 URI Fragment References",
     "description": "Resolve discovered local URI fragments as JSON Pointers and verify schema-classified resource reference targets.",
     "test_method": [

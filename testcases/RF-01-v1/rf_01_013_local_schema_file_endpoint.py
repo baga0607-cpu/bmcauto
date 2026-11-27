@@ -1,5 +1,5 @@
 TEST_CASE = {
-    "modified_at": "2026-11-26T05:42:12.574147+00:00",
+    "modified_at": "2026-11-27T15:33:42.839835+08:00",
     "test_type": "compliance",
     "spec_ref": [
         "DSP0266 v1.25.0 section 6.7 Table 4 (/redfish/v1/Schemas/<SchemaFile>, Required=No)",
@@ -8,7 +8,7 @@ TEST_CASE = {
         "DSP0266 v1.25.0 section 11.1.4 (CSDL and JSON Schema format).",
         "DSP0266 v1.25.0 section 11.2.4 (CSDL and JSON Schema format)."
     ],
-    "created_at": "2026-10-30T07:27:24.936887+00:00",
+    "created_at": "2026-10-30T15:27:24.936887+08:00",
     "name": "RF-01-013 Local Schema File Endpoint",
     "description": "Retrieve advertised local schema files and assess document recognition separately from the recommended /redfish/v1/Schemas/ endpoint.",
     "test_method": [

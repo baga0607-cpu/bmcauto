@@ -39,4 +39,4 @@ class RepositoryRemovalTest(unittest.TestCase):
             self.assertEqual(self.client.delete(path,json={'confirm':True}).status_code,500)
         self.assertEqual(self.client.get(path).status_code,200)
         self.assertEqual(self.client.delete(path,json={'confirm':True}).status_code,200)
-        self.assertEqual(self.definition(a)['source_version'],self.repository['source_version'])
+        self.assertEqual(self.definition(a)['modified_at'],self.repository['modified_at'])

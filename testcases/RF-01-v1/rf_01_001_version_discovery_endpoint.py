@@ -1,11 +1,11 @@
 TEST_CASE = {
-    "modified_at": "2026-11-26T05:42:12.574147+00:00",
+    "modified_at": "2026-11-27T15:33:42.839835+08:00",
     "test_type": "compliance",
     "spec_ref": [
         "DSP0266 v1.25.0 section 6.6 (protocol/version discovery)",
         "DSP0266 v1.25.0 section 6.7 Table 4 (/redfish)."
     ],
-    "created_at": "2026-10-14T07:32:57.063413+00:00",
+    "created_at": "2026-10-14T15:32:57.063413+08:00",
     "name": "RF-01-001 Version Discovery Endpoint",
     "description": "Verify that /redfish returns a valid JSON object whose v1 property equals /redfish/v1/.",
     "test_method": [

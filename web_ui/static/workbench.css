@@ -104,7 +104,7 @@ body.repository-page #repository-preview{display:flex;flex-direction:column;min-
 body.repository-page #repository-preview .repository-preview-header{flex:0 0 auto;margin:0;padding-bottom:12px;align-items:flex-start;gap:12px}
 body.repository-page #repository-preview h2{min-width:0}
 body.repository-page #repository-preview .preview-close{flex:none;font-size:.75rem;height:27px;min-height:27px;line-height:1;padding:6px 9px}
-body.repository-page .repository-preview-content{flex:1;min-height:0;overflow:auto;scrollbar-gutter:stable}
+body.repository-page .repository-preview-content{flex:1;min-height:0;overflow:auto}
 body.repository-page .repository-preview-content .table-wrap{overflow:visible}
 body.repository-page .repository-preview-content .log{overflow:visible}
 .repository-resizer{cursor:col-resize;touch-action:none;position:relative;align-self:stretch}
@@ -229,7 +229,7 @@ body.plan-workspace .plan-case-details .repository-preview-header{flex:0 0 auto;
 body.plan-workspace .plan-case-details h2{min-width:0;overflow-wrap:anywhere;font-size:1.05rem;margin:0}
 body.plan-workspace .plan-case-details h3{font-size:.95rem;margin:14px 0 10px}
 body.plan-workspace .plan-case-details .preview-close{flex:none;font-size:.75rem;height:27px;min-height:27px;line-height:1;padding:6px 9px}
-body.plan-workspace #case-editor{flex:1;min-height:0;overflow:auto;scrollbar-gutter:stable;padding:0}
+body.plan-workspace #case-editor{flex:1;min-height:0;overflow:auto;padding:0}
 body.plan-workspace #case-editor .fields{grid-template-columns:minmax(0,1fr)}
 body.plan-workspace #case-editor section[hidden]{display:none}
 body.plan-workspace #case-editor .source-editor{resize:vertical}
@@ -276,7 +276,7 @@ body.plan-workspace #repository-table th:nth-child(3){width:78px}
 body.plan-workspace .import-pane-controls input[type=search]{width:100%;margin:0;padding:7px 10px}
 .import-pane-controls button{flex:none}
 #import-source-list,.import-target-pane .repository-list{min-width:0;width:100%}
-#import-source-list .repository-scroll{min-width:0;width:100%;scrollbar-gutter:stable}
+#import-source-list .repository-scroll{min-width:0;width:100%}
 .import-source-table .repository-folder-line,.import-source-table .repository-folder-name{min-width:0;white-space:normal}
 .import-source-table .repository-folder-name strong{min-width:0;overflow-wrap:anywhere}
 .import-resizer{cursor:col-resize;touch-action:none;position:relative;align-self:stretch}
@@ -362,7 +362,6 @@ body #navigator,body.plan-workspace:has(.plan-import-layout) #navigator{display:
 .project-picker-menu{position:absolute;top:100%;right:0;width:220px;padding:10px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);z-index:30}
 .project-picker-menu input{width:100%}.project-options{max-height:240px;overflow:auto;margin-top:8px;display:grid;gap:3px}
 .project-options button{text-align:left;border:0;overflow-wrap:anywhere;font-weight:400}.project-options button[aria-pressed=true]{background:var(--selected);color:var(--accent)}.project-options button[hidden]{display:none}
-.sidebar-preferences{display:flex;align-items:center;gap:10px;margin-top:28px;padding:16px 8px 0;border-top:1px solid var(--line)}
 body #workspace{min-width:0;padding:28px 32px 50px}
 
 .project-picker>input{width:100%;min-width:0;padding:8px 6px;font-size:.9rem;background:var(--surface)}
@@ -403,11 +402,10 @@ body #navigator.sidebar-open{width:280px;box-shadow:var(--shadow)}
 #navigator:not(.sidebar-open) .sidebar-label{opacity:0;pointer-events:none}
 #navigator:not(.sidebar-open) .project-picker{visibility:hidden;pointer-events:none;width:0;flex:0}
 #navigator.sidebar-open .project-picker{flex:1}
-.sidebar-preferences{flex-wrap:wrap;padding:12px 0 0;gap:8px;margin-top:20px}
 @media(prefers-reduced-motion:reduce){body #navigator,.sidebar-label{transition:none}}
 
 /* One scroll region keeps column and row labels visible on both axes. */
-.info-grouped{max-height:calc(100vh - 210px);min-height:180px;overflow:auto;position:relative;isolation:isolate;scrollbar-gutter:stable}
+.info-grouped{max-height:calc(100vh - 210px);min-height:180px;overflow:auto;position:relative;isolation:isolate}
 .info-grouped table{border-collapse:separate;border-spacing:0}
 .info-grouped thead th{position:sticky;top:0;z-index:4;background:var(--ground);border-bottom:1px solid var(--line)}
 .info-grouped th[scope="row"]{position:sticky;left:0;z-index:2;background:var(--ground);border-right:1px solid var(--line)}
@@ -422,7 +420,7 @@ body #navigator.sidebar-open{width:280px;box-shadow:var(--shadow)}
 
 
 /* Daily Schedule: one scroll surface owns both sticky axes. */
-.gantt-scroll{overflow:auto;max-height:62vh;overscroll-behavior:contain;scrollbar-gutter:stable;background:var(--surface)}
+.gantt-scroll{overflow:auto;max-height:62vh;overscroll-behavior:contain;background:var(--surface)}
 .gantt{width:calc(280px + var(--schedule-days)*var(--day-width));min-width:0}
 .gantt-heading,.gantt-row{grid-template-columns:280px minmax(0,1fr)}
 .gantt-heading{position:sticky;top:0;z-index:5;height:40px;background:var(--surface)}
@@ -521,7 +519,7 @@ body #navigator.sidebar-open{width:280px;box-shadow:var(--shadow)}
 .gantt-heading{top:var(--schedule-sticky-top,0px)}
 
 /* Show up to eight Task rows, with dates pinned inside the table. */
-.gantt-scroll{max-height:var(--schedule-height,507px);overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable}
+.gantt-scroll{max-height:var(--schedule-height,507px);overflow-y:auto;overscroll-behavior:contain}
 .gantt-heading{top:0}
 
 /* Schedule fills the remaining viewport, with a small bottom margin. */
@@ -530,7 +528,7 @@ body #navigator.sidebar-open{width:280px;box-shadow:var(--shadow)}
 body #workspace:has(.gantt-scroll){padding-bottom:24px}
 
 /* Project specifications fit the viewport and scroll beneath their column headings. */
-.info-specifications{height:var(--spec-height,calc(100dvh - 200px));overflow:auto;overscroll-behavior:contain;scrollbar-gutter:stable}
+.info-specifications{height:var(--spec-height,calc(100dvh - 200px));overflow:auto;overscroll-behavior:contain}
 .info-specifications thead th{position:sticky;top:0;z-index:3;background:var(--ground)}
 body #workspace:has(.info-specifications){padding-bottom:24px}
 .info-specifications{max-height:none;min-height:120px}
@@ -540,13 +538,12 @@ body #workspace:has(.info-specifications){padding-bottom:24px}
 .managed-tasks-wrap{min-height:260px}
 
 /* Stable Task columns for populated, filtered and empty states. */
-html:has(.managed-tasks){scrollbar-gutter:stable}
 .managed-tasks{table-layout:fixed;min-width:1100px}
 .managed-tasks th:last-child,.managed-tasks td:first-child{min-width:0}
 .managed-tasks td{overflow-wrap:anywhere}
 
 /* Task lists share the Schedule density and viewport scroll surface. */
-.managed-tasks-wrap{height:var(--task-list-height,calc(100dvh - 140px));min-height:120px;border:1px solid var(--line);border-radius:var(--radius);overscroll-behavior:contain;scrollbar-gutter:stable}
+.managed-tasks-wrap{height:var(--task-list-height,calc(100dvh - 140px));min-height:120px;border:1px solid var(--line);border-radius:var(--radius);overscroll-behavior:contain}
 .managed-tasks{border-collapse:separate;border-spacing:0}
 .managed-tasks thead th{position:sticky;top:0;z-index:3;height:40px;padding:6px 12px;border-bottom:1px solid var(--line);background:var(--ground)}
 .managed-tasks td{padding:6px 12px;line-height:1.4;vertical-align:middle}
@@ -593,7 +590,7 @@ body #workspace:has(.managed-tasks-wrap){padding-bottom:24px}
 #report-compose-help{margin:0 0 20px;max-width:76ch}
 .report-compose-area{border-top:1px solid var(--line);padding-top:14px;margin-top:16px}
 .report-compose-area h3{margin:0 0 8px}
-.report-compose-area ul{list-style:none;margin:0;padding:6px;min-height:92px;max-height:240px;overflow:auto;border:1px dashed var(--line);border-radius:var(--radius);background:var(--ground);scrollbar-gutter:stable;overscroll-behavior:contain}
+.report-compose-area ul{list-style:none;margin:0;padding:6px;min-height:92px;max-height:240px;overflow:auto;border:1px dashed var(--line);border-radius:var(--radius);background:var(--ground);overscroll-behavior:contain}
 .report-compose-item{display:flex;align-items:center;gap:10px;min-height:58px;padding:8px;border-bottom:1px solid var(--line);background:var(--surface);cursor:grab}
 .report-compose-item:last-child{border-bottom:0}
 .report-compose-item.is-dragging{opacity:.55}
@@ -769,7 +766,7 @@ body.repository-page #repository-table tr[data-window-selected]>td{background:va
 /* Normal Plan list ends 24px above the viewport, matching Task List. */
 body.plan-workspace #workspace .repository-layout:not(.plan-import-layout){height:var(--plan-list-height);flex:none;min-height:0}
 body.plan-workspace #workspace .repository-layout>.repository-list{height:100%;min-height:0}
-body.plan-workspace #workspace .repository-layout>.repository-list>.repository-scroll{height:100%;min-height:0;overflow:auto;overscroll-behavior:contain;scrollbar-gutter:stable}
+body.plan-workspace #workspace .repository-layout>.repository-list>.repository-scroll{height:100%;min-height:0;overflow:auto;overscroll-behavior:contain}
 
 /* Plan workspace: title/project, tabs, toolbar, then Case list. */
 body.plan-list-workspace .plan-inline-editor{height:auto;min-height:0;padding:0;overflow:visible}
@@ -785,7 +782,7 @@ body.execution-workspace #execution-panel{display:flex;flex-direction:column;fle
 .execution-task-header label{display:flex;align-items:center;gap:8px;min-width:0}
 .execution-task-header select{max-width:min(55vw,32rem);min-height:34px;padding:6px 10px}
 .execution-task-header strong{margin-left:6px;font-variant-numeric:tabular-nums}
-.execution-case-scroll{flex:1;min-height:0;overflow:auto;border:1px solid var(--line);scrollbar-gutter:stable;overscroll-behavior:contain}
+.execution-case-scroll{flex:1;min-height:0;overflow:auto;border:1px solid var(--line);overscroll-behavior:contain}
 .execution-case-table{table-layout:fixed;width:100%;max-width:900px;min-width:640px}
 .execution-case-table th:nth-child(2){width:100px}
 .execution-case-table th:nth-child(3){width:108px}
@@ -897,9 +894,12 @@ dialog.repo-view-dialog[open]{display:flex;flex-direction:column;overflow:hidden
 body.plan-workspace #plan-case-list #repository-table{width:100%;max-width:none}
 body.plan-workspace #plan-case-list .repository-folder-line :is(.folder-collapse,.folder-collapse-spacer){grid-column:1}
 
-.plan-controls{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding-bottom:12px;margin-bottom:12px;border-bottom:1px solid var(--line)}
-.plan-controls label{font-weight:600}
-.plan-controls select{width:auto;min-width:12rem;max-width:100%}
+.plan-header-actions{display:flex;align-items:center;gap:10px}
+.plan-controls{display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px;padding:7px 0}
+.plan-current{display:flex;align-items:center;gap:10px;min-width:0;max-width:100%;font-size:23px;font-weight:650}
+.plan-current label{flex:none;padding:2px 14px;border-radius:999px;background:var(--navigation-bg);color:white;font:inherit}
+.plan-current select{display:block;width:auto;min-width:0;max-width:100%;padding:0 4px 0 0;background:transparent;border:0;color:var(--ink);font:inherit;cursor:pointer}
+.plan-current option{color:var(--ink);background:var(--surface)}
 
 body:is(.repository-page,.plan-workspace) #repository-table.case-list-columns{table-layout:fixed;width:100%;min-width:650px;max-width:none}
 body:is(.repository-page,.plan-workspace) #repository-table.case-list-columns{--case-list-row-height:36px}
@@ -911,36 +911,78 @@ body:is(.repository-page,.plan-workspace) #repository-table.case-list-columns th
 body.plan-workspace #repository-table.case-list-columns th:first-child{width:71%}
 body.plan-workspace #repository-table.case-list-columns th:nth-child(2){width:15%}
 body.plan-workspace #repository-table.case-list-columns th:last-child{width:14%}
-.plan-case-caption{display:grid;min-width:0;font-size:14px;line-height:18px;overflow-wrap:anywhere}
-.plan-case-caption small{font-size:11px;line-height:13px;font-weight:400;color:var(--muted)}
+.plan-case-caption{display:grid;min-width:0;font:400 14px/1.5 "Segoe UI",Arial,sans-serif;overflow-wrap:anywhere}
+.plan-list-code{display:inline-block;margin-inline-end:9px;font:400 .91em/1.5 Consolas,monospace;color:var(--muted)}
 
 
 body.plan-list-workspace .plan-inline-editor:has(.plan-step-layout){display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden}
-body.plan-workspace #workspace .repository-layout.plan-step-layout{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:auto minmax(0,1fr);gap:0;overflow:hidden}
+body.plan-workspace #workspace .repository-layout.plan-step-layout{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,3fr);grid-template-rows:auto minmax(0,1fr);column-gap:12px;overflow:hidden}
 .plan-step-layout>.repository-list{grid-column:1;grid-row:2;--case-tree-indent:9px}
+.plan-step-layout #plan-case-list tr[data-plan-case]{--case-list-row-height:28.5px}
+.plan-step-layout #plan-case-list #repository-table tr[data-plan-case]>td{padding-block:.5px}
 body.plan-workspace .plan-step-layout #plan-case-list #repository-table tbody tr>td:first-child{padding-left:calc(6px + var(--depth,0)*var(--case-tree-indent))}
 body.plan-workspace .plan-step-layout>.plan-tools{grid-area:1/1;margin:0;min-width:0}
-.plan-step-layout>.plan-tools label{min-width:min(6rem,100%);max-width:100%;flex:2 1 0}
-.plan-step-layout>.plan-tools::after{content:"";flex:1 1 0;margin-inline-start:-8px}
-body.plan-workspace .plan-step-layout>.plan-tools input[type=search]{width:100%}
+.plan-step-layout>.plan-tools label{min-width:0;flex:0 1 12rem}
+
+body.plan-workspace .plan-step-layout>.plan-tools input[type=search]{width:100%;border-radius:999px;padding-inline:14px}
 body.plan-workspace .plan-step-layout #plan-case-list #repository-table{min-width:0}
 body.plan-workspace .plan-step-layout #repository-table.case-list-columns th:first-child{width:76%}
 body.plan-workspace .plan-step-layout #repository-table.case-list-columns th:last-child{width:24%;min-width:0}
-#plan-step-preview{min-width:0;min-height:0;display:grid;grid-column:2;grid-row:1/span 2;grid-template-rows:subgrid;border-left:1px solid var(--line);background:var(--surface)}
-.plan-step-layout>.plan-tools,.plan-step-heading{padding:6px 12px;min-height:46px;background:var(--workspace-bg,var(--surface));border-bottom:1px solid var(--line)}
-.plan-step-heading{display:flex;align-items:center;justify-content:space-between;gap:8px}
-#plan-step-preview h2{font-size:16px;line-height:1.35;margin:0;min-width:0;overflow-wrap:anywhere}
-.plan-step-heading button{flex:none;white-space:nowrap}
-.plan-step-scroll{min-height:0;overflow:auto;flex:1}
-.plan-step-scroll table{width:100%;min-width:0;table-layout:auto}
-.plan-step-scroll :is(th,td){text-align:left;vertical-align:top}
-.plan-step-scroll th{position:sticky;top:0;background:var(--ground);font-size:1rem;font-weight:600;line-height:20px;padding:4px 12px;border:0}
-.plan-step-scroll td{padding:3px 12px;border:0;line-height:1.35;white-space:pre-wrap;overflow-wrap:anywhere;font-weight:400}
-.plan-step-scroll :is(th,td){border-bottom:1px solid var(--line)}
-.plan-step-scroll :is(th,td):first-child:not([colspan]){width:1%;padding-inline:6px;white-space:nowrap}
-.plan-step-scroll .checkpoint-row td:first-child{color:var(--muted)}
+#plan-step-preview{min-width:0;min-height:0;display:flex;flex-direction:column;grid-column:2;grid-row:1/span 2;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+.plan-step-layout>.plan-tools{padding:8px;border:1px solid var(--line);border-radius:8px 8px 0 0;background:#f8fafb;align-items:center}
+.plan-manage{position:relative;z-index:4;margin:0;padding:0;border:0;font:400 14px/1.5 "Segoe UI",Arial,sans-serif;color:var(--ink)}
+.plan-manage summary{cursor:pointer;display:list-item;margin:0;padding:6px 14px;font:inherit;border:1px solid var(--line);border-radius:999px;background:var(--surface)}
+.plan-header-actions button,.plan-tools>button,.plan-step-heading button{border-radius:999px;padding-inline:14px}
+.plan-manage>div{position:absolute;left:0;top:100%;min-width:150px;padding:6px;background:var(--surface);border:1px solid var(--line);box-shadow:0 5px 15px #20394c20}
+.plan-tools .plan-manage button{display:block;width:100%;min-height:0;padding:6px 10px;border:0;border-radius:999px;background:transparent;color:inherit;font:inherit;text-align:left}
+.plan-tools .plan-manage button:disabled{opacity:.44;cursor:default}
+.plan-manage :is(summary,button):focus-visible,.plan-version-update:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+/* Raised controls share the same light source across the Plan workspace. */
+.plan-controls,.plan-step-layout{
+  --plan-raised:inset 0 1px 1px #fff,0 2px 3px #1d38552e;
+  --plan-pressed:inset 0 2px 4px #1d385540,inset 0 -1px 1px #ffffffbd;
+}
+:is(.plan-header-actions button,.plan-tools>button,.plan-step-heading button,.plan-manage summary,.plan-version-update){
+  background:var(--plan-button-fill,linear-gradient(#fff,#e3ebf2));box-shadow:var(--plan-raised)
+}
+:is(.plan-header-actions button,.plan-tools button,.plan-step-heading button,.plan-manage summary,.plan-version-update):hover:not(:disabled){
+  background:var(--plan-button-hover,linear-gradient(#fff,#dce8f1));box-shadow:var(--plan-raised)
+}
+:is(.plan-header-actions button,.plan-tools button,.plan-step-heading button,.plan-manage summary,.plan-version-update):active:not(:disabled),
+.plan-tools .plan-manage[open]>summary{
+  background:var(--plan-button-active,#dbe6ee);box-shadow:var(--plan-pressed)
+}
+:is(.plan-header-actions button,.plan-tools button,.plan-step-heading button,.plan-version-update):disabled{
+  background:var(--ground);box-shadow:none
+}
+@media(prefers-reduced-motion:no-preference){
+  :is(.plan-header-actions button,.plan-tools button,.plan-step-heading button,.plan-manage summary,.plan-version-update){transition:box-shadow .12s ease-out,transform .12s ease-out}
+  :is(.plan-header-actions button,.plan-tools button,.plan-step-heading button,.plan-manage summary,.plan-version-update):active:not(:disabled){transform:translateY(1px)}
+}
+.plan-step-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:18px clamp(16px,2vw,32px) 12px}
+.plan-case-code,.plan-action-label{font:600 13px/1.5 Consolas,monospace;color:var(--accent)}
+#plan-step-preview h2{margin:2px 0 0;font-size:clamp(19px,1.7vw,27px);line-height:1.25;overflow-wrap:anywhere}
+.plan-step-heading button{flex:none}
+.plan-step-scroll{min-height:0;overflow:auto;padding:0 clamp(16px,2vw,32px) 18px}
+.plan-reading-step{padding:14px 0;border-top:1px solid var(--line)}
+.plan-reading-step h3{margin:4px 0 10px;font-size:16px;line-height:1.45}
+.plan-check{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:14px;padding:5px 0}
+.plan-check span,.plan-case-info{font-size:12px;color:var(--muted)}
+.plan-case-info{margin-inline-start:auto;align-self:center;overflow-wrap:anywhere}
+.plan-check p,.plan-reading-step h3{white-space:pre-line;overflow-wrap:anywhere}
+.plan-check p{margin:0}
+body.plan-workspace #plan-case-list #repository-table .case-selection-label:has(.plan-version-update){grid-template-columns:16px minmax(0,1fr) auto}
+.plan-version-update{
+  --plan-button-fill:linear-gradient(#fffffb,#fff9e6);
+  --plan-button-hover:linear-gradient(#fffef8,#fff7db);
+  --plan-button-active:#fbf3db;
+  grid-column:3;grid-row:1;justify-self:end;border-radius:999px;padding:1px 9px;min-height:22px;font:400 .8rem/1.5 "Segoe UI",Arial,sans-serif
+}
 .plan-step-heading button[hidden]{display:none}
-#repository-table .case-preview-current>td:first-child{box-shadow:inset 3px 0 var(--accent)}
+@media (hover:hover){
+  .plan-step-layout #plan-case-list #repository-table tr[data-plan-case]:not(.repo-selected):hover>td{background-color:color-mix(in srgb,var(--surface) 90%,var(--accent))}
+}
+.plan-step-layout #plan-case-list #repository-table tr[data-plan-case].repo-selected>td{background-color:color-mix(in srgb,var(--selected) 84%,var(--accent))}
 body.plan-workspace .plan-step-layout #repository-table.case-list-columns th:only-child{width:100%}
 
 /* Light theme: blue-gray navigation and headers frame white data surfaces. */
@@ -952,17 +994,43 @@ body.plan-workspace .plan-step-layout #repository-table.case-list-columns th:onl
   --line:#cbd8e2;
   --accent:#235e87;
   --selected:#cfe5f4;
-  --navigation-bg:#dde8ef;
+  --navigation-bg:#20394c;
   --workspace-bg:#f4f7fa;
 }
 :root:not([data-theme=dark]) #workspace{background:var(--workspace-bg)}
 :root:not([data-theme=dark]) body #navigator,
 :root:not([data-theme=dark]) body.plan-workspace:has(.plan-import-layout) #navigator{background:var(--navigation-bg)}
 :root:not([data-theme=dark]) .brand-mark{background:var(--accent)}
-:root:not([data-theme=dark]) .sidebar-navigation a[aria-current=page]{box-shadow:inset 3px 0 var(--accent)}
+#navigator .brand,#navigator .sidebar-navigation a{color:#edf5fb}
+#navigator .sidebar-navigation a:hover{background:#304f66}
+#navigator .sidebar-navigation a[aria-current=page]{background:#385e7b;color:#fff}
+#navigator a:focus-visible{outline:2px solid #acd8ff;outline-offset:-2px}
 :where(:root:not([data-theme=dark]) #workspace table){background-color:var(--surface)}
 .execution-case-name .retest-indicator{position:relative;display:inline-grid;place-items:center;flex:0 0 18px;height:18px;margin-inline-start:4px;border-radius:50%;background:var(--warn-bg);color:var(--warn);font-size:15px;line-height:1;cursor:help}
 .retest-tooltip{display:none;position:absolute;z-index:5;inset-inline-start:100%;top:50%;transform:translateY(-50%);width:max-content;max-width:15rem;padding:5px 8px;border-radius:4px;background:var(--ink);color:var(--surface);font-size:12px;line-height:1.35;text-align:start}
 .retest-indicator:is(:hover,:focus) .retest-tooltip{display:block}
 .disclosure-icon{display:inline-block;width:16px;height:16px;flex:none;vertical-align:middle;pointer-events:none}
 button[aria-expanded=true] .disclosure-icon{transform:rotate(90deg)}
+body.plan-workspace #plan-case-list #repository-table .repository-folder-row>td{vertical-align:middle}
+body.plan-workspace #plan-case-list .repository-folder-line>.folder-collapse{display:grid;place-items:center;transform:none}
+.plan-folder-toggle-icon{display:block;pointer-events:none}
+button[aria-expanded=true] .plan-folder-toggle-icon{transform:rotate(90deg)}
+
+/* Leave scrollbar placement to the platform; draw only the thumb. */
+@media (forced-colors: none){
+  :root{--scroll-thumb:rgb(69 92 110 / 45%);--scroll-hover:rgb(56 80 99 / 75%)}
+  #navigator{--scroll-thumb:rgb(228 240 249 / 50%);--scroll-hover:rgb(239 247 255 / 85%)}
+  @supports selector(::-webkit-scrollbar){
+    ::-webkit-scrollbar{width:7px;height:7px}
+    ::-webkit-scrollbar-track,::-webkit-scrollbar-corner{background:transparent}
+    ::-webkit-scrollbar-button{display:none}
+    ::-webkit-scrollbar-thumb{background:transparent;border:1px solid transparent;background-clip:padding-box;border-radius:999px}
+    [data-scroll-active]::-webkit-scrollbar-thumb{background-color:var(--scroll-thumb)}
+    ::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{background-color:var(--scroll-hover)}
+    @media(prefers-reduced-motion:no-preference){::-webkit-scrollbar-thumb{transition:background-color .18s ease-out}}
+  }
+  @supports not selector(::-webkit-scrollbar){
+    *{scrollbar-width:thin;scrollbar-color:transparent transparent}
+    [data-scroll-active],*:hover:not(:has(:hover)),*:focus-visible{scrollbar-color:var(--scroll-thumb) transparent}
+  }
+}

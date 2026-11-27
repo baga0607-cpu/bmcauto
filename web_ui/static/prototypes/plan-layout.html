@@ -1,0 +1,10 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Plan layouts · BMC Agent prototype</title>
+<link rel="stylesheet" href="plan-layout.css">
+<header><b class="brand">BMC Agent</b><span>Projects <i>/</i> Plans</span><small>Local prototype</small></header>
+<main><div class="planbar"><div><label for="plan">Test plan</label><select id="plan"></select></div><div><button data-act="add">Add Plan</button> <button data-act="edit">Edit Plan</button></div></div>
+<div id="work"></div></main>
+<nav id="variants" aria-label="比較方案"></nav>
+<dialog id="dialog"><form id="form"><h2 id="title"></h2><div id="fields"></div><footer><button type="button" data-act="close">Cancel</button><button class="primary" id="submit">Save</button></footer></form></dialog>
+<script src="plan-layout-data.js"></script><script src="plan-layout.js"></script></html>

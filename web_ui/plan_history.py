@@ -20,7 +20,7 @@ OPERATIONS = {
     'repository_add_to_plan': 'Import Test Cases',
     'repository_folder_add_to_plan': 'Import Test Cases', 'import_cases': 'Import Test Cases',
     'import_tc': 'Import Test Cases', 'delete_tc': 'Remove Test Cases',
-    'single_update': 'Update parameters',
+    'single_update': 'Update parameters', 'update_from_repository': 'Update Test Case',
 }
 
 
@@ -46,14 +46,14 @@ def snapshot(session, plan_id, order):
     for folder in folders.values():
         items['Folder', folder.id] = dict(path=path(folder.id), position=folder.position + 1)
     cases = session.query(TestCase.system_id, TestCase.display_name, TestCase.folder_id,
-                          TestCase.source_version, TestCase.settings_json).filter_by(plan_id=plan_id)
+                          TestCase.modified_at, TestCase.settings_json).filter_by(plan_id=plan_id)
     records = []
     for case in cases:
         items['Test Case', case.system_id] = dict(name=case.display_name, folder=path(case.folder_id),
-            version=case.source_version, parameters=json.loads(case.settings_json or '{}'))
+            version=case.modified_at, parameters=json.loads(case.settings_json or '{}'))
         if order:
             records.append(dict(id=case.system_id, name=case.display_name, folder_id=case.folder_id,
-                                source_version=case.source_version))
+                                modified_at=case.modified_at))
     positions = Counter()
     ordered = case_order.arrange(session, 'plan:'+plan_id, records) if records else ()
     for case in ordered:

@@ -6,8 +6,9 @@ import json
 import math
 import sys
 import uuid
-from types import ModuleType
-from datetime import datetime, timezone, timedelta
+from types import ModuleType, SimpleNamespace
+from taipei_time import TAIPEI
+from datetime import datetime, timezone
 from pathlib import Path
 from flask import jsonify, request
 from models import CaseListOrder, RepositoryHistory, RepositoryCase, RepositoryFolder, RepositoryFolderCase, TestCase, TaskTestCase
@@ -65,7 +66,7 @@ def metadata(source):
 
 
 def normalize_source_time(value, key):
-    """Original source file birth time, carried in the .py; never import/mtime."""
+    """Normalize an authored source timestamp for storage and chronological comparison."""
     if value is None:
         return None
     if not isinstance(value, str):
@@ -92,7 +93,7 @@ def stamp_source_edit(source):
     lines = raw.splitlines(keepends=True)
     def offset(line, column):
         return sum(map(len, lines[:line-1])) + column
-    stamp = repr(datetime.now(timezone.utc).isoformat(timespec='microseconds')).encode()
+    stamp = repr(datetime.now(TAIPEI).isoformat(timespec='microseconds')).encode()
     for key, value in zip(fields.keys, fields.values):
         if isinstance(key, ast.Constant) and key.value == 'modified_at':
             start, end = offset(value.lineno, value.col_offset), offset(value.end_lineno, value.end_col_offset)
@@ -110,9 +111,36 @@ def source_dates_for_case(root, tc):
         return source_dates({})
 
 
+def migrate_modified_at(conn, root):
+    """Replace legacy import generations using the independent sources in this workspace."""
+    columns = {r[1] for r in conn.execute('PRAGMA table_info(repository_cases)')}
+    if 'source_version' in columns:
+        conn.execute("""CREATE TABLE repository_cases_new (
+            id VARCHAR(36) PRIMARY KEY NOT NULL, name VARCHAR(255) NOT NULL,
+            modified_at VARCHAR(50), source_text TEXT NOT NULL)""")
+        for identity, name, source in conn.execute('SELECT id,name,source_text FROM repository_cases'):
+            try:
+                stamp = metadata(source).get('modified_at')
+            except (SyntaxError, ValueError, ps.StateError):
+                stamp = None
+            conn.execute('INSERT INTO repository_cases_new VALUES (?,?,?,?)', (identity,name,stamp,source))
+        conn.execute('DROP TABLE repository_cases')
+        conn.execute('ALTER TABLE repository_cases_new RENAME TO repository_cases')
+    columns = {r[1] for r in conn.execute('PRAGMA table_info(testcases)')}
+    if 'source_version' in columns:
+        conn.execute('DROP INDEX IF EXISTS uq_testcases_plan_name_version')
+        conn.execute('ALTER TABLE testcases RENAME COLUMN source_version TO modified_at')
+        conn.execute('UPDATE testcases SET modified_at=NULL')
+        if {'script_path', 'script_kind'} <= columns:
+            for identity, path in conn.execute("SELECT system_id,script_path FROM testcases WHERE script_kind='single'"):
+                case = SimpleNamespace(script_path=path, script_kind='single')
+                stamp = source_dates_for_case(root, case)['source_modified_at']
+                conn.execute('UPDATE testcases SET modified_at=? WHERE system_id=?', (stamp,identity))
+
+
 def repository_info(row):
     meta = metadata(row.source_text)
-    return dict(id=row.id, name=row.name, source_version=row.source_version,
+    return dict(id=row.id, name=row.name, modified_at=row.modified_at,
                 **source_dates(meta), metadata=meta)
 
 
@@ -196,7 +224,7 @@ def repository_snapshot(session):
         items[folder['id']] = {key: folder[key] for key in ('folder_path', 'position')}
     for row, folder in session.query(RepositoryCase, RepositoryFolderCase.folder_id).join(
             RepositoryFolderCase, RepositoryFolderCase.repository_id == RepositoryCase.id):
-        items[row.id] = dict(name=row.name, folder=items[folder]['folder_path'], version=row.source_version)
+        items[row.id] = dict(name=row.name, folder=items[folder]['folder_path'], version=row.modified_at)
     for order in session.query(CaseListOrder).filter_by(scope='repository'):
         items['order:'+order.folder] = dict(folder=items.get(order.folder, {}).get('folder_path'), order=json.loads(order.case_ids))
     return items
@@ -241,7 +269,7 @@ def register(app, runtime):
     def repository_list(s, data):
         return jsonify(co.arrange(s,'repository',[dict(**repository_info(row),
                              folder_id=(s.get(RepositoryFolderCase,row.id).folder_id if s.get(RepositoryFolderCase,row.id) else None))
-                        for row in s.query(RepositoryCase).order_by(RepositoryCase.source_version.desc())]))
+                        for row in s.query(RepositoryCase).order_by(RepositoryCase.modified_at.desc())]))
 
     @route('/api/repository/testcases', ['POST'])
     def repository_import(s, data):
@@ -249,17 +277,13 @@ def register(app, runtime):
         if not isinstance(source, str) or not source.strip():
             raise ps.StateError('Provide Python source from a .py file')
         meta = metadata(source)
-        imported_at = datetime.now(timezone.utc)
-        version = imported_at.isoformat(timespec='microseconds')
-        while s.query(RepositoryCase).filter_by(source_version=version).first():
-            imported_at += timedelta(microseconds=1)
-            version = imported_at.isoformat(timespec='microseconds')
-        row = RepositoryCase(id=str(uuid.uuid4()), name=meta['name'].strip(), source_version=version, source_text=source)
+        row = RepositoryCase(id=str(uuid.uuid4()), name=meta['name'].strip(),
+                             modified_at=meta.get('modified_at'), source_text=source)
         s.add(row); s.flush()
         folder=ps.require(s,RepositoryFolder,data.get('folder_id') or rt.ROOT)
         s.add(RepositoryFolderCase(repository_id=row.id,folder_id=folder.id))
         s.flush()
-        return jsonify(id=row.id, name=row.name, source_version=row.source_version, **source_dates(meta)), 201
+        return jsonify(id=row.id, name=row.name, modified_at=row.modified_at, **source_dates(meta)), 201
 
     @route('/api/repository/testcases/<repository_id>', ['GET'])
     def repository_read(s, data, repository_id):
@@ -322,7 +346,7 @@ def register(app, runtime):
     @route('/api/repository/testcases/<repository_id>', ['PUT'])
     def repository_replace(s, data, repository_id):
         row = ps.require(s, RepositoryCase, repository_id)
-        if data.get('previous_version') != row.source_version:
+        if 'previous_modified_at' not in data or data['previous_modified_at'] != row.modified_at:
             raise ps.StateError('The Test Case changed. Reopen the replacement dialog.', 409)
         source = data.get('source')
         if not isinstance(source, str):
@@ -330,17 +354,17 @@ def register(app, runtime):
         if source == row.source_text:
             raise ps.StateError('Replacement rejected: the Python source is identical to the current Test Case.', 409)
         meta = metadata(source)
-        version = datetime.now(timezone.utc)
-        while s.query(RepositoryCase).filter_by(source_version=version.isoformat()).first():
-            version += timedelta(microseconds=1)
-        row.name, row.source_text, row.source_version = meta['name'].strip(), source, version.isoformat()
-        return jsonify(id=row.id, name=row.name, source_version=row.source_version)
+        stamp = meta.get('modified_at')
+        if not stamp or (row.modified_at and stamp <= row.modified_at):
+            raise ps.StateError('Update TEST_CASE.modified_at to a later modification time.', 409)
+        row.name, row.source_text, row.modified_at = meta['name'].strip(), source, stamp
+        return jsonify(id=row.id, name=row.name, modified_at=row.modified_at)
 
     def copy_case(s,row,plan_id,folder,paths):
         identity=str(uuid.uuid4());meta=metadata(row.source_text)
         tc=TestCase(system_id=identity,display_name=row.name,plan_id=plan_id,
                     script_path=f'testcase_database.scripts.{identity}',script_kind='single',repository_id=row.id,
-                    source_version=row.source_version,settings_json=json.dumps({k:v['default'] for k,v in meta.get('parameters',{}).items()}),settings_revision=0)
+                    modified_at=row.modified_at,settings_json=json.dumps({k:v['default'] for k,v in meta.get('parameters',{}).items()}),settings_revision=0)
         if folder is None: tc.position=s.query(TestCase).filter_by(plan_id=plan_id,folder_id=None).count()
         s.add(tc);s.flush();ps.assign_folder(s,tc,folder)
         path=script_file(runtime['MAIN_PROGRAM_DIR'],tc)
@@ -369,7 +393,7 @@ def register(app, runtime):
     def repository_folder_add_to_plan(s,data,plan_id,folder_id):
         s.info['plan_import_origin'] = {'type': 'repository'}
         ps.unlocked(s,plan_id);source_folder=ps.require(s,RepositoryFolder,folder_id)
-        rows=s.query(RepositoryCase).join(RepositoryFolderCase,RepositoryFolderCase.repository_id==RepositoryCase.id).filter(RepositoryFolderCase.folder_id.in_(rt.subtree(s,folder_id))).order_by(RepositoryCase.source_version.desc()).all()
+        rows=s.query(RepositoryCase).join(RepositoryFolderCase,RepositoryFolderCase.repository_id==RepositoryCase.id).filter(RepositoryFolderCase.folder_id.in_(rt.subtree(s,folder_id))).order_by(RepositoryCase.modified_at.desc()).all()
         names={tc.normalized_name for tc in s.query(TestCase).filter_by(plan_id=plan_id)}
         added=[];skipped=[];paths=[]
         try:
@@ -387,6 +411,93 @@ def register(app, runtime):
         except Exception:
             s.rollback();remove_copies(paths);raise
         return jsonify(folder_id=folder.id,folder_name=folder.name,added=[tc.to_dict() for tc in added],skipped=skipped),201
+
+    @route('/api/plans/<plan_id>/case-versions', ['GET'])
+    def plan_case_versions(s, data, plan_id):
+        plan = ps.require(s, ps.ProjectPlan, plan_id)
+        results = []
+        for tc in co.plan_rows(s, plan_id, plan.testcases):
+            item = dict(id=tc.system_id, repository_id=tc.repository_id, name=tc.display_name, plan_modified=None, repository_modified=None, status='Unavailable')
+            results.append(item)
+            if tc.script_kind != 'single':
+                continue
+            try:
+                source = script_file(runtime['MAIN_PROGRAM_DIR'], tc).read_text(encoding='utf-8')
+                meta = metadata(source)
+                item['plan_modified'] = meta.get('modified_at')
+                reference = s.get(RepositoryCase, tc.repository_id) if tc.repository_id else None
+                if reference is None:
+                    item['status'] = 'Not in repository'
+                    continue
+                local = item['plan_modified']
+                remote = item['repository_modified'] = reference.modified_at
+                if local and remote:
+                    if remote > local:
+                        item['status'] = 'Repository update available'
+                    elif local > remote:
+                        item['status'] = 'Plan source modified'
+                    elif source == reference.source_text.replace('\r\n', '\n').replace('\r', '\n'):
+                        item['status'] = 'Up to date'
+                    else:
+                        item['status'] = 'Different source'
+            except (OSError, UnicodeError, SyntaxError, ps.StateError):
+                continue
+        return jsonify(results)
+
+    def overwrite_source(s, tc, path, previous_source, source, settings):
+        s.info.setdefault('plan_import_overwrites', set()).add(tc.display_name)
+        reasons = []
+        if json.loads(tc.settings_json or '{}') != settings:
+            reasons.append('Parameter Modified')
+        if previous_source != source:
+            reasons.append('Case Modified')
+            s.info.setdefault('plan_source_changes', []).append(dict(kind='Test Case', item=tc.display_name,
+                before={'source': 'Previous Python source'}, after={'source': 'Replaced during import'}))
+        tc.settings_revision=(tc.settings_revision or 0)+1
+        for membership in s.query(TaskTestCase).filter_by(testcase_id=tc.system_id):
+            if membership.executed_at or membership.result_json or membership.manual_override_json or membership.status in ('Passed','Failed','Block','CP','C-PASS'):
+                membership.mark_for_retest(*(reasons or ['Case Overwritten']))
+        path.write_text(source,encoding='utf-8')
+
+    @route('/api/plans/<plan_id>/testcases/<tc_id>/repository-update', ['POST'])
+    def update_from_repository(s, data, plan_id, tc_id):
+        if data.get('confirm') is not True:
+            raise ps.StateError('Confirm the Test Case update.')
+        ps.begin_write(s)
+        ps.unlocked(s, plan_id)
+        tc = ps.require(s, TestCase, tc_id)
+        if tc.plan_id != plan_id or tc.script_kind != 'single':
+            raise ps.StateError('Test Case is unavailable in this Plan.', 404)
+        reference = ps.require(s, RepositoryCase, tc.repository_id)
+        path = script_file(runtime['MAIN_PROGRAM_DIR'], tc)
+        original = path.read_bytes()
+        previous = original.decode('utf-8')
+        local = metadata(previous).get('modified_at')
+        remote = reference.modified_at
+        if (reference.id != data.get('repository_id') or not local or not remote or remote <= local
+                or local != data.get('plan_modified') or remote != data.get('repository_modified')):
+            raise ps.StateError('The versions changed. Run Check Version again.', 409)
+        meta = metadata(reference.source_text)
+        current = json.loads(tc.settings_json or '{}')
+        settings = {}
+        for key, spec in meta.get('parameters', {}).items():
+            value = current.get(key, spec['default'])
+            try:
+                validate_settings({'parameters': {key: spec}}, {key: value})
+            except ps.StateError:
+                value = spec['default']
+            settings[key] = value
+        s.info['plan_import_origin'] = {'type': 'repository'}
+        try:
+            overwrite_source(s, tc, path, previous, reference.source_text, settings)
+            tc.modified_at = remote
+            tc.settings_json = json.dumps(settings, ensure_ascii=False)
+            s.commit()
+        except Exception:
+            s.rollback()
+            path.write_bytes(original)
+            raise
+        return jsonify(id=tc_id, modified_at=remote)
 
     @route('/api/plans/<plan_id>/import-cases', ['POST'])
     def import_cases(s,data,plan_id):
@@ -425,20 +536,20 @@ def register(app, runtime):
         def read_item(row):
             if source_type=='repository':
                 meta=metadata(row.source_text)
-                item=dict(id=row.id,name=row.name,source=row.source_text,version=row.source_version,
+                item=dict(id=row.id,name=row.name,source=row.source_text,version=row.modified_at,
                           settings={k:v['default'] for k,v in meta.get('parameters',{}).items()},repository_id=row.id)
             else:
                 if row.plan_id!=source_plan: raise ps.StateError('Case belongs to another source Plan')
                 if row.script_kind!='single': raise ps.StateError('Only single-file Test Cases can be imported')
                 definition_data=definition(runtime['MAIN_PROGRAM_DIR'],row);meta=definition_data['metadata']
-                item=dict(id=row.system_id,name=row.display_name,source=definition_data['source'],version=row.source_version,
+                item=dict(id=row.system_id,name=row.display_name,source=definition_data['source'],version=row.modified_at,
                           settings=validate_settings(meta,definition_data['settings']),repository_id=row.repository_id)
             item['canonical']=meta['name'].strip().casefold();incoming.append(item);return item
         def read_folder(identity):
             if source_type=='repository':
                 folder=ps.require(s,RepositoryFolder,identity)
                 children=[n.folder_id for n in rt.siblings(s,identity)]
-                rows=s.query(RepositoryCase).join(RepositoryFolderCase,RepositoryFolderCase.repository_id==RepositoryCase.id).filter(RepositoryFolderCase.folder_id==identity).order_by(RepositoryCase.source_version.desc(),RepositoryCase.id).all()
+                rows=s.query(RepositoryCase).join(RepositoryFolderCase,RepositoryFolderCase.repository_id==RepositoryCase.id).filter(RepositoryFolderCase.folder_id==identity).order_by(RepositoryCase.modified_at.desc(),RepositoryCase.id).all()
             else:
                 folder=ps.require(s,ps.PlanFolder,identity)
                 if folder.plan_id!=source_plan: raise ps.StateError('Folder belongs to another source Plan')
@@ -472,20 +583,20 @@ def register(app, runtime):
         for tc in s.query(TestCase).filter_by(plan_id=plan_id).order_by(TestCase.system_id):
             try: source=script_file(runtime['MAIN_PROGRAM_DIR'],tc).read_text(encoding='utf-8');canonical=metadata(source)['name'].strip().casefold()
             except (OSError,UnicodeError,SyntaxError,ps.StateError): source='';canonical=tc.normalized_name
-            existing.append(dict(id=tc.system_id,name=tc.display_name,canonical=canonical,source_version=tc.source_version,**source_dates_for_case(runtime['MAIN_PROGRAM_DIR'],tc),
-                                 token=fingerprint(source,json.loads(tc.settings_json or '{}'),tc.source_version)))
+            existing.append(dict(id=tc.system_id,name=tc.display_name,canonical=canonical,modified_at=tc.modified_at,**source_dates_for_case(runtime['MAIN_PROGRAM_DIR'],tc),
+                                 token=fingerprint(source,json.loads(tc.settings_json or '{}'),tc.modified_at)))
             actual[tc.system_id]=tc
         conflicts=[];used_names={x['name'].casefold() for x in existing}
         for item in incoming:
             matches=[x for x in existing if x['canonical']==item['canonical'] or x['name'].casefold()==item['name'].casefold()]
-            same=[x for x in matches if x['source_version']==item['version']]
+            same=[x for x in matches if x['modified_at']==item['version']]
             candidates=same or matches;decision=decisions.get(item['id'],{})
             item['action']='new'
             if candidates:
                 valid_target=next((x for x in candidates if x['id']==decision.get('target_id') and x['token']==decision.get('target_token')),None)
                 valid=valid_target and decision.get('action') in (('overwrite','skip') if same else ('overwrite','coexist','skip'))
                 if not valid:
-                    conflicts.append(dict(id=item['id'],name=item['name'],source_version=item['version'],same_version=bool(same),targets=candidates));continue
+                    conflicts.append(dict(id=item['id'],name=item['name'],modified_at=item['version'],same_version=bool(same),targets=candidates));continue
                 item['action']=decision['action'];item['target_id']=valid_target['id']
                 if item['action']=='skip':continue
             if item['action']=='overwrite':
@@ -493,33 +604,21 @@ def register(app, runtime):
             else:
                 name=item['name'];item['display_name']=name
                 descriptor=dict(id='incoming:'+item['id'],name=name);existing.append(descriptor)
-            descriptor.update(canonical=item['canonical'],source_version=item['version'],token=fingerprint(item['source'],item['settings'],item['version']))
+            descriptor.update(canonical=item['canonical'],modified_at=item['version'],token=fingerprint(item['source'],item['settings'],item['version']))
         if conflicts:return jsonify(error='Resolve Test Case conflicts before importing.',conflicts=conflicts),409
         paths=[];originals={};added=[];updated=[];skipped=[]
         def apply_item(item,folder):
             if item['action']=='skip':skipped.append(item['name']);return
             if item['action']=='overwrite':
                 tc=actual[item['target_id']];path=script_file(runtime['MAIN_PROGRAM_DIR'],tc)
-                s.info.setdefault('plan_import_overwrites', set()).add(tc.display_name)
                 previous_source = path.read_text(encoding='utf-8')
                 originals.setdefault(path, previous_source)
-                reasons = []
-                if json.loads(tc.settings_json or '{}') != item['settings']:
-                    reasons.append('Parameter Modified')
-                if previous_source != item['source']:
-                    reasons.append('Case Modified')
-                if originals[path] != item['source']:
-                    s.info.setdefault('plan_source_changes', []).append(dict(kind='Test Case', item=tc.display_name,
-                        before={'source': 'Previous Python source'}, after={'source': 'Replaced during import'}))
-                tc.settings_revision=(tc.settings_revision or 0)+1
-                for membership in s.query(TaskTestCase).filter_by(testcase_id=tc.system_id):
-                    if membership.executed_at or membership.result_json or membership.manual_override_json or membership.status in ('Passed','Failed','Block','CP','C-PASS'):
-                        membership.mark_for_retest(*(reasons or ['Case Overwritten']))
-                path.write_text(item['source'],encoding='utf-8');updated.append(tc)
+                overwrite_source(s, tc, path, previous_source, item['source'], item['settings'])
+                updated.append(tc)
             else:
-                row=RepositoryCase(name=item['display_name'],source_text=item['source'],source_version=item['version'])
+                row=RepositoryCase(name=item['display_name'],source_text=item['source'],modified_at=item['version'])
                 tc=copy_case(s,row,plan_id,folder,paths);actual['incoming:'+item['id']]=tc;added.append(tc)
-            tc.repository_id=item['repository_id'];tc.source_version=item['version']
+            tc.repository_id=item['repository_id'];tc.modified_at=item['version']
             tc.settings_json=json.dumps(item['settings'],ensure_ascii=False)
         def apply_folder(node,parent):
             parent_id=parent.id if parent else None
@@ -585,6 +684,7 @@ def register(app, runtime):
         if source != original:
             reasons.append('Case Modified')
         if reasons:
+            tc.modified_at = meta.get('modified_at')
             tc.settings_json = json.dumps(settings, ensure_ascii=False)
             tc.settings_revision = (tc.settings_revision or 0) + 1
             for membership in s.query(TaskTestCase).filter_by(testcase_id=tc_id):

@@ -10,7 +10,7 @@ class CaseVersionMigrationTest(unittest.TestCase):
         engine=create_engine('sqlite://')
         with engine.connect() as conn:
             conn.exec_driver_sql('PRAGMA foreign_keys=OFF');conn.commit()
-            conn.exec_driver_sql("CREATE TABLE testcases (system_id TEXT PRIMARY KEY, plan_id TEXT, normalized_name TEXT, source_version TEXT, CONSTRAINT uq_testcases_plan_normalized_name UNIQUE (plan_id, normalized_name))")
+            conn.exec_driver_sql("CREATE TABLE testcases (system_id TEXT PRIMARY KEY, plan_id TEXT, normalized_name TEXT, modified_at TEXT, CONSTRAINT uq_testcases_plan_normalized_name UNIQUE (plan_id, normalized_name))")
             conn.exec_driver_sql('CREATE TABLE evidence (id TEXT, testcase_id TEXT REFERENCES testcases(system_id) ON DELETE CASCADE, log TEXT)')
             conn.exec_driver_sql('CREATE INDEX case_plan_idx ON testcases(plan_id)')
             conn.exec_driver_sql('CREATE UNIQUE INDEX uq_testcases_plan_normalized_name ON testcases(plan_id,normalized_name)')

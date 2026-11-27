@@ -33,7 +33,7 @@ dialog.task-info-drawer .task-drawer-body { grid-template-columns: minmax(0,1fr)
 .task-drawer-body > nav { display:flex; flex-direction:column; gap:4px; padding:12px 8px; background:var(--ground); border-right:1px solid var(--line); }
 .task-drawer-body > nav button { text-align:left; border:0; background:transparent; padding:9px 10px; }
 .task-drawer-body > nav button[aria-selected=true] { background:var(--selected); color:var(--accent); }
-#task-drawer-content { padding:16px 18px; overflow:auto; min-width:0; scrollbar-color:var(--line) var(--surface); }
+#task-drawer-content { padding:16px 18px; overflow:auto; min-width:0; }
 #task-drawer-content h2 { font-size:15px; margin:16px 0 10px; }
 #task-drawer-content h2:first-child { margin-top:0; }
 #task-drawer-content form { margin:0; padding:0; border:0; background:transparent; max-width:none; }

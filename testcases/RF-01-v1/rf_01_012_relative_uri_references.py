@@ -1,5 +1,5 @@
 TEST_CASE = {
-    "modified_at": "2026-11-26T05:42:12.574147+00:00",
+    "modified_at": "2026-11-27T15:33:42.839835+08:00",
     "test_type": "compliance",
     "spec_ref": [
         "DSP0266 v1.25.0 section 6.1",
@@ -8,7 +8,7 @@ TEST_CASE = {
         "RFC 8288 Appendix B.3 (compatible parsing).",
         "RFC 8288 section 3 (Link parameter syntax)"
     ],
-    "created_at": "2026-10-30T07:19:35.437164+00:00",
+    "created_at": "2026-10-30T15:19:35.437164+08:00",
     "name": "RF-01-012 Relative URI References",
     "description": "Inspect discovered Body and GET-response header URI references for the Redfish relative-reference form requirement.",
     "command_routes": {

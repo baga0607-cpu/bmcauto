@@ -1,5 +1,5 @@
 TEST_CASE = {
-    "modified_at": "2026-11-26T05:42:12.574147+00:00",
+    "modified_at": "2026-11-27T15:33:42.839835+08:00",
     "test_type": "compliance",
     "spec_ref": [
         "DSP0266 v1.25.0 section 6.6",
@@ -8,7 +8,7 @@ TEST_CASE = {
         "DSP0266 v1.25.0 section 9.6.2 (resource identity)",
         "DSP0266 v1.25.0 section 9.6.3 (resource type)"
     ],
-    "created_at": "2026-10-19T01:23:29.401576+00:00",
+    "created_at": "2026-10-19T09:23:29.401576+08:00",
     "name": "RF-01-002 Service Root Endpoint",
     "description": "Verify that /redfish/v1/ returns a ServiceRoot JSON object with the expected resource URI. Record RedfishVersion if present, without evaluating its value.",
     "command_routes": {

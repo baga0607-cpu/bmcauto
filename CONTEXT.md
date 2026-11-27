@@ -1,6 +1,8 @@
 2026-11-13 新對話入口：[完整交接文件](docs/status/2026-11-13-next-chat-handoff.md)。包含已推送內容、部署/同步待辦與尚待確認的 Checkpoint 摘要方案。
 
-2026-11-13: Reports omit Case-level Note fallback rows; step notes and saved evidence remain unchanged. RF-01-011 schema retrieval revision is tracked; deployment and installed Repository/Plan synchronization remain pending. See docs/status/2026-11-13-cross-chat-integration.md.
+2026-11-13 superseding report decision: omit Case-level note fallback rows entirely; retain step notes and saved evidence. 19 tests passed; formal-service deployment pending. See [status](docs/status/2026-11-13-report-note-association.md).
+
+2026-11-13 report note association: complete step-note blocks are excluded from aggregate Case notes before rendering the historical fallback row. 18 tests passed; formal-service deployment pending. See [status](docs/status/2026-11-13-report-note-association.md).
 
 2026-11-12 latest report: Case Name is the only disclosure; Test Data and Test Information expand together. Result Summary and standalone Note removed, method table retained under Test Data. Formal service updated at 16:17. See [report hierarchy](docs/status/2026-11-12-report-hierarchy.md).
 
@@ -15,6 +17,22 @@
 2026-11-12 report update supersedes earlier omission of method tables: HTML/PDF include compact ID / Type / Description / Result rows for Step, Checkpoint and Record, with explicit source-step links and recorded statuses. Cases remain initially collapsed; opening shows Test Data. See docs/status/2026-11-12-report-method-results.md.
 
 # BMC Agent Test Management
+
+2026-11-11 latest Task Info: 560px drawer; Overview bottom explanations removed. Existing Task date/status fields open Task List's shared editor on single click, with required Note in the same dialog. No inline mandatory Note. See docs/status/2026-11-11-task-info-compact-scope.md.
+
+2026-11-11: Task Info uses tighter spacing and half-width Overview controls. iDesign Request ID/Link are direct Overview fields. Scope now mirrors the Plan folder tree, with expand/collapse and folder selection; no Folder column. See docs/status/2026-11-11-task-info-compact-scope.md.
+
+2026-11-10 follow-up: New Task uses the Task Info drawer. Task deletion requires a Note reason and sets status Deleted while retaining Task scope/results/logs; ordinary lists exclude Deleted. Overview/Connection use one inline label/field per row. Note records remain expanded newest-first. See docs/status/2026-11-10-task-create-soft-delete.md.
+
+2026-11-10 Task Info supersedes the earlier full-page/read-only design. Task Name opens a right drawer over Task List. Test Tasks expose Overview, Scope, Connection, DUT Config and Note; Plan Tasks expose Overview and Note. Direct editing uses per-page Save/Discard and unsaved navigation prompts. History presentation inside Task Info is called Note; existing stored records/API keys remain compatible. Connection has seven visible fields mapped onto the existing Task environment. Task List exposes independent Assignee and Status columns. My Task is retired, and the application interface is English only. See docs/status/2026-11-10-task-info-drawer.md.
+
+Latest report visual decision: Formal Document layout. Case Name/location, Description, Result Summary, PASS/FAIL and Log attachment access are primary and always visible. Only Task/FW/Tester/Execution Date metadata collapses. HTML and browser-print styling use this hierarchy.
+
+2026-10-30 latest report decision: HTML is default, delivered in ZIP with separate logs directory. No inline log content or preview; Open attachment opens the standalone .log. Secondary case information collapses. Optional server PDF retains embedded logs; HTML print expands metadata but does not embed logs. Execution Date is human-readable UTC+08:00. See docs/status/2026-10-30-html-report.md.
+
+2026-10-30 compact PDF report supersedes Worksheet 1 method tables: no Detail Test Method; show bounded recorded Result Summary and retain complete log attachments, metadata and manual/retest notes. Explicit step evidence is still recorded in full logs/results. Final/Reference winner rules unchanged. See docs/status/2026-10-30-compact-report.md.
+
+2026-10-30 workspace performance: Project/Task summaries omit evidence and defer large DB columns. Log dialogs fetch one case on demand, retaining complete Export and bounded preview. Execution polls every 2 seconds active, 15 seconds idle (two-second scheduler), 30 seconds hidden. Stored evidence and full-result APIs remain intact. See docs/status/2026-10-30-workspace-summary-performance.md.
 
 This context defines the language used to organize reusable test cases and execute test work in BMC Agent.
 
@@ -53,10 +71,10 @@ A lineage shared across Plan-local test case copies through `family_id`. An exac
 _Avoid_: Treating `system_id` as cross-Plan identity
 
 **Test Case Repository**:
-A store of standard single-file Python Test Cases. Every import receives a UTC timestamp identifying its source generation. Loading a Repository Test Case into a Plan copies its Python source and creates independent editable settings.
+A store of standard single-file Python Test Cases. A Repository ID identifies the source. Its authored modified_at identifies the revision. Loading a Repository Test Case into a Plan copies its Python source and creates independent editable settings.
 
 **Source Generation**:
-The Repository import timestamp identifying the test method generation. Plan-specific adaptations never change this timestamp.
+The normalized TEST_CASE.modified_at of the Python source. Copies and parameter edits preserve it. Source edits advance it.
 
 **Plan Test Case Settings**:
 Parameters declared by a Test Case and edited only in its Plan. Every Task references the latest Plan definition when executing. Plan changes mark retained existing results as needing a rerun; results and logs remain available.
@@ -159,7 +177,7 @@ A Task Report represents one current Task. A Final Report merges eligible curren
 **Report Step Evidence** (2026-10-28): one structured Step / Criteria / Result row emitted by context['log'].step. It describes a performed action and observation; it is not an executable step definition or execution-history entity. Missing fields display —. A latest result may retain its literal description/test_method declaration for reporting. Same-Plan Final Report copies the winning membership evidence and uses that source Task's current FW Package and Assignee. DUT Configuration is a label only. See docs/agents/report-step-output.md.
 
 
-**Source File Creation Time** (2026-10-28): the original .py file birth time, carried as literal TEST_CASE.created_at with a timezone and serialized as source_created_at. Display this in Repository, Plan/source import and Task scope. Preserve it when copying/adapting the same source. Unknown time is —; never infer it from import time or modification time. Source Generation remains the separate internal immutable import key used for lineage/conflicts; it is no longer the file timestamp shown to the user.
+**Source File Creation Time** (2026-10-28): the original .py file birth time, carried as literal TEST_CASE.created_at with a timezone and serialized as source_created_at. Display this in Repository, Plan/source import and Task scope. Preserve it when copying/adapting the same source. Unknown time is —; never infer it from import time or modification time. Revision comparisons use the source modification timestamp; it is no longer the file timestamp shown to the user.
 
 
 **Task Info Sections** (2026-10-28): Content owns assignment/setup/dates/references/firmware; Note & History owns notes and existing change history. Test Tasks additionally expose Scope, Connection and the reserved DUT Config section, in that order. Plan Tasks expose neither test scope nor connection/DUT sections. DUT Configuration remains a label without fill rules. This changes information presentation, not Task ownership, scope or execution semantics.
@@ -204,3 +222,19 @@ A Task Report represents one current Task. A Final Report merges eligible curren
 2026-10-29 latest Plan layout: title/Project subtitle, Plan tabs, toolbar (search/Import/Rename/Delete), Case list.
 
 2026-10-30: Read docs/status/2026-10-30-handoff.md. Service started; source updates published to baga0607-cpu/bmcauto main (d3cb74a). Use the publication checkout, never retired origin. Viewer/Editor only dock on the right. Runtime assets and existing binary fixture changes remain local.
+
+
+2026-10-30 Execution controls: Task tabs lead directly into a fixed toolbar and full-width case table. Scope, Connection, Result Annotation, Plan-owned parameters and Test log use bound dialogs. Filter visible cases by automatic vs semi_automatic/manual; batch selection/run uses visible scope. Any active Task locks execution checkboxes. Row Stop stops only the running case and continues the queue; toolbar Stop ends the Task/remaining queue. Stopped cases retain NR/evidence and are not rerun by Resume monitoring. Live Log keeps operator prompts. Supersedes the right-side Execution evidence pane and Task Info/Test Plans links. See docs/status/2026-10-30-execution-controls.md.
+
+2026-10-30 Plan scroll correction: full-viewport shell, fixed title/tabs/toolbar, case-list-only scrolling. The Plan list bottom gap is now 10px, superseding 24px. See docs/status/2026-10-30-plan-scroll.md.
+
+2026-10-30 Execution Log performance: streaming renders coalesce at 100 ms; Log preview shows at most the latest 65,536 characters with a visible notice, while Export retains the full snapshot. See docs/status/2026-10-30-execution-log-hang.md for renderer-hang reproduction and validation.
+
+
+## 2026-11-02 RF-01-008／013 與結果 Note
+
+依 DSP0266 1.25.0、DSP0268 2026.2 更新：008 明確 HTTP 404 為 PASS＋Note；013 接受宣告的其他合法本機 Schema 位置，缺少 /Schemas/ 建議入口證據不再單獨使測項 Fail。必要內容／取得／探索錯誤仍失敗。平台 CaseLog、結果儲存及 Execution Note 已完成並套用；新增兩份 Repository 版本、更新兩份無人工邏輯差異的 Plan 副本，保留所有既有結果／Log 並標記重測。未測 DUT、未發布 GitHub。HTML/PDF 報告格式依使用者要求另在新對話討論，渲染程式未變。詳見 docs/status/2026-11-02-result-note.md。
+
+2026-11-02 approved report layout supersedes report-layout deferral: default collapsed HTML cases with Bahnschrift 22px/600 headings and same-row status; Test Data (Description/Result Summary/Note/Spec Ref./Log) and Test Information (Task Name/Tester/Execution Time/FW Package/DUT Configuration). PDF fully expands these fields and retains embedded logs. See docs/status/2026-11-02-approved-report-layout.md. Execution Note storage remains unchanged.
+
+2026-11-02: Source creation time is retained separately from source modification time. Display modified_at when present, otherwise created_at. See docs/status/2026-11-02-source-dates.md.

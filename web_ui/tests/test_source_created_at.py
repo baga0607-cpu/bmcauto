@@ -17,7 +17,7 @@ class SourceCreatedAtTest(unittest.TestCase):
         self.assertEqual(response.status_code,201,response.get_json());self.repository=response.get_json()
         expected='2020-01-01T19:04:05.123456+00:00'
         self.assertEqual(self.repository['source_created_at'],expected)
-        self.assertNotEqual(self.repository['source_version'],expected)
+        self.assertNotEqual(self.repository['modified_at'],expected)
         listing=self.client.get('/api/repository/testcases').get_json()
         self.assertEqual(next(r for r in listing if r['id']==self.repository['id'])['source_created_at'],expected)
         tc=self.add_case();definition=self.definition(tc)
@@ -38,7 +38,7 @@ class SourceCreatedAtTest(unittest.TestCase):
     def test_unknown_never_falls_back_to_import_or_copy_time(self):
         self.assertIsNone(self.repository['source_created_at'])
         tc=self.add_case();self.assertIsNone(self.definition(tc)['source_created_at'])
-        self.assertTrue(self.repository['source_version'])
+        self.assertIsNone(self.repository['modified_at'])
 
     def test_modified_time_tracks_source_edits_only(self):
         source = self.source('2020-01-02T00:00:00Z').replace("'name':", "'modified_at': '2021-01-01T08:00:00+08:00', 'name':", 1)
@@ -61,3 +61,46 @@ class SourceCreatedAtTest(unittest.TestCase):
                 response=self.client.post('/api/repository/inspect',json={'source':self.source(value)})
                 self.assertEqual(response.status_code,400,response.get_json())
         self.assertEqual(metadata(self.source('2020-01-02T03:04:05Z'))['created_at'],'2020-01-02T03:04:05.000000+00:00')
+
+    def test_plan_checks_linked_id_and_preserves_subsecond_versions(self):
+        first = '2026-01-01T12:00:00.000001+08:00'
+        second = '2026-01-01T12:00:00.000002+08:00'
+        source = fixtures.SOURCE.replace("'name':", f"'modified_at': '{first}', 'name':")
+        repository = '/api/repository/testcases'
+        self.repository = self.client.post(repository, json={'source': source}).get_json()
+        tc = self.add_case()
+        replacement = source.replace(first, second)
+        self.client.post(repository, json={'source': replacement})
+        def status():
+            return self.client.get('/api/plans/a/case-versions').get_json()[0]['status']
+        self.assertEqual(status(), 'Up to date')
+        target = repository + '/' + self.repository['id']
+        payload = {'source': replacement, 'previous_modified_at': tc['modified_at']}
+        self.assertEqual(self.client.put(target, json=payload).status_code, 200)
+        self.assertEqual(self.client.put(target, json=payload).status_code, 409)
+        self.assertEqual(status(), 'Repository update available')
+        self.client.delete(target, json={'confirm': True})
+        self.assertEqual(status(), 'Not in repository')
+
+    def test_update_requires_confirmation_and_updates_only_checked_copy(self):
+        source = fixtures.SOURCE.replace("'name':", "'modified_at': '2026-01-01T00:00:00Z', 'name':")
+        self.repository = self.client.post('/api/repository/testcases', json={'source': source}).get_json()
+        tc = self.add_case()
+        peer = self.add_case('b')
+        settings = dict(self.definition(tc)['settings'], expected=204)
+        self.update(tc, {'settings': settings, 'settings_revision': 0})
+        target = '/api/repository/testcases/' + self.repository['id']
+        newer = source.replace('2026-01-01','2026-02-01')
+        self.assertEqual(self.client.put(target, json={'source': newer,
+            'previous_modified_at': tc['modified_at']}).status_code, 200)
+        check = self.client.get('/api/plans/a/case-versions').get_json()[0]
+        url = '/api/plans/a/testcases/' + tc['id'] + '/repository-update'
+        self.assertEqual(self.client.post(url, json=check).status_code, 400)
+        self.assertEqual(self.client.post(url, json=dict(check, confirm=True, repository_modified='stale')).status_code, 409)
+        self.assertEqual(self.definition(tc)['source'], source)
+        self.assertEqual(self.client.post(url, json=dict(check, confirm=True)).status_code, 200)
+        self.assertEqual(self.definition(tc)['source'], newer)
+        self.assertEqual(self.definition(tc)['settings'], settings)
+        self.assertEqual(self.definition(peer, 'b')['source'], source)
+        self.assertEqual(self.client.get('/api/plans/a/case-versions').get_json()[0]['status'], 'Up to date')
+        self.assertEqual(self.client.post(url, json=dict(check, confirm=True)).status_code, 409)

@@ -29,7 +29,7 @@ class RepositoryFoldersTest(unittest.TestCase):
   f=self.folder();self.move(self.repository,f)
   r=self.bulk(f);self.assertEqual(r.status_code,201,r.get_json());data=r.get_json();tc=data['added'][0]
   self.assertEqual(tc['folder_path'],'Power')
-  self.assertEqual(tc['source_version'],self.repository['source_version'])
+  self.assertEqual(tc['modified_at'],self.repository['modified_at'])
   self.move(self.repository,None)
   definition=self.client.get('/api/plans/a/testcases/'+tc['id']+'/definition').get_json()
   self.assertEqual(definition['source'],fixtures.SOURCE)
